@@ -8,6 +8,9 @@
         "baseUrl": "./src",
         "paths": {
             "@config/*": ["config/*"],
+            "@modules/*": ["modules/*"],
+            "@generated/*": ["generated/*"],
+            "@db/*": ["db/*"]
         },
 
         "strict": true,
