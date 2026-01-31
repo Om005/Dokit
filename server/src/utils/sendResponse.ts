@@ -15,7 +15,10 @@ interface Input {
     [data: string]: unknown;
 }
 
-const sendResponse = (res: Response, { message, statusCode = Statuscodes.OK, success = true, ...other }: Input) => {
+const sendResponse = (
+    res: Response,
+    { message, statusCode = Statuscodes.OK, success = true, ...other }: Input
+) => {
     const resonse: ApiResponse = {
         success,
         statusCode,

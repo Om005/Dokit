@@ -13,6 +13,8 @@ export const EnvSchema = z
         REDIS_PORT: z.int().min(1).max(65535),
         REDIS_LOCAL: z.union([z.literal(0), z.literal(1)]),
         IS_PRODUCTION: z.union([z.literal(0), z.literal(1)]),
+        BREVO_API_KEY: z.string().min(1),
+        SENDER_EMAIL: z.string().email(),
     })
     .strict();
 

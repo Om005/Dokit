@@ -3,7 +3,7 @@ import env from "@config/env";
 import path from "path";
 
 const logDir = path.resolve(process.cwd(), "logs");
-const isProd = env.IS_PRODUCTION === 1;
+const isProd = env.IS_PRODUCTION;
 
 const targets: pino.TransportTargetOptions[] = [];
 

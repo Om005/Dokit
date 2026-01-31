@@ -5,9 +5,10 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import authRoutes from "@modules/auth/routes";
 import httpLogger from "@middlewares/httpLogger";
+import { verifyTransporter } from "@config/mailer";
 
 checkEnv();
-
+// verifyTransporter();
 const app = express();
 
 app.use(express.json());

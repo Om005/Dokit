@@ -26,6 +26,8 @@ interface EnvConfig {
     REDIS_PORT: number;
     REDIS_LOCAL: 1 | 0;
     IS_PRODUCTION: 1 | 0;
+    BREVO_API_KEY: string;
+    SENDER_EMAIL: string;
 }
 
 const env: EnvConfig = {
@@ -39,6 +41,8 @@ const env: EnvConfig = {
     REDIS_PORT: parseInt(process.env.REDIS_PORT as string, 10),
     REDIS_LOCAL: parseInt(process.env.REDIS_LOCAL as string, 10) as 1 | 0,
     IS_PRODUCTION: parseInt(process.env.IS_PRODUCTION as string, 10) as 1 | 0,
+    BREVO_API_KEY: process.env.BREVO_API_KEY as string,
+    SENDER_EMAIL: process.env.SENDER_EMAIL as string,
 };
 
 export default env;
