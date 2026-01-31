@@ -17,15 +17,14 @@ if (fs.existsSync(PATH)) {
     process.exit(1);
 }
 
-if(!process.env.DATABASE_URL) {
+if (!process.env.DATABASE_URL) {
     console.error("DATABASE_URL is not set in environment variables");
     process.exit(1);
 }
 
 const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL!,
+    connectionString: process.env.DATABASE_URL!,
 });
-
 
 const prisma = new PrismaClient({
     adapter,

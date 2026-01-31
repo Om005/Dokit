@@ -4,6 +4,7 @@ import { checkEnv } from "@config/checkEnv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import authRoutes from "@modules/auth/routes";
+import httpLogger from "@middlewares/httpLogger";
 
 checkEnv();
 
@@ -17,8 +18,8 @@ app.use(
         credentials: true,
     })
 );
-
-app.use("/auth", authRoutes);
+app.use(httpLogger);
+app.use("/api/auth", authRoutes);
 
 const PORT = env.PORT;
 

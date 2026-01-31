@@ -10,7 +10,9 @@
             "@config/*": ["config/*"],
             "@modules/*": ["modules/*"],
             "@generated/*": ["generated/*"],
-            "@db/*": ["db/*"]
+            "@db/*": ["db/*"],
+            "@utils/*": ["utils/*"],
+            "@middlewares/*": ["middlewares/*"]
         },
 
         "strict": true,

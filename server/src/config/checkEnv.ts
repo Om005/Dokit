@@ -7,6 +7,12 @@ export const EnvSchema = z
         PORT: z.int().min(1000).max(9999),
         FRONTEND_URL: z.url(),
         DATABASE_URL: z.string().min(1),
+        REDIS_USERNAME: z.string().min(1),
+        REDIS_PASSWORD: z.string().min(1),
+        REDIS_HOST: z.string().min(1),
+        REDIS_PORT: z.int().min(1).max(65535),
+        REDIS_LOCAL: z.union([z.literal(0), z.literal(1)]),
+        IS_PRODUCTION: z.union([z.literal(0), z.literal(1)]),
     })
     .strict();
 
