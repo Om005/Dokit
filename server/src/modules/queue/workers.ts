@@ -7,14 +7,10 @@ import { EMAIL_QUEUE } from "./queue-names";
 import workers from "./worker-actions";
 
 const initiatWorkers = () => {
-    const emailWorker = new Worker(
-        EMAIL_QUEUE,
-        workers.sendEmail,
-        { 
-            connection: redisConfig,
-            concurrency: 10,
-        }
-    );
+    const emailWorker = new Worker(EMAIL_QUEUE, workers.sendEmail, {
+        connection: redisConfig,
+        concurrency: 10,
+    });
 };
 
 export default initiatWorkers;

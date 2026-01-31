@@ -27,3 +27,5 @@ const sendResponse = (
     };
     return res.status(statusCode).json(resonse);
 };
+
+export default sendResponse;

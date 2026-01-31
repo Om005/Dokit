@@ -1,11 +1,11 @@
 import { ConnectionOptions } from "bullmq";
 import env from "./env";
 
-const isProd = env.IS_PRODUCTION;
+const isRedisLocal = env.REDIS_LOCAL;
 
 let redisConfig: ConnectionOptions;
 
-if (isProd) {
+if (!isRedisLocal) {
     redisConfig = {
         host: env.REDIS_HOST,
         port: env.REDIS_PORT,

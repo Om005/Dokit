@@ -14,8 +14,7 @@ const workers = {
             logger.error(`Failed to send email by job id: ${job.id}`);
             logger.error(error);
         }
-    }
-}
-
+    },
+};
 
 export default workers;

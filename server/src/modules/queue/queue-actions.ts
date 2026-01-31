@@ -2,7 +2,7 @@ import { MailerOptions } from "@config/mailer";
 import logger from "@utils/logger";
 import { emailQueue } from "./queues";
 
-const queueActions = {    
+const queueActions = {
     addEmailToQueue: async ({ from, to, subject, htmlContent }: MailerOptions) => {
         emailQueue.add(
             "send-email",
@@ -18,7 +18,6 @@ const queueActions = {
             }
         );
         logger.info(`Email job added to the queue for ${to}`);
-    }
-    
-}
+    },
+};
 export default queueActions;
