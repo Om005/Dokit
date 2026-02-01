@@ -18,15 +18,12 @@ datasource db {
 model User {
   id             String      @id @default(uuid())
   email          String   @unique
-  password       String
-  name           String
-  isVerified     Boolean  @default(false)
+  firstName      String
+  lastName       String
+  username       String   @unique
+  passwordHash   String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt @default(now())
-  verificationToken String?
-  verificationTokenExpiry DateTime?
-  resetPasswordToken String?
-  resetPasswordTokenExpiry DateTime?
   sessions        Session[]
 }
 
@@ -34,7 +31,7 @@ model Session {
   id               String   @id @default(uuid())
   userId           String
   user             User     @relation(fields: [userId], references: [id])
-  ip               String?  
+  ip               String  
   userAgent        String?  
   deviceType       String?  
   browser          String?  
@@ -43,7 +40,7 @@ model Session {
   region          String?  
   country         String?  
   lastSeen         DateTime @default(now())
-  createdAt        DateTime @default(now())
+  createdAt        DateTime @updatedAt
   expiresAt        DateTime
   refreshToken    String? 
 }

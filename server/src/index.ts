@@ -11,9 +11,10 @@ import queueActions from "@modules/queue/queue-actions";
 import initiatWorkers from "@modules/queue/workers";
 import { connectRedis } from "@config/redisClient";
 import rateLimit from "@middlewares/rateLimiter";
+import globalErrorHandler from "@middlewares/globalErrorHandler";
 
 checkEnv();
-verifyTransporter();
+// verifyTransporter();
 initiatWorkers();
 connectRedis();
 const app = express();
@@ -30,6 +31,7 @@ app.use(
 );
 app.use(httpLogger);
 app.use(extractIpMiddleware);
+app.use(globalErrorHandler);
 app.use("/api/auth", authRoutes);
 
 app.get("/", rateLimit({ limit: 2, windowMs: 60 * 1000 }), (req: Request, res: Response) => {
