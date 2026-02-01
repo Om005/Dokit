@@ -7,11 +7,11 @@
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
-  engineType = "library"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 
@@ -24,7 +24,7 @@ model User {
   passwordHash   String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt @default(now())
-  sessions        Session[]
+  sessions       Session[]
 }
 
 model Session {
@@ -36,11 +36,11 @@ model Session {
   deviceType       String?  
   browser          String?  
   os               String?  
-  city            String?  
-  region          String?  
-  country         String?  
-  lastSeen         DateTime @default(now())
-  createdAt        DateTime @updatedAt
+  city             String?  
+  region           String?  
+  country          String?  
+  lastSeen         DateTime @updatedAt
+  createdAt        DateTime @default(now())
   expiresAt        DateTime
-  refreshToken    String? 
+  refreshToken     String? 
 }

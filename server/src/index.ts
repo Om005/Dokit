@@ -12,8 +12,10 @@ import initiatWorkers from "@modules/queue/workers";
 import { connectRedis } from "@config/redisClient";
 import rateLimit from "@middlewares/rateLimiter";
 import globalErrorHandler from "@middlewares/globalErrorHandler";
+import { connectToDatabase } from "@db/prisma";
 
 checkEnv();
+connectToDatabase();
 // verifyTransporter();
 initiatWorkers();
 connectRedis();

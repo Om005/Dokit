@@ -13,4 +13,11 @@ router.post(
     controllers.sendOtpForAccountCreation
 );
 
+router.post(
+    "/verify-account-creation-otp",
+    rateLimit({ limit: 5, windowMs: 60 * 1000, prefix: "verify-account-creation-otp" }),
+    validationMiddleware(validators.verifyRegistrationOtp),
+    controllers.verifyAccountCreationOtp
+);
+
 export default router;
