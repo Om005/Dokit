@@ -28,6 +28,8 @@ interface EnvConfig {
     IS_PRODUCTION: 1 | 0;
     BREVO_API_KEY: string;
     SENDER_EMAIL: string;
+    MAXMIND_LICENSE_KEY: string;
+    JWT_SECRET: string;
 }
 
 const env: EnvConfig = {
@@ -43,6 +45,8 @@ const env: EnvConfig = {
     IS_PRODUCTION: parseInt(process.env.IS_PRODUCTION as string, 10) as 1 | 0,
     BREVO_API_KEY: process.env.BREVO_API_KEY as string,
     SENDER_EMAIL: process.env.SENDER_EMAIL as string,
+    MAXMIND_LICENSE_KEY: process.env.MAXMIND_LICENSE_KEY as string,
+    JWT_SECRET: process.env.JWT_SECRET as string,
 };
 
 export default env;

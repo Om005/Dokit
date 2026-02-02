@@ -13,11 +13,14 @@ import { connectRedis } from "@config/redisClient";
 import rateLimit from "@middlewares/rateLimiter";
 import globalErrorHandler from "@middlewares/globalErrorHandler";
 import { connectToDatabase } from "@db/prisma";
+import { initGeoIP, locationMiddleware } from "@middlewares/location";
+import uaParserMiddleware from "@middlewares/UAparser";
 
 checkEnv();
 connectToDatabase();
 // verifyTransporter();
 initiatWorkers();
+initGeoIP();
 connectRedis();
 const app = express();
 
@@ -36,15 +39,22 @@ app.use(extractIpMiddleware);
 app.use(globalErrorHandler);
 app.use("/api/auth", authRoutes);
 
-app.get("/", rateLimit({ limit: 2, windowMs: 60 * 1000 }), (req: Request, res: Response) => {
-    // queueActions.addEmailToQueue({
-    //     from: env.SENDER_EMAIL,
-    //     to: "chavdaom84@gmail.com",
-    //     subject: "Test Email",
-    //     htmlContent: "<h1>Hello from the queue!</h1>",
-    // });
-    res.send("Email job added to the queue");
-});
+app.get(
+    "/",
+    uaParserMiddleware,
+    locationMiddleware,
+    rateLimit({ limit: 2, windowMs: 60 * 1000 }),
+    (req: Request, res: Response) => {
+        console.log(req.meta);
+        // queueActions.addEmailToQueue({
+        //     from: env.SENDER_EMAIL,
+        //     to: "chavdaom84@gmail.com",
+        //     subject: "Test Email",
+        //     htmlContent: "<h1>Hello from the queue!</h1>",
+        // });
+        res.send("Email job added to the queue");
+    }
+);
 
 const PORT = env.PORT;
 

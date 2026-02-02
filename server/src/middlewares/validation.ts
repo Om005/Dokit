@@ -10,10 +10,11 @@ const validationMiddleware = (schema: ZodSchema) => {
         try {
             result = schema.safeParse(req.body);
             if (!result.success) {
+                const message = JSON.parse(result.error.message)[0].message;
                 return sendResponse(res, {
                     success: false,
                     statusCode: StatusCodes.BAD_REQUEST,
-                    message: "Invalid request",
+                    message: message || "Invalid request",
                 });
             } else {
                 next();

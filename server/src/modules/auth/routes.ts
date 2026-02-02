@@ -3,6 +3,9 @@ import express from "express";
 import validators from "./validators";
 import controllers from "./controllers";
 import rateLimit from "@middlewares/rateLimiter";
+import uaParserMiddleware from "@middlewares/UAparser";
+import { locationMiddleware } from "@middlewares/location";
+import { authenticate } from "@middlewares/authenticate";
 
 const router = express.Router();
 
@@ -18,6 +21,67 @@ router.post(
     rateLimit({ limit: 5, windowMs: 60 * 1000, prefix: "verify-account-creation-otp" }),
     validationMiddleware(validators.verifyRegistrationOtp),
     controllers.verifyAccountCreationOtp
+);
+
+router.post(
+    "/create-account",
+    rateLimit({ limit: 5, windowMs: 60 * 1000, prefix: "create-account" }),
+    validationMiddleware(validators.createAccount),
+    uaParserMiddleware,
+    locationMiddleware,
+    controllers.createAccount
+);
+
+router.post(
+    "/sign-in",
+    rateLimit({ limit: 10, windowMs: 60 * 1000, prefix: "sign-in" }),
+    validationMiddleware(validators.singIn),
+    uaParserMiddleware,
+    locationMiddleware,
+    controllers.signIn
+);
+
+router.post(
+    "/sign-out",
+    rateLimit({ limit: 10, windowMs: 60 * 1000, prefix: "sign-out" }),
+    authenticate,
+    controllers.signOut
+);
+
+router.post(
+    "/refresh-session",
+    rateLimit({ limit: 10, windowMs: 60 * 1000, prefix: "refresh-session" }),
+    uaParserMiddleware,
+    locationMiddleware,
+    controllers.refreshSession
+);
+
+router.post(
+    "/send-otp-for-password-reset",
+    rateLimit({ limit: 5, windowMs: 60 * 1000, prefix: "send-otp-password-reset" }),
+    validationMiddleware(validators.sendOtpForPasswordReset),
+    controllers.sendOtpForPasswordReset
+);
+
+router.post(
+    "/verify-password-reset-otp",
+    rateLimit({ limit: 5, windowMs: 60 * 1000, prefix: "verify-password-reset-otp" }),
+    validationMiddleware(validators.verifyPasswordResetOtp),
+    controllers.verifyPasswordResetOtp
+);
+
+router.post(
+    "/reset-password",
+    rateLimit({ limit: 5, windowMs: 60 * 1000, prefix: "reset-password" }),
+    validationMiddleware(validators.resetPassword),
+    controllers.resetPassword
+);
+
+router.post(
+    "/is-authenticated",
+    rateLimit({ limit: 60, windowMs: 60 * 1000, prefix: "is-authenticated" }),
+    authenticate,
+    controllers.isAuthenticated
 );
 
 export default router;

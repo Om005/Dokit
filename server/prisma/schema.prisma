@@ -33,14 +33,14 @@ model Session {
   user             User     @relation(fields: [userId], references: [id])
   ip               String  
   userAgent        String?  
-  deviceType       String?  
-  browser          String?  
-  os               String?  
+  device           Json?  
+  browser          Json?  
+  os               Json?  
   city             String?  
   region           String?  
   country          String?  
   lastSeen         DateTime @updatedAt
   createdAt        DateTime @default(now())
   expiresAt        DateTime
-  refreshToken     String? 
+  refreshTokenHash String?
 }

@@ -24,7 +24,7 @@ const extractIpMiddleware = (req: Request, res: Response, next: NextFunction) =>
         ip = ip.substring(7);
     }
     if (ip === "::1" || !isIP(ip)) {
-        ip = "127.0.0.1";
+        ip = "8.8.8.8";
     }
     if (!req.meta) {
         req.meta = {};

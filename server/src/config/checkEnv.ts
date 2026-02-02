@@ -15,6 +15,8 @@ export const EnvSchema = z
         IS_PRODUCTION: z.union([z.literal(0), z.literal(1)]),
         BREVO_API_KEY: z.string().min(1),
         SENDER_EMAIL: z.string().email(),
+        MAXMIND_LICENSE_KEY: z.string().min(1),
+        JWT_SECRET: z.string().min(1),
     })
     .strict();
 
