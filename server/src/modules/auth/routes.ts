@@ -19,7 +19,7 @@ router.post(
 router.post(
     "/verify-account-creation-otp",
     rateLimit({ limit: 5, windowMs: 60 * 1000, prefix: "verify-account-creation-otp" }),
-    validationMiddleware(validators.verifyRegistrationOtp),
+    validationMiddleware(validators.verifyAccountCreationOtp),
     controllers.verifyAccountCreationOtp
 );
 
@@ -35,7 +35,7 @@ router.post(
 router.post(
     "/sign-in",
     rateLimit({ limit: 10, windowMs: 60 * 1000, prefix: "sign-in" }),
-    validationMiddleware(validators.singIn),
+    validationMiddleware(validators.signIn),
     uaParserMiddleware,
     locationMiddleware,
     controllers.signIn

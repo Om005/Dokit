@@ -5,7 +5,7 @@ const validators = {
         email: z.string().email(),
     }),
 
-    verifyRegistrationOtp: z.object({
+    verifyAccountCreationOtp: z.object({
         email: z.string().email(),
         otp: z.string().length(6),
     }),
@@ -35,7 +35,7 @@ const validators = {
             ),
     }),
 
-    singIn: z.object({
+    signIn: z.object({
         email: z.string().email("Invalid email address"),
         password: z.string().min(1, "Password is required"),
     }),
