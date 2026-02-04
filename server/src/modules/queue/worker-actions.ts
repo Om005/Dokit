@@ -6,7 +6,6 @@ import type { Job } from "bullmq";
 const workers = {
     sendEmail: async (job: Job) => {
         const emailOptions: MailerOptions = job.data;
-        console.log(emailOptions);
         try {
             await transporter.sendMail(emailOptions);
             logger.info(`Email sent successfully by job id: ${job.id}`);

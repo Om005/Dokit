@@ -7,7 +7,6 @@ import { RootState } from "@/store/store";
 
 export function HeroSection() {
     const { isAuthenticated, email, username } = useSelector((state: RootState) => state.auth);
-    console.log({ isAuthenticated, email, username });
     return (
         <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-24 hero-gradient">
             {/* Version Badge */}

@@ -45,7 +45,6 @@ export default function SignupPage() {
             const result = await dispatch(
                 authActions.sendOtpForAccountCreation({ email })
             ).unwrap();
-            console.log(result);
 
             if (result.success) {
                 dispatch(setTempEmail(email));
