@@ -10,7 +10,7 @@ interface AuthState {
     email: string | null;
     firstName: string | null;
     lastName: string | null;
-    userName: string | null;
+    username: string | null;
     id: string | null;
     tempEmail: string | null;
     isLoading: boolean;
@@ -37,7 +37,7 @@ const authActions = {
 
     createAccount: createAsyncThunk<
         ApiResponse,
-        { email: string; firstName: string; lastName: string; userName: string; password: string },
+        { email: string; firstName: string; lastName: string; username: string; password: string },
         { rejectValue: ApiResponse }
     >(
         "auth/createAccount",
@@ -45,7 +45,7 @@ const authActions = {
             email: string;
             firstName: string;
             lastName: string;
-            userName: string;
+            username: string;
             password: string;
         }>("/api/auth/create-account")
     ),
@@ -105,7 +105,7 @@ const initialState: AuthState = {
     email: null,
     firstName: null,
     lastName: null,
-    userName: null,
+    username: null,
     id: null,
     tempEmail: null,
     isLoading: false,
@@ -150,7 +150,7 @@ const authSlice = createSlice({
                             email?: string;
                             firstName?: string;
                             lastName?: string;
-                            userName?: string;
+                            username?: string;
                             id?: string;
                         };
                     };
@@ -160,7 +160,7 @@ const authSlice = createSlice({
                     state.email = payload.data.user.email || null;
                     state.firstName = payload.data.user.firstName || null;
                     state.lastName = payload.data.user.lastName || null;
-                    state.userName = payload.data.user.userName || null;
+                    state.username = payload.data.user.username || null;
                     state.id = payload.data.user.id || null;
                 }
             })
@@ -178,7 +178,7 @@ const authSlice = createSlice({
                             email?: string;
                             firstName?: string;
                             lastName?: string;
-                            userName?: string;
+                            username?: string;
                             id?: string;
                         };
                     };
@@ -188,7 +188,7 @@ const authSlice = createSlice({
                     state.email = payload.data.user.email || null;
                     state.firstName = payload.data.user.firstName || null;
                     state.lastName = payload.data.user.lastName || null;
-                    state.userName = payload.data.user.userName || null;
+                    state.username = payload.data.user.username || null;
                     state.id = payload.data.user.id || null;
                 }
             })
@@ -204,7 +204,7 @@ const authSlice = createSlice({
                 state.email = null;
                 state.firstName = null;
                 state.lastName = null;
-                state.userName = null;
+                state.username = null;
                 state.id = null;
             })
             .addCase(authActions.signOut.rejected, (state) => {
@@ -217,7 +217,7 @@ const authSlice = createSlice({
                             email?: string;
                             firstName?: string;
                             lastName?: string;
-                            userName?: string;
+                            username?: string;
                             id?: string;
                         };
                     };
@@ -227,7 +227,7 @@ const authSlice = createSlice({
                     state.email = payload.data.user.email || null;
                     state.firstName = payload.data.user.firstName || null;
                     state.lastName = payload.data.user.lastName || null;
-                    state.userName = payload.data.user.userName || null;
+                    state.username = payload.data.user.username || null;
                     state.id = payload.data.user.id || null;
                 }
             })
@@ -236,7 +236,7 @@ const authSlice = createSlice({
                 state.email = null;
                 state.firstName = null;
                 state.lastName = null;
-                state.userName = null;
+                state.username = null;
                 state.id = null;
             })
             .addCase(authActions.isAuthenticated.pending, (state) => {
@@ -250,7 +250,7 @@ const authSlice = createSlice({
                             email?: string;
                             firstName?: string;
                             lastName?: string;
-                            userName?: string;
+                            username?: string;
                             id?: string;
                         };
                     };
@@ -260,7 +260,7 @@ const authSlice = createSlice({
                     state.email = payload.data.user.email || null;
                     state.firstName = payload.data.user.firstName || null;
                     state.lastName = payload.data.user.lastName || null;
-                    state.userName = payload.data.user.userName || null;
+                    state.username = payload.data.user.username || null;
                     state.id = payload.data.user.id || null;
                 }
             })
@@ -270,7 +270,7 @@ const authSlice = createSlice({
                 state.email = null;
                 state.firstName = null;
                 state.lastName = null;
-                state.userName = null;
+                state.username = null;
                 state.id = null;
             })
             .addCase(authActions.sendOtpForPasswordReset.pending, (state) => {

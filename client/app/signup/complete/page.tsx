@@ -1,0 +1,265 @@
+"use client";
+
+import React from "react";
+
+import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/store/store";
+import { authActions } from "@/store/authentication";
+import { toast } from "sonner";
+import Link from "next/link";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, User, AtSign, Lock, Eye, EyeOff, Check, X } from "lucide-react";
+
+interface PasswordRequirement {
+    label: string;
+    test: (password: string) => boolean;
+}
+
+const passwordRequirements: PasswordRequirement[] = [
+    { label: "At least 8 characters", test: (p) => p.length >= 8 },
+    { label: "One uppercase letter", test: (p) => /[A-Z]/.test(p) },
+    { label: "One lowercase letter", test: (p) => /[a-z]/.test(p) },
+    { label: "One number", test: (p) => /[0-9]/.test(p) },
+    { label: "One special character", test: (p) => /[!@#$%^&*(),.?":{}|<>]/.test(p) },
+];
+
+export default function CompletePage() {
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
+    const [userName, setUserName] = useState("");
+    const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const router = useRouter();
+    const dispatch = useDispatch<AppDispatch>();
+    const { isLoading, tempEmail } = useSelector((state: RootState) => state.auth);
+
+    useEffect(() => {
+        if (!tempEmail) {
+            router.push("/signup");
+        }
+    }, [tempEmail, router]);
+
+    const passwordValidation = useMemo(() => {
+        return passwordRequirements.map((req) => ({
+            ...req,
+            passed: req.test(password),
+        }));
+    }, [password]);
+
+    const isPasswordValid = useMemo(() => {
+        return passwordValidation.every((req) => req.passed);
+    }, [passwordValidation]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!firstName.trim()) {
+            toast.error("Please enter your first name");
+            return;
+        }
+
+        if (!lastName.trim()) {
+            toast.error("Please enter your last name");
+            return;
+        }
+
+        if (!userName.trim()) {
+            toast.error("Please enter a username");
+            return;
+        }
+
+        if (userName.length < 3) {
+            toast.error("Username must be at least 3 characters");
+            return;
+        }
+
+        if (!isPasswordValid) {
+            toast.error("Please meet all password requirements");
+            return;
+        }
+
+        if (!tempEmail) {
+            toast.error("Email not found. Please start again.");
+            router.push("/signup");
+            return;
+        }
+
+        try {
+            console.log({
+                email: tempEmail,
+                firstName: firstName.trim(),
+                lastName: lastName.trim(),
+                username: userName.trim(),
+                password,
+            });
+            const result = await dispatch(
+                authActions.createAccount({
+                    email: tempEmail,
+                    firstName: firstName.trim(),
+                    lastName: lastName.trim(),
+                    username: userName.trim(),
+                    password,
+                })
+            ).unwrap();
+
+            if (result.success) {
+                toast.success("Account created successfully!");
+                router.push("/");
+            } else {
+                toast.error(result.message || "Failed to create account");
+            }
+        } catch (error) {
+            const err = error as { message?: string };
+            toast.error(err.message || "Something went wrong");
+        }
+    };
+
+    if (!tempEmail) {
+        return null;
+    }
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-background p-4">
+            <div className="w-full max-w-md">
+                <div className="text-center mb-8">
+                    <Link href="/" className="text-2xl font-bold text-foreground">
+                        Dokit.
+                    </Link>
+                </div>
+
+                <Card className="border-border/50 shadow-lg">
+                    <CardHeader className="space-y-1 text-center">
+                        <CardTitle className="text-2xl font-bold">Complete your profile</CardTitle>
+                        <CardDescription>Fill in your details to finish signing up</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="firstName">First Name</Label>
+                                    <div className="relative">
+                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                                        <Input
+                                            id="firstName"
+                                            type="text"
+                                            placeholder="John"
+                                            value={firstName}
+                                            onChange={(e) => setFirstName(e.target.value)}
+                                            className="pl-10"
+                                            disabled={isLoading}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="lastName">Last Name</Label>
+                                    <Input
+                                        id="lastName"
+                                        type="text"
+                                        placeholder="Doe"
+                                        value={lastName}
+                                        onChange={(e) => setLastName(e.target.value)}
+                                        disabled={isLoading}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="userName">Username</Label>
+                                <div className="relative">
+                                    <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                                    <Input
+                                        id="userName"
+                                        type="text"
+                                        placeholder="johndoe"
+                                        value={userName}
+                                        onChange={(e) =>
+                                            setUserName(
+                                                e.target.value.toLowerCase().replace(/\s/g, "")
+                                            )
+                                        }
+                                        className="pl-10"
+                                        disabled={isLoading}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="password">Password</Label>
+                                <div className="relative">
+                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                                    <Input
+                                        id="password"
+                                        type={showPassword ? "text" : "password"}
+                                        placeholder="Create a strong password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="pl-10 pr-10"
+                                        disabled={isLoading}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff className="size-4" />
+                                        ) : (
+                                            <Eye className="size-4" />
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Password Requirements */}
+                            <div className="space-y-2 p-3 rounded-lg bg-muted/50 border border-border/50">
+                                <p className="text-xs font-medium text-muted-foreground mb-2">
+                                    Password requirements:
+                                </p>
+                                <div className="grid grid-cols-1 gap-1.5">
+                                    {passwordValidation.map((req, index) => (
+                                        <div
+                                            key={index}
+                                            className={`flex items-center gap-2 text-xs transition-colors ${
+                                                req.passed
+                                                    ? "text-green-600 dark:text-green-400"
+                                                    : "text-muted-foreground"
+                                            }`}
+                                        >
+                                            {req.passed ? (
+                                                <Check className="size-3.5" />
+                                            ) : (
+                                                <X className="size-3.5" />
+                                            )}
+                                            <span>{req.label}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <Button
+                                type="submit"
+                                className="w-full"
+                                disabled={isLoading || !isPasswordValid}
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <Loader2 className="animate-spin" />
+                                        Creating account...
+                                    </>
+                                ) : (
+                                    "Create Account"
+                                )}
+                            </Button>
+                        </form>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    );
+}

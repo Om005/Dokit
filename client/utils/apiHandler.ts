@@ -20,10 +20,11 @@ const createApiHandler = <InputType>(
                 data: method !== "get" ? inputData : undefined,
             });
 
+            console.log("API Response:", response.data);
             return response.data;
         } catch (error) {
             const err = error as AxiosError<ApiResponse>;
-
+            console.error("API Error:", error.response);
             if (err.response && err.response.data) {
                 return rejectWithValue(err.response.data);
             }
