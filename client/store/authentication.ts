@@ -12,7 +12,10 @@ interface AuthState {
     lastName: string | null;
     username: string | null;
     id: string | null;
-    tempEmail: string | null;
+    accountCreationEmail: string | null;
+    verifiedForAccountCreation: boolean;
+    verifiedForPasswordReset: boolean;
+    passwordResetEmail: string | null;
     isLoading: boolean;
 }
 
@@ -101,13 +104,16 @@ const authActions = {
 
 const initialState: AuthState = {
     isAuthenticated: false,
-    isAuthLoading: false,
+    isAuthLoading: true,
     email: null,
     firstName: null,
     lastName: null,
     username: null,
     id: null,
-    tempEmail: null,
+    accountCreationEmail: null,
+    passwordResetEmail: null,
+    verifiedForAccountCreation: false,
+    verifiedForPasswordReset: false,
     isLoading: false,
 };
 
@@ -115,8 +121,11 @@ const authSlice = createSlice({
     name: "auth",
     initialState: initialState,
     reducers: {
-        setTempEmail(state, action) {
-            state.tempEmail = action.payload;
+        setAccountCreationEmail(state, action) {
+            state.accountCreationEmail = action.payload;
+        },
+        setPasswordResetEmail(state, action) {
+            state.passwordResetEmail = action.payload;
         },
     },
     extraReducers: (builder) => {
@@ -135,6 +144,7 @@ const authSlice = createSlice({
             })
             .addCase(authActions.verifyAccountCreationOtp.fulfilled, (state) => {
                 state.isLoading = false;
+                state.verifiedForAccountCreation = true;
             })
             .addCase(authActions.verifyAccountCreationOtp.rejected, (state) => {
                 state.isLoading = false;
@@ -144,6 +154,9 @@ const authSlice = createSlice({
             })
             .addCase(authActions.createAccount.fulfilled, (state, action) => {
                 state.isLoading = false;
+                state.accountCreationEmail = null;
+                state.passwordResetEmail = null;
+                state.verifiedForAccountCreation = false;
                 const payload = action.payload as ApiResponse & {
                     data?: {
                         user?: {
@@ -172,6 +185,8 @@ const authSlice = createSlice({
             })
             .addCase(authActions.signIn.fulfilled, (state, action) => {
                 state.isLoading = false;
+                state.accountCreationEmail = null;
+                state.passwordResetEmail = null;
                 const payload = action.payload as ApiResponse & {
                     data?: {
                         user?: {
@@ -287,6 +302,7 @@ const authSlice = createSlice({
             })
             .addCase(authActions.verifyPasswordResetOtp.fulfilled, (state) => {
                 state.isLoading = false;
+                state.verifiedForPasswordReset = true;
             })
             .addCase(authActions.verifyPasswordResetOtp.rejected, (state) => {
                 state.isLoading = false;
@@ -296,6 +312,8 @@ const authSlice = createSlice({
             })
             .addCase(authActions.resetPassword.fulfilled, (state) => {
                 state.isLoading = false;
+                state.passwordResetEmail = null;
+                state.verifiedForPasswordReset = false;
             })
             .addCase(authActions.resetPassword.rejected, (state) => {
                 state.isLoading = false;
@@ -306,10 +324,15 @@ const authSlice = createSlice({
 const authPersistConfig = {
     key: "auth",
     storage,
-    whitelist: ["tempEmail"],
+    whitelist: [
+        "accountCreationEmail",
+        "passwordResetEmail",
+        "verifiedForAccountCreation",
+        "verifiedForPasswordReset",
+    ],
 };
 
 const persistedAuthReducer = persistReducer(authPersistConfig, authSlice.reducer);
 
-export const { setTempEmail } = authSlice.actions;
+export const { setAccountCreationEmail, setPasswordResetEmail } = authSlice.actions;
 export { authActions, persistedAuthReducer };

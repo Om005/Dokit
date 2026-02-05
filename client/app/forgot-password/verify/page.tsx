@@ -1,78 +1,83 @@
 "use client";
 
-import React from "react";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store/store";
 import { authActions } from "@/store/authentication";
 import { toast } from "sonner";
-import Link from "next/link";
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { Loader2, ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import GuestRoute from "@/components/guest-route";
 import { Navbar } from "@/components/navbar";
 
-export default function VerifyPage() {
-    const [otp, setOtp] = useState("");
+export default function ForgotPasswordVerifyPage() {
     const router = useRouter();
     const dispatch = useDispatch<AppDispatch>();
-    const { isLoading, accountCreationEmail } = useSelector((state: RootState) => state.auth);
+    const { isLoading, passwordResetEmail } = useSelector((state: RootState) => state.auth);
 
-    console.log("Temp Email:", accountCreationEmail);
+    const [otp, setOtp] = useState("");
+    const [resendCooldown, setResendCooldown] = useState(0);
+
     useEffect(() => {
-        if (!accountCreationEmail) {
-            router.push("/signup");
+        if (!passwordResetEmail) {
+            router.push("/forgot-password");
         }
-    }, [accountCreationEmail, router]);
+    }, [passwordResetEmail, router]);
+
+    useEffect(() => {
+        if (resendCooldown > 0) {
+            const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [resendCooldown]);
 
     const handleVerify = async () => {
         if (otp.length !== 6) {
-            toast.error("Please enter the complete 6-digit OTP");
+            toast.error("Please enter the complete 6-digit code");
             return;
         }
 
-        if (!accountCreationEmail) {
-            toast.error("Email not found. Please start again.");
-            router.push("/signup");
+        if (!passwordResetEmail) {
+            toast.error("Email not found. Please start over.");
+            router.push("/forgot-password");
             return;
         }
 
         try {
             const result = await dispatch(
-                authActions.verifyAccountCreationOtp({ email: accountCreationEmail, otp })
+                authActions.verifyPasswordResetOtp({ email: passwordResetEmail, otp })
             ).unwrap();
 
             if (result.success) {
                 toast.success(result.message || "OTP verified successfully");
-                router.push("/signup/complete");
+                router.push("/forgot-password/reset-password");
             } else {
                 toast.error(result.message || "Invalid OTP");
+                setOtp("");
             }
         } catch (error) {
             const err = error as { message?: string };
-            toast.error(err.message || "Invalid OTP");
+            toast.error(err.message || "Verification failed");
+            setOtp("");
         }
     };
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        handleVerify();
-    };
 
-    const handleResendOtp = async () => {
-        if (!accountCreationEmail) return;
+    const handleResend = async () => {
+        if (!passwordResetEmail || resendCooldown > 0) return;
 
         try {
             const result = await dispatch(
-                authActions.sendOtpForAccountCreation({ email: accountCreationEmail })
+                authActions.sendOtpForPasswordReset({ email: passwordResetEmail })
             ).unwrap();
 
             if (result.success) {
-                toast.success("OTP resent to your email");
+                toast.success("New OTP sent to your email");
+                setResendCooldown(60);
+                setOtp("");
             } else {
                 toast.error(result.message || "Failed to resend OTP");
             }
@@ -82,20 +87,22 @@ export default function VerifyPage() {
         }
     };
 
-    if (!accountCreationEmail) {
+    if (!passwordResetEmail) {
         return null;
     }
 
     return (
         <GuestRoute>
-            <div className="min-h-screen flex items-center justify-center bg-background p-4">
+            <main className="min-h-screen flex items-center justify-center bg-background p-4">
                 <Navbar />
                 <div className="w-full max-w-md">
-                    <div className="text-center mb-8">
-                        <Link href="/" className="text-2xl font-bold text-foreground">
-                            Dokit.
-                        </Link>
-                    </div>
+                    <Link
+                        href="/forgot-password"
+                        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+                    >
+                        <ArrowLeft className="h-4 w-4" />
+                        Back
+                    </Link>
 
                     <Card className="border-border/50 shadow-lg">
                         <CardHeader className="space-y-1 text-center">
@@ -103,18 +110,18 @@ export default function VerifyPage() {
                             <CardDescription>
                                 We sent a 6-digit code to{" "}
                                 <span className="font-medium text-foreground">
-                                    {accountCreationEmail}
+                                    {passwordResetEmail}
                                 </span>
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <form onSubmit={handleSubmit} className="space-y-6">
+                            <div className="space-y-6">
                                 <div className="flex justify-center">
                                     <InputOTP
                                         maxLength={6}
                                         value={otp}
+                                        onChange={setOtp}
                                         onComplete={handleVerify}
-                                        onChange={(value) => setOtp(value)}
                                         disabled={isLoading}
                                     >
                                         <InputOTPGroup>
@@ -129,52 +136,40 @@ export default function VerifyPage() {
                                 </div>
 
                                 <Button
-                                    type="submit"
-                                    className="w-full cursor-pointer"
+                                    onClick={handleVerify}
+                                    className="w-full h-11 bg-[#2A76F1] hover:bg-[#2A76F1]/90 text-white font-medium"
                                     disabled={isLoading || otp.length !== 6}
                                 >
                                     {isLoading ? (
                                         <>
-                                            <Loader2 className="animate-spin" />
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                             Verifying...
                                         </>
                                     ) : (
-                                        <>
-                                            Verify & Continue
-                                            <ArrowRight />
-                                        </>
+                                        "Verify code"
                                     )}
                                 </Button>
-                            </form>
 
-                            <div className="mt-6 text-center text-sm text-muted-foreground">
-                                {"Didn't receive the code?"}{" "}
-                                <button
-                                    type="button"
-                                    onClick={handleResendOtp}
-                                    disabled={isLoading}
-                                    className=" cursor-pointer text-primary hover:underline font-medium disabled:opacity-50"
-                                >
-                                    Resend
-                                </button>
-                            </div>
-
-                            <div className="mt-4 cursor-pointer">
-                                <Link href="/signup">
-                                    <Button
-                                        variant="ghost"
-                                        className="w-full cursor-pointer"
-                                        disabled={isLoading}
-                                    >
-                                        <ArrowLeft />
-                                        Back to signup
-                                    </Button>
-                                </Link>
+                                <div className="text-center">
+                                    <p className="text-sm text-muted-foreground">
+                                        Didn&apos;t receive the code?{" "}
+                                        <button
+                                            type="button"
+                                            onClick={handleResend}
+                                            disabled={resendCooldown > 0 || isLoading}
+                                            className="text-[#2A76F1] hover:underline font-medium disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
+                                        >
+                                            {resendCooldown > 0
+                                                ? `Resend in ${resendCooldown}s`
+                                                : "Resend"}
+                                        </button>
+                                    </p>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
                 </div>
-            </div>
+            </main>
         </GuestRoute>
     );
 }

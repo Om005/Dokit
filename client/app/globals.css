@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-/* @import "tw-animate-css"; */
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -108,8 +108,8 @@
     --color-secondary-foreground: var(--secondary-foreground);
     --color-accent: var(--accent);
     --color-navbar-bg: var(--navbar-bg);
-    --font-sans: var(--font-geist-sans);
-    --font-mono: var(--font-geist-mono);
+    --font-sans: var(--font-inter);
+    --font-mono: var(--font-jetbrains-mono);
 
     /* Shadcn/ui defaults - added */
     --color-popover: var(--popover);

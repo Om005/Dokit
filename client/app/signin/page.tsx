@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import GuestRoute from "@/components/guest-route";
+import { Navbar } from "@/components/navbar";
 
 export default function SignInPage() {
     const [email, setEmail] = useState("");
@@ -66,95 +68,98 @@ export default function SignInPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-background p-4">
-            <div className="w-full max-w-md">
-                <div className="text-center mb-8">
-                    <Link href="/" className="text-2xl font-bold text-foreground">
-                        Dokit.
-                    </Link>
+        <GuestRoute>
+            <div className="min-h-screen flex items-center justify-center bg-background p-4">
+                <Navbar />
+                <div className="w-full max-w-md">
+                    <div className="text-center mb-8">
+                        <Link href="/" className="text-2xl font-bold text-foreground">
+                            Dokit.
+                        </Link>
+                    </div>
+
+                    <Card className="border-border/50 shadow-lg">
+                        <CardHeader className="space-y-1 text-center">
+                            <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+                            <CardDescription>Sign in to your account to continue</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <form onSubmit={handleSubmit} className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="email">Email</Label>
+                                    <div className="relative">
+                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            placeholder="you@example.com"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className="pl-10"
+                                            disabled={isLoading}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <Label htmlFor="password">Password</Label>
+                                        <Link
+                                            href="/forgot-password"
+                                            className="text-xs text-primary hover:underline"
+                                        >
+                                            Forgot password?
+                                        </Link>
+                                    </div>
+                                    <div className="relative">
+                                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                                        <Input
+                                            id="password"
+                                            type={showPassword ? "text" : "password"}
+                                            placeholder="Enter your password"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="pl-10 pr-10"
+                                            disabled={isLoading}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                        >
+                                            {showPassword ? (
+                                                <EyeOff className="size-4" />
+                                            ) : (
+                                                <Eye className="size-4" />
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <Button type="submit" className="w-full" disabled={isLoading}>
+                                    {isLoading ? (
+                                        <>
+                                            <Loader2 className="animate-spin" />
+                                            Signing in...
+                                        </>
+                                    ) : (
+                                        "Sign In"
+                                    )}
+                                </Button>
+                            </form>
+
+                            <div className="mt-6 text-center text-sm">
+                                <span className="text-muted-foreground">
+                                    {"Don't have an account? "}
+                                </span>
+                                <Link href="/signup" className="text-primary hover:underline">
+                                    Sign up
+                                </Link>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
-
-                <Card className="border-border/50 shadow-lg">
-                    <CardHeader className="space-y-1 text-center">
-                        <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-                        <CardDescription>Sign in to your account to continue</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="email">Email</Label>
-                                <div className="relative">
-                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        placeholder="you@example.com"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        className="pl-10"
-                                        disabled={isLoading}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <Label htmlFor="password">Password</Label>
-                                    <Link
-                                        href="/forgot-password"
-                                        className="text-xs text-primary hover:underline"
-                                    >
-                                        Forgot password?
-                                    </Link>
-                                </div>
-                                <div className="relative">
-                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                                    <Input
-                                        id="password"
-                                        type={showPassword ? "text" : "password"}
-                                        placeholder="Enter your password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="pl-10 pr-10"
-                                        disabled={isLoading}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                                    >
-                                        {showPassword ? (
-                                            <EyeOff className="size-4" />
-                                        ) : (
-                                            <Eye className="size-4" />
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <Button type="submit" className="w-full" disabled={isLoading}>
-                                {isLoading ? (
-                                    <>
-                                        <Loader2 className="animate-spin" />
-                                        Signing in...
-                                    </>
-                                ) : (
-                                    "Sign In"
-                                )}
-                            </Button>
-                        </form>
-
-                        <div className="mt-6 text-center text-sm">
-                            <span className="text-muted-foreground">
-                                {"Don't have an account? "}
-                            </span>
-                            <Link href="/signup" className="text-primary hover:underline">
-                                Sign up
-                            </Link>
-                        </div>
-                    </CardContent>
-                </Card>
             </div>
-        </div>
+        </GuestRoute>
     );
 }
