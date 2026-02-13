@@ -84,4 +84,11 @@ router.post(
     controllers.isAuthenticated
 );
 
+router.post(
+    "/is-username-available",
+    rateLimit({ limit: 60, windowMs: 60 * 1000, prefix: "is-username-available" }),
+    validationMiddleware(validators.isUsernameAvailable),
+    controllers.isUsernameAvailable
+);
+
 export default router;

@@ -15,6 +15,7 @@ import globalErrorHandler from "@middlewares/globalErrorHandler";
 import { connectToDatabase } from "@db/prisma";
 import { initGeoIP, locationMiddleware } from "@middlewares/location";
 import uaParserMiddleware from "@middlewares/UAparser";
+import { initializeBloomFilter } from "@config/bloomFilter";
 
 checkEnv();
 connectToDatabase();
@@ -22,6 +23,7 @@ connectToDatabase();
 initiatWorkers();
 initGeoIP();
 connectRedis();
+initializeBloomFilter();
 const app = express();
 
 app.set("trust proxy", true);

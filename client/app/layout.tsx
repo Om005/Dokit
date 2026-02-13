@@ -55,17 +55,15 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/components/auth-provider";
 import { Toaster } from "@/components/ui/sonner";
 
-// 2. Configure Inter (for UI)
 const inter = Inter({
     subsets: ["latin"],
-    variable: "--font-inter", // Variable name we will reference in CSS
+    variable: "--font-inter",
     display: "swap",
 });
 
-// 3. Configure JetBrains Mono (for Code)
 const jetbrainsMono = JetBrains_Mono({
     subsets: ["latin"],
-    variable: "--font-jetbrains-mono", // Variable name we will reference in CSS
+    variable: "--font-jetbrains-mono",
     display: "swap",
 });
 
@@ -81,7 +79,6 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en" suppressHydrationWarning>
-            {/* 4. Apply variables to the body */}
             <body className={`${inter.variable} ${jetbrainsMono.variable} antialiased font-sans`}>
                 <ThemeProvider
                     attribute="class"

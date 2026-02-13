@@ -99,7 +99,7 @@ export function Navbar() {
                     </Button>
 
                     {isAuthenticated ? (
-                        <DropdownMenu>
+                        <DropdownMenu modal={false}>
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="ghost"

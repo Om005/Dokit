@@ -13,6 +13,7 @@ import argon2 from "argon2";
 import types from "./types";
 import crypto from "crypto";
 import jwt, { SignOptions } from "jsonwebtoken";
+import { userNameBloomFilter } from "@config/bloomFilter";
 
 const REFRESH_TOKEN_EXPIRY_MS = 15 * 24 * 60 * 60 * 1000;
 const ACCESS_COOKIE_EXPIRY_MS = 15 * 60 * 1000;
@@ -229,6 +230,7 @@ const controllers = {
                     subject: "Welcome to Dokit!",
                     htmlContent: emailTemplates.getWelcomeEmail(firstName, lastName),
                 } as MailerOptions),
+                userNameBloomFilter.addUsername(username),
             ]).catch((err) => logger.error("Background task error", err));
 
             res.cookie("refreshToken", plainToken, {
@@ -741,6 +743,61 @@ const controllers = {
             return sendResponse(res, {
                 success: false,
                 message: "Failed to verify authentication.",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    },
+
+    isUsernameAvailable: async (req: Request, res: Response) => {
+        try {
+            const { username } = req.body;
+            const normalizedUsername = username.trim();
+
+            if (normalizedUsername.length === 0) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Username cannot be empty.",
+                    statusCode: StatusCodes.BAD_REQUEST,
+                });
+            }
+
+            const mightExist = await userNameBloomFilter.mightExist(normalizedUsername);
+
+            if (!mightExist) {
+                return sendResponse(res, {
+                    success: true,
+                    message: "Username is available.",
+                    statusCode: StatusCodes.OK,
+                    data: { available: true },
+                });
+            }
+
+            const existingUser = await prisma.user.findFirst({
+                where: { username: normalizedUsername },
+                select: { id: true },
+            });
+
+            if (existingUser) {
+                return sendResponse(res, {
+                    success: true,
+                    message: "Username is already taken.",
+                    statusCode: StatusCodes.OK,
+                    data: { available: false },
+                });
+            } else {
+                return sendResponse(res, {
+                    success: true,
+                    message: "Username is available.",
+                    statusCode: StatusCodes.OK,
+                    data: { available: true },
+                });
+            }
+        } catch (error) {
+            logger.error("Error in isUsernameAvailable:");
+            logger.error(error);
+            return sendResponse(res, {
+                success: false,
+                message: "Failed to check username availability.",
                 statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
             });
         }
