@@ -18,7 +18,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
             return res.status(StatusCodes.UNAUTHORIZED).json({
                 success: false,
                 message: "Authentication required",
-                code: StatusCodes.UNAUTHORIZED,
+                statusCode: StatusCodes.UNAUTHORIZED,
             });
         }
 
@@ -36,14 +36,14 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
             return res.status(StatusCodes.UNAUTHORIZED).json({
                 success: false,
                 message: "Session has expired. Please log in again.",
-                code: StatusCodes.UNAUTHORIZED,
+                statusCode: StatusCodes.UNAUTHORIZED,
             });
         }
 
         return res.status(StatusCodes.UNAUTHORIZED).json({
             success: false,
             message: "Invalid session. Please log in again.",
-            code: StatusCodes.UNAUTHORIZED,
+            statusCode: StatusCodes.UNAUTHORIZED,
         });
     }
 };

@@ -17,6 +17,10 @@ interface AuthState {
     verifiedForPasswordReset: boolean;
     passwordResetEmail: string | null;
     isLoading: boolean;
+    usernameAvailability: {
+        loading: boolean;
+        available: boolean | null;
+    };
 }
 
 const authActions = {
@@ -100,6 +104,15 @@ const authActions = {
         "auth/isAuthenticated",
         createApiHandler<void>("/api/auth/is-authenticated")
     ),
+
+    isUsernameAvailable: createAsyncThunk<
+        ApiResponse,
+        { username: string },
+        { rejectValue: ApiResponse }
+    >(
+        "auth/isUsernameAvailable",
+        createApiHandler<{ username: string }>("/api/auth/is-username-available")
+    ),
 };
 
 const initialState: AuthState = {
@@ -115,6 +128,10 @@ const initialState: AuthState = {
     verifiedForAccountCreation: false,
     verifiedForPasswordReset: false,
     isLoading: false,
+    usernameAvailability: {
+        loading: false,
+        available: null,
+    },
 };
 
 const authSlice = createSlice({
@@ -317,6 +334,27 @@ const authSlice = createSlice({
             })
             .addCase(authActions.resetPassword.rejected, (state) => {
                 state.isLoading = false;
+            })
+            .addCase(authActions.isUsernameAvailable.pending, (state) => {
+                state.usernameAvailability.loading = true;
+                state.usernameAvailability.available = null;
+            })
+            .addCase(authActions.isUsernameAvailable.fulfilled, (state, action) => {
+                state.usernameAvailability.loading = false;
+                const payload = action.payload as ApiResponse & {
+                    data?: {
+                        available: boolean;
+                    };
+                };
+                if (payload && payload.data && typeof payload.data.available === "boolean") {
+                    state.usernameAvailability.available = payload.data.available;
+                } else {
+                    state.usernameAvailability.available = false;
+                }
+            })
+            .addCase(authActions.isUsernameAvailable.rejected, (state) => {
+                state.usernameAvailability.loading = false;
+                state.usernameAvailability.available = false;
             });
     },
 });

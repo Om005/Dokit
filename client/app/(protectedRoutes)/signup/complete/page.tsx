@@ -14,8 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, User, AtSign, Lock, Eye, EyeOff, Check, X } from "lucide-react";
-import GuestRoute from "@/components/guest-route";
-import { Navbar } from "@/components/navbar";
 
 interface PasswordRequirement {
     label: string;
@@ -56,9 +54,8 @@ export default function CompletePage() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const router = useRouter();
     const dispatch = useDispatch<AppDispatch>();
-    const { isLoading, accountCreationEmail, verifiedForAccountCreation } = useSelector(
-        (state: RootState) => state.auth
-    );
+    const { isLoading, accountCreationEmail, verifiedForAccountCreation, usernameAvailability } =
+        useSelector((state: RootState) => state.auth);
 
     useEffect(() => {
         if (!accountCreationEmail || !verifiedForAccountCreation) {
@@ -149,6 +146,18 @@ export default function CompletePage() {
         }
     };
 
+    useEffect(() => {
+        if (!userName || userName.length < 3) {
+            return;
+        }
+
+        const debounceTimer = setTimeout(() => {
+            dispatch(authActions.isUsernameAvailable({ username: userName }));
+        }, 500);
+
+        return () => clearTimeout(debounceTimer);
+    }, [userName, dispatch]);
+
     if (!accountCreationEmail || !verifiedForAccountCreation) {
         return null;
     }
@@ -199,7 +208,34 @@ export default function CompletePage() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="userName">Username</Label>
+                                {/* <Label htmlFor="userName">Username</Label> */}
+                                <Label
+                                    htmlFor="userName"
+                                    className="flex items-center justify-between"
+                                >
+                                    <span>Username</span>
+                                    {userName.length >= 3 && (
+                                        <span className="text-xs font-medium">
+                                            {usernameAvailability.loading && (
+                                                <span className="text-amber-600 dark:text-amber-400">
+                                                    Checking...
+                                                </span>
+                                            )}
+                                            {!usernameAvailability.loading &&
+                                                usernameAvailability.available === true && (
+                                                    <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
+                                                        <Check className="size-3" /> Available
+                                                    </span>
+                                                )}
+                                            {!usernameAvailability.loading &&
+                                                usernameAvailability.available === false && (
+                                                    <span className="text-red-600 dark:text-red-400 flex items-center gap-1">
+                                                        <X className="size-3" /> Taken
+                                                    </span>
+                                                )}
+                                        </span>
+                                    )}
+                                </Label>
                                 <div className="relative">
                                     <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                                     <Input
@@ -207,12 +243,19 @@ export default function CompletePage() {
                                         type="text"
                                         placeholder="johndoe"
                                         value={userName}
+                                        maxLength={20}
                                         onChange={(e) =>
-                                            setUserName(
-                                                e.target.value.toLowerCase().replace(/\s/g, "")
-                                            )
+                                            setUserName(e.target.value.replace(/\s/g, ""))
                                         }
-                                        className="pl-10"
+                                        className={`pl-10 pr-10 transition-colors ${
+                                            userName.length >= 3 && !usernameAvailability.loading
+                                                ? usernameAvailability.available === true
+                                                    ? "border-green-500 focus-visible:ring-green-500"
+                                                    : usernameAvailability.available === false
+                                                      ? "border-red-500 focus-visible:ring-red-500"
+                                                      : ""
+                                                : ""
+                                        }`}
                                         disabled={isLoading}
                                     />
                                 </div>
@@ -338,7 +381,13 @@ export default function CompletePage() {
                             <Button
                                 type="submit"
                                 className="w-full cursor-pointer"
-                                disabled={isLoading || !isPasswordValid || !passwordsMatch}
+                                disabled={
+                                    isLoading ||
+                                    !isPasswordValid ||
+                                    !passwordsMatch ||
+                                    (!usernameAvailability.loading &&
+                                        !usernameAvailability.available)
+                                }
                             >
                                 {isLoading ? (
                                     <>

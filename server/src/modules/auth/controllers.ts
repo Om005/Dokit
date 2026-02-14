@@ -758,6 +758,7 @@ const controllers = {
                     success: false,
                     message: "Username cannot be empty.",
                     statusCode: StatusCodes.BAD_REQUEST,
+                    data: { available: false },
                 });
             }
 

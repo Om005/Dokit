@@ -89,7 +89,7 @@ export default function RootLayout({
                     <StoreProvider>
                         <AuthProvider>
                             {children}
-                            <Toaster richColors={true} />
+                            <Toaster position="top-right" richColors={true} />
                         </AuthProvider>
                     </StoreProvider>
                 </ThemeProvider>
