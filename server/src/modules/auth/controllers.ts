@@ -291,7 +291,7 @@ const controllers = {
                 return sendResponse(res, {
                     success: false,
                     message: "Invalid email or password.",
-                    statusCode: StatusCodes.UNAUTHORIZED,
+                    statusCode: StatusCodes.BAD_REQUEST,
                 });
             }
             const newSessionId = crypto.randomUUID();
@@ -306,7 +306,7 @@ const controllers = {
                 return sendResponse(res, {
                     success: false,
                     message: "Invalid email or password.",
-                    statusCode: StatusCodes.UNAUTHORIZED,
+                    statusCode: StatusCodes.BAD_REQUEST,
                 });
             }
 

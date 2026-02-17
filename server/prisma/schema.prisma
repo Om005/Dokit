@@ -44,3 +44,4 @@ model Session {
   expiresAt        DateTime
   refreshTokenHash String?
 }
+

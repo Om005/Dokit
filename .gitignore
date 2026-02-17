@@ -71,4 +71,6 @@ pnpm-lock.yaml
 # .mmdb file: this is a large binary file used for geolocation
 *.mmdb
 *.mmdb.*
+
+geoip/
 server/src/generated

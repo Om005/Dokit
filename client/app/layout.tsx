@@ -47,17 +47,70 @@
 //     );
 // }
 
+// import type { Metadata } from "next";
+// import { Inter, JetBrains_Mono } from "next/font/google"; // 1. Import the right fonts
+// import "./globals.css";
+// import StoreProvider from "@/components/storeProvider";
+// import { ThemeProvider } from "next-themes";
+// import { AuthProvider } from "@/components/auth-provider";
+// import { Toaster } from "@/components/ui/sonner";
+
+// const inter = Inter({
+//     subsets: ["latin"],
+//     variable: "--font-inter",
+//     display: "swap",
+// });
+
+// const jetbrainsMono = JetBrains_Mono({
+//     subsets: ["latin"],
+//     variable: "--font-jetbrains-mono",
+//     display: "swap",
+// });
+
+// export const metadata: Metadata = {
+//     title: "Dokit - Collaborative Code Editor",
+//     description: "Real-time collaborative code editor",
+// };
+
+// export default function RootLayout({
+//     children,
+// }: Readonly<{
+//     children: React.ReactNode;
+// }>) {
+//     return (
+//         <html lang="en" suppressHydrationWarning>
+//             <body className={`${inter.variable} ${jetbrainsMono.variable} antialiased font-sans`}>
+//                 <ThemeProvider
+//                     attribute="class"
+//                     defaultTheme="dark"
+//                     enableSystem
+//                     disableTransitionOnChange
+//                 >
+//                     <StoreProvider>
+//                         <AuthProvider>
+//                             {children}
+//                             <Toaster position="top-right" richColors={true} />
+//                         </AuthProvider>
+//                     </StoreProvider>
+//                 </ThemeProvider>
+//             </body>
+//         </html>
+//     );
+// }
+
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google"; // 1. Import the right fonts
+// 1. Import Outfit
+import { Outfit, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import StoreProvider from "@/components/storeProvider";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/components/auth-provider";
 import { Toaster } from "@/components/ui/sonner";
 
-const inter = Inter({
+// 2. Configure Outfit
+const outfit = Outfit({
     subsets: ["latin"],
-    variable: "--font-inter",
+    variable: "--font-outfit", // Rename variable
     display: "swap",
 });
 
@@ -79,7 +132,8 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en" suppressHydrationWarning>
-            <body className={`${inter.variable} ${jetbrainsMono.variable} antialiased font-sans`}>
+            {/* 3. Update the variable class name here */}
+            <body className={`${outfit.variable} ${jetbrainsMono.variable} antialiased font-sans`}>
                 <ThemeProvider
                     attribute="class"
                     defaultTheme="dark"

@@ -30,6 +30,11 @@ interface EnvConfig {
     SENDER_EMAIL: string;
     MAXMIND_LICENSE_KEY: string;
     JWT_SECRET: string;
+    R2_ENDPOINT: string;
+    R2_ACCOUNT_ID: string;
+    R2_ACCESS_KEY_ID: string;
+    R2_SECRET_ACCESS_KEY: string;
+    R2_BUCKET_NAME: string;
 }
 
 const env: EnvConfig = {
@@ -47,6 +52,11 @@ const env: EnvConfig = {
     SENDER_EMAIL: process.env.SENDER_EMAIL as string,
     MAXMIND_LICENSE_KEY: process.env.MAXMIND_LICENSE_KEY as string,
     JWT_SECRET: process.env.JWT_SECRET as string,
+    R2_ENDPOINT: process.env.R2_ENDPOINT as string,
+    R2_ACCOUNT_ID: process.env.R2_ACCOUNT_ID as string,
+    R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID as string,
+    R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY as string,
+    R2_BUCKET_NAME: process.env.R2_BUCKET_NAME as string,
 };
 
 export default env;
