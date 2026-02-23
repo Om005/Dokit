@@ -28,6 +28,28 @@ services:
     depends_on:
       - postgres
 
+  redis:
+    image: redis:latest
+    container_name: my-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  dokit-nginx:
+    image: dokit-nginx:latest
+    container_name: dokit-nginx
+    ports:
+      - '8080:80'
+    networks: 
+      - dokit-network
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   pgadmin_data:
+  redis-data:
+
+networks:
+  dokit-network:
