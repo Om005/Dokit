@@ -25,6 +25,7 @@ model User {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt @default(now())
   sessions       Session[]
+  projects        Project[]
 }
 
 model Session {
@@ -45,3 +46,23 @@ model Session {
   refreshTokenHash String?
 }
 
+model Project {
+  id             String        @id @default(uuid())
+  name           String
+  description    String?
+  stack          ProjectStack
+  ownerId        String
+  owner          User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  isArchived     Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt @default(now())
+  lastAccessedAt DateTime      @default(now())
+
+  @@index([ownerId])
+}
+
+enum ProjectStack {
+  NODE
+  REACT_VITE
+  EXPRESS
+}

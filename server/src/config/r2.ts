@@ -1,7 +1,7 @@
 import { S3Client } from "@aws-sdk/client-s3";
 import env from "./env";
 
-export const r2Client = new S3Client({
+const r2Client = new S3Client({
     region: "auto",
     endpoint: env.R2_ENDPOINT,
     credentials: {
@@ -10,4 +10,4 @@ export const r2Client = new S3Client({
     },
 });
 
-export const R2_BUCKET = env.R2_BUCKET_NAME;
+export default r2Client;
