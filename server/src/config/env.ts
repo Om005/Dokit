@@ -35,6 +35,7 @@ interface EnvConfig {
     R2_ACCESS_KEY_ID: string;
     R2_SECRET_ACCESS_KEY: string;
     R2_BUCKET_NAME: string;
+    NGINX_HOST: string;
 }
 
 const env: EnvConfig = {
@@ -57,6 +58,7 @@ const env: EnvConfig = {
     R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID as string,
     R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY as string,
     R2_BUCKET_NAME: process.env.R2_BUCKET_NAME as string,
+    NGINX_HOST: process.env.NGINX_HOST as string,
 };
 
 export default env;

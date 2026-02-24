@@ -17,6 +17,7 @@ import { connectToDatabase } from "@db/prisma";
 import { initGeoIP, locationMiddleware } from "@middlewares/location";
 import uaParserMiddleware from "@middlewares/UAparser";
 import { initializeBloomFilter } from "@config/bloomFilter";
+import createDokitContainer from "services/dockerManager";
 
 checkEnv();
 connectToDatabase();

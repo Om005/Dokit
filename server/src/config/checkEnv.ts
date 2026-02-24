@@ -22,6 +22,7 @@ export const EnvSchema = z
         R2_ACCESS_KEY_ID: z.string().min(1),
         R2_SECRET_ACCESS_KEY: z.string().min(1),
         R2_BUCKET_NAME: z.string().min(1),
+        NGINX_HOST: z.string().min(1),
     })
     .strict();
 
