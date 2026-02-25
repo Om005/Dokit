@@ -11,13 +11,11 @@ import { verifyTransporter } from "@config/mailer";
 
 import initiatWorkers from "@modules/queue/workers";
 import { connectRedis } from "@config/redisClient";
-import rateLimit from "@middlewares/rateLimiter";
 import globalErrorHandler from "@middlewares/globalErrorHandler";
 import { connectToDatabase } from "@db/prisma";
-import { initGeoIP, locationMiddleware } from "@middlewares/location";
-import uaParserMiddleware from "@middlewares/UAparser";
+import { initGeoIP } from "@middlewares/location";
 import { initializeBloomFilter } from "@config/bloomFilter";
-import createDokitContainer from "services/dockerManager";
+import initializeScheduler from "jobs/scheduler";
 
 checkEnv();
 connectToDatabase();
@@ -48,4 +46,6 @@ const PORT = env.PORT;
 
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
+
+    initializeScheduler();
 });

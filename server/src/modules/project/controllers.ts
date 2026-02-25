@@ -7,128 +7,169 @@ import logger from "@utils/logger";
 import sendResponse from "@utils/sendResponse";
 import { StatusCodes } from "http-status-codes";
 import { prisma } from "@db/prisma";
-
-const STACK_BASE_PREFIX: Record<ProjectStack, string> = {
-    NODE: "base/node",
-    REACT_VITE: "base/react_vite",
-    EXPRESS: "base/express",
-};
-
-async function copyBaseToProject(stack: ProjectStack, projectId: string): Promise<number> {
-    try {
-        const sourcePrefix = STACK_BASE_PREFIX[stack];
-        const destPrefix = `code/${projectId}`;
-        let filesCopied = 0;
-        let continuationToken: string | undefined;
-
-        do {
-            const listResp = await r2Client.send(
-                new ListObjectsV2Command({
-                    Bucket: env.R2_BUCKET_NAME,
-                    Prefix: sourcePrefix + "/",
-                    ContinuationToken: continuationToken,
-                })
-            );
-
-            const objects = listResp.Contents ?? [];
-
-            await Promise.all(
-                objects.map((obj) => {
-                    const sourceKey = obj.Key!;
-                    const relativePath = sourceKey.slice(sourcePrefix.length + 1);
-                    const destKey = `${destPrefix}/${relativePath}`;
-
-                    return r2Client.send(
-                        new CopyObjectCommand({
-                            Bucket: env.R2_BUCKET_NAME,
-                            CopySource: `${env.R2_BUCKET_NAME}/${sourceKey}`,
-                            Key: destKey,
-                        })
-                    );
-                })
-            );
-
-            filesCopied += objects.length;
-            continuationToken = listResp.IsTruncated ? listResp.NextContinuationToken : undefined;
-        } while (continuationToken);
-
-        return filesCopied;
-    } catch (error) {
-        logger.error("Error copying base template to project:");
-        logger.error(error);
-        return -1;
-    }
-}
+import R2Manager from "services/r2Manager";
+import DockerManager from "services/dockerManager";
+import validators from "./validators";
+import queueActions from "@modules/queue/queueActions";
 
 const controllers = {
     createProject: async (req: Request, res: Response) => {
         try {
             const { name, description, stack } = req.body;
-            const user = req.meta.user;
-            if (!user) {
+            const userId = req.meta.user?.id;
+            if (!userId) {
                 return sendResponse(res, {
                     success: false,
                     message: "Unauthorized",
                     statusCode: StatusCodes.UNAUTHORIZED,
                 });
             }
-            const userId = user.id;
             const existingProject = await prisma.project.findFirst({
-                where: { ownerId: userId, name },
-                select: { id: true },
+                where: {
+                    name,
+                    ownerId: userId,
+                },
             });
             if (existingProject) {
                 return sendResponse(res, {
                     success: false,
-                    message: "Project with the same name already exists",
+                    message: "A project with this name already exists.",
                     statusCode: StatusCodes.CONFLICT,
                 });
             }
 
             const projectId = crypto.randomUUID();
-            const newProject = await prisma.project.create({
-                data: {
-                    id: projectId,
-                    name,
-                    description,
-                    stack,
-                    ownerId: userId,
-                },
-            });
 
             try {
-                const filesCopied = await copyBaseToProject(stack, projectId);
+                const filesCopied = await R2Manager.copyBaseToProject(
+                    projectId,
+                    stack as ProjectStack
+                );
                 if (filesCopied === -1) {
-                    prisma.project.delete({ where: { id: projectId } });
+                    logger.error("Failed to copy base files to project.");
                     return sendResponse(res, {
                         success: false,
-                        message: "Failed to set up project",
+                        message: "Failed to create project. Please try again later.",
                         statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
                     });
                 }
+                const containerInfo = await DockerManager.createDokitContainer(
+                    projectId,
+                    stack as ProjectStack
+                );
+                if (!containerInfo.containerId) {
+                    logger.error("Failed to create dokit container for project.");
+                    return sendResponse(res, {
+                        success: false,
+                        message: "Failed to create project. Please try again later.",
+                        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+                    });
+                }
+                const project = await prisma.project.create({
+                    data: {
+                        id: projectId,
+                        name,
+                        description,
+                        stack: stack as ProjectStack,
+                        ownerId: userId,
+                    },
+                });
+
+                return sendResponse(res, {
+                    success: true,
+                    message: "Project created successfully.",
+                    data: {
+                        project,
+                        containerInfo,
+                    },
+                });
             } catch (error) {
-                prisma.project.delete({ where: { id: projectId } });
-                logger.error("Error copying base template to project:");
+                logger.error("Error creating project:");
                 logger.error(error);
+
+                await R2Manager.deleteProject(projectId).catch((err) => {
+                    logger.error("R2 Rollback failed:");
+                    logger.error(err);
+                });
+                await DockerManager.deleteDokitContainer(projectId).catch((err) => {
+                    logger.error("Docker Rollback failed:");
+                    logger.error(err);
+                });
+
                 return sendResponse(res, {
                     success: false,
-                    message: "Failed to set up project",
+                    message: "Failed to create project. Please try again later.",
                     statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
                 });
             }
-
-            return sendResponse(res, {
-                success: true,
-                message: "Project created successfully",
-                data: { newProject },
-                statusCode: StatusCodes.CREATED,
-            });
         } catch (error) {
-            logger.error("Error creating project:");
+            logger.error("Error in createProject controller:");
             logger.error(error);
             return sendResponse(res, {
                 success: false,
-                message: "Failed to create project",
+                message: "Failed to create project. Please try again later.",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    },
+
+    deleteProject: async (req: Request, res: Response) => {
+        try {
+            const { projectId } = req.params;
+            const result = validators.DeleteProjectSchema.safeParse({ projectId });
+            if (!result.success) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Invalid project ID format.",
+                    statusCode: StatusCodes.BAD_REQUEST,
+                });
+            }
+            const userId = req.meta.user?.id;
+            if (!userId) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Unauthorized",
+                    statusCode: StatusCodes.UNAUTHORIZED,
+                });
+            }
+            const project = await prisma.project.findUnique({
+                where: {
+                    id: result.data.projectId,
+                },
+            });
+            if (!project) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Project not found.",
+                    statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+            if (project.ownerId !== userId) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "You do not have permission to delete this project.",
+                    statusCode: StatusCodes.FORBIDDEN,
+                });
+            }
+            await Promise.all([
+                queueActions.addDeleteProjectJob(result.data.projectId as string),
+                queueActions.addContainerCleanupJob(result.data.projectId as string),
+            ]);
+
+            await prisma.project.delete({
+                where: { id: result.data.projectId },
+            });
+
+            return sendResponse(res, {
+                success: true,
+                message: "Project deleted successfully.",
+            });
+        } catch (error) {
+            logger.error("Error in deleteProject controller:");
+            logger.error(error);
+            return sendResponse(res, {
+                success: false,
+                message: "Failed to delete project. Please try again later.",
                 statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
             });
         }

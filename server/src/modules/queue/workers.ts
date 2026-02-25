@@ -3,13 +3,27 @@ import { transporter } from "@config/mailer";
 import redisConfig from "@config/redisQueue";
 import { MailerOptions } from "@config/mailer";
 import logger from "@utils/logger";
-import { EMAIL_QUEUE } from "./queue-names";
-import workers from "./worker-actions";
+import queues from "./queueNames";
+import workers from "./workerActions";
 
 const initiatWorkers = () => {
-    const emailWorker = new Worker(EMAIL_QUEUE, workers.sendEmail, {
+    const emailWorker = new Worker(queues.EMAIL_QUEUE, workers.sendEmail, {
         connection: redisConfig,
         concurrency: 10,
+    });
+
+    const cleanContainersWorker = new Worker(
+        queues.CLEAN_CONTAINERS_QUEUE,
+        workers.cleanupContainer,
+        {
+            connection: redisConfig,
+            concurrency: 5,
+        }
+    );
+
+    const deleteProjectWorker = new Worker(queues.DELETE_PROJECT_QUEUE, workers.deleteProject, {
+        connection: redisConfig,
+        concurrency: 5,
     });
 };
 

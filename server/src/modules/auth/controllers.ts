@@ -4,21 +4,25 @@ import env from "@config/env";
 import { prisma } from "@db/prisma";
 import sendResponse from "@utils/sendResponse";
 import authUtils from "@utils/auth-utils";
-import queueActions from "@modules/queue/queue-actions";
+import queueActions from "@modules/queue/queueActions";
 import { redisClient } from "@config/redisClient";
 import { StatusCodes } from "http-status-codes";
 import logger from "@utils/logger";
 import emailTemplates from "@utils/emailTemplates";
 import argon2 from "argon2";
-import types from "./types";
 import crypto from "crypto";
-import jwt, { SignOptions } from "jsonwebtoken";
 import { userNameBloomFilter } from "@config/bloomFilter";
 
 const REFRESH_TOKEN_EXPIRY_MS = 15 * 24 * 60 * 60 * 1000;
 const ACCESS_COOKIE_EXPIRY_MS = 15 * 60 * 1000;
 
-const cookieOptions: types.cookieOptions = {
+interface cookieOptions {
+    httpOnly: boolean;
+    secure: boolean;
+    sameSite: "lax" | "strict" | "none";
+}
+
+const cookieOptions: cookieOptions = {
     httpOnly: true,
     secure: env.IS_PRODUCTION === 1,
     sameSite: env.IS_PRODUCTION === 1 ? "none" : "lax",

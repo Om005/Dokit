@@ -116,9 +116,9 @@ async function deleteProject(projectId: string) {
     }
 }
 
-const r2Manager = {
+const R2Manager = {
     copyBaseToProject,
     deleteProject,
 };
 
-export default r2Manager;
+export default R2Manager;

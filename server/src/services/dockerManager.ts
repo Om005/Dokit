@@ -2,6 +2,8 @@ import Docker from "dockerode";
 import { ProjectStack } from "@generated/prisma";
 import logger from "@utils/logger";
 import env from "@config/env";
+import queueActions from "@modules/queue/queueActions";
+import { prisma } from "@db/prisma";
 
 const docker = new Docker();
 
@@ -163,10 +165,38 @@ async function listDokitContainers(): Promise<DokitContainer[]> {
     }
 }
 
+async function cleanupOldContainers(): Promise<void> {
+    try {
+        const conainers = await listDokitContainers();
+        const now = Date.now();
+        const twoHrs = 2 * 60 * 60 * 1000;
+        const fifteenMins = 15 * 60 * 1000;
+        for (const container of conainers) {
+            const projectId = container.name.replace("dokit-", "");
+            const existingProject = await prisma.project.findUnique({ where: { id: projectId } });
+
+            if (
+                now - container.created.getTime() > twoHrs ||
+                !existingProject ||
+                existingProject.lastAccessedAt.getTime() < now - fifteenMins
+            ) {
+                queueActions.addContainerCleanupJob(projectId).catch((error) => {
+                    logger.error(`Failed to add cleanup job for container ${container.name}:`);
+                    logger.error(error);
+                });
+            }
+        }
+    } catch (error) {
+        logger.error("Error cleaning up old Dokit containers:");
+        logger.error(error);
+    }
+}
+
 const DockerManager = {
     createDokitContainer,
     deleteDokitContainer,
     listDokitContainers,
+    cleanupOldContainers,
 };
 
 export default DockerManager;

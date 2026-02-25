@@ -6,6 +6,10 @@ const validators = {
         description: z.string().max(500).optional(),
         stack: z.enum(["NODE", "REACT_VITE", "EXPRESS"]),
     }),
+
+    DeleteProjectSchema: z.object({
+        projectId: z.string().uuid(),
+    }),
 };
 
 export default validators;
