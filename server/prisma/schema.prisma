@@ -49,6 +49,8 @@ model Session {
 model Project {
   id             String        @id @default(uuid())
   name           String
+  isPasswordProtected Boolean       @default(false)
+  passwordHash    String?
   description    String?
   stack          ProjectStack
   ownerId        String

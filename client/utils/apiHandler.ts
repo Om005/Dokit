@@ -16,8 +16,8 @@ const createApiHandler = <InputType>(
             const response = await api.request<ApiResponse>({
                 url,
                 method,
-                params: method === "get" ? inputData : undefined,
-                data: method !== "get" ? inputData : undefined,
+                params: method === "get" || method === "delete" ? inputData : undefined,
+                data: method !== "get" && method !== "delete" ? inputData : undefined,
             });
 
             return response.data;

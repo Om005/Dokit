@@ -99,18 +99,16 @@
 // }
 
 import type { Metadata } from "next";
-// 1. Import Outfit
 import { Outfit, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import StoreProvider from "@/components/storeProvider";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/components/auth-provider";
 import { Toaster } from "@/components/ui/sonner";
+import StoreProvider from "@/components/store-provider";
 
-// 2. Configure Outfit
 const outfit = Outfit({
     subsets: ["latin"],
-    variable: "--font-outfit", // Rename variable
+    variable: "--font-outfit",
     display: "swap",
 });
 
@@ -132,7 +130,6 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en" suppressHydrationWarning>
-            {/* 3. Update the variable class name here */}
             <body className={`${outfit.variable} ${jetbrainsMono.variable} antialiased font-sans`}>
                 <ThemeProvider
                     attribute="class"

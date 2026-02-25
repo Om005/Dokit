@@ -11,11 +11,19 @@ import R2Manager from "services/r2Manager";
 import DockerManager from "services/dockerManager";
 import validators from "./validators";
 import queueActions from "@modules/queue/queueActions";
+import argon2 from "argon2";
 
 const controllers = {
     createProject: async (req: Request, res: Response) => {
         try {
-            const { name, description, stack } = req.body;
+            const { name, description, stack, password } = req.body;
+            let isPasswordProtected = false;
+            let passwordHash: string | null = null;
+            if (password !== undefined && typeof password === "string") {
+                isPasswordProtected = true;
+
+                passwordHash = await argon2.hash(password);
+            }
             const userId = req.meta.user?.id;
             if (!userId) {
                 return sendResponse(res, {
@@ -72,6 +80,8 @@ const controllers = {
                         description,
                         stack: stack as ProjectStack,
                         ownerId: userId,
+                        isPasswordProtected,
+                        passwordHash: isPasswordProtected ? passwordHash : null,
                     },
                 });
 
@@ -79,8 +89,8 @@ const controllers = {
                     success: true,
                     message: "Project created successfully.",
                     data: {
-                        project,
-                        containerInfo,
+                        project: { ...project, passwordHash: undefined, ownerId: undefined },
+                        // containerInfo,
                     },
                 });
             } catch (error) {
@@ -115,7 +125,7 @@ const controllers = {
 
     deleteProject: async (req: Request, res: Response) => {
         try {
-            const { projectId } = req.params;
+            const { projectId } = req.query;
             const result = validators.DeleteProjectSchema.safeParse({ projectId });
             if (!result.success) {
                 return sendResponse(res, {
@@ -163,6 +173,7 @@ const controllers = {
             return sendResponse(res, {
                 success: true,
                 message: "Project deleted successfully.",
+                data: { projectId: result.data.projectId },
             });
         } catch (error) {
             logger.error("Error in deleteProject controller:");
@@ -170,6 +181,54 @@ const controllers = {
             return sendResponse(res, {
                 success: false,
                 message: "Failed to delete project. Please try again later.",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    },
+
+    listProjects: async (req: Request, res: Response) => {
+        try {
+            const userId = req.meta.user?.id;
+
+            if (!userId) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Unauthorized",
+                    statusCode: StatusCodes.UNAUTHORIZED,
+                });
+            }
+
+            const projects = await prisma.project.findMany({
+                where: {
+                    ownerId: userId,
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    stack: true,
+                    isPasswordProtected: true,
+                    isArchived: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    lastAccessedAt: true,
+                },
+                orderBy: {
+                    createdAt: "desc",
+                },
+            });
+
+            return sendResponse(res, {
+                success: true,
+                message: "Projects retrieved successfully.",
+                data: { projects },
+            });
+        } catch (error) {
+            logger.error("Error in listProjects controller:");
+            logger.error(error);
+            return sendResponse(res, {
+                success: false,
+                message: "Failed to retrieve projects. Please try again later.",
                 statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
             });
         }

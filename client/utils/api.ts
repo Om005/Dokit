@@ -1,6 +1,4 @@
 import axios from "axios";
-import { store } from "@/store/store";
-import { authActions } from "@/store/authentication";
 import { toast } from "sonner";
 
 const api = axios.create({
@@ -66,8 +64,11 @@ api.interceptors.response.use(
         } catch (refreshError: any) {
             processQueue(refreshError);
 
-            console.log();
-            store.dispatch(authActions.signOut());
+            // Dynamically import to avoid circular dependency
+            const { store } = await import("@/store/store");
+            const { clearAuth } = await import("@/store/authentication");
+
+            store.dispatch(clearAuth());
 
             toast.error(
                 refreshError?.response?.data?.message || "Session expired. Please sign in again."

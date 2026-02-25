@@ -1,16 +1,16 @@
 "use client";
 
-import ProtectedRoute from "@/components/protected-route";
+import GuestRoute from "@/components/guest-route";
 import { Navbar } from "@/components/navbar";
 import React from "react";
 
 const layout = ({ children }: { children: React.ReactNode }) => {
     return (
         <div>
-            <ProtectedRoute>
+            <GuestRoute>
                 <Navbar />
                 {children}
-            </ProtectedRoute>
+            </GuestRoute>
         </div>
     );
 };

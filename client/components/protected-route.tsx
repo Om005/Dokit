@@ -5,13 +5,13 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 import { Loader } from "./loader";
 
-const GuestRoute = ({ children }: { children: React.ReactNode }) => {
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     const router = useRouter();
     const { isAuthenticated, isAuthLoading } = useSelector((state: RootState) => state.auth);
 
     useEffect(() => {
-        if (!isAuthLoading && isAuthenticated) {
-            router.push("/");
+        if (!isAuthLoading && !isAuthenticated) {
+            router.push("/signin");
         }
     }, [isAuthenticated, isAuthLoading, router]);
 
@@ -19,13 +19,9 @@ const GuestRoute = ({ children }: { children: React.ReactNode }) => {
         return <Loader />;
     }
 
-    if (isAuthenticated) {
-        return null;
-    }
-
-    if (isAuthLoading === false && isAuthenticated === false) {
+    if (isAuthLoading === false && isAuthenticated === true) {
         return <div>{children}</div>;
     }
 };
 
-export default GuestRoute;
+export default ProtectedRoute;

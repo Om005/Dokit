@@ -144,6 +144,14 @@ const authSlice = createSlice({
         setPasswordResetEmail(state, action) {
             state.passwordResetEmail = action.payload;
         },
+        clearAuth(state) {
+            state.isAuthenticated = false;
+            state.email = null;
+            state.firstName = null;
+            state.lastName = null;
+            state.username = null;
+            state.id = null;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -372,5 +380,5 @@ const authPersistConfig = {
 
 const persistedAuthReducer = persistReducer(authPersistConfig, authSlice.reducer);
 
-export const { setAccountCreationEmail, setPasswordResetEmail } = authSlice.actions;
+export const { setAccountCreationEmail, setPasswordResetEmail, clearAuth } = authSlice.actions;
 export { authActions, persistedAuthReducer };
