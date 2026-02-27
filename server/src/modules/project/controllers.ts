@@ -90,7 +90,7 @@ const controllers = {
                     message: "Project created successfully.",
                     data: {
                         project: { ...project, passwordHash: undefined, ownerId: undefined },
-                        // containerInfo,
+                        containerInfo,
                     },
                 });
             } catch (error) {
@@ -233,6 +233,96 @@ const controllers = {
             });
         }
     },
+
+    startProject: async (req: Request, res: Response) => {
+        try {
+            const { name, password } = req.body;
+            const userId = req.meta.user?.id;
+
+            const project = await prisma.project.findFirst({
+                where: {
+                    name: name,
+                    ownerId: userId,
+                },
+            });
+
+            if (!project) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Project not found.",
+                    statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+
+            if (project.isPasswordProtected) {
+                if (!password) {
+                    return sendResponse(res, {
+                        success: false,
+                        message: "Password is required to start this project.",
+                        statusCode: StatusCodes.BAD_REQUEST,
+                    });
+                }
+
+                const passwordValid = await argon2.verify(project.passwordHash!, password);
+                if (!passwordValid) {
+                    return sendResponse(res, {
+                        success: false,
+                        message: "Incorrect password.",
+                        statusCode: StatusCodes.BAD_REQUEST,
+                    });
+                }
+            }
+
+            try {
+                const containerInfo = await DockerManager.createDokitContainer(
+                    project.id,
+                    project.stack
+                );
+                if (!containerInfo.containerId) {
+                    logger.error("Failed to create dokit container for project.");
+                    return sendResponse(res, {
+                        success: false,
+                        message: "Failed to start project. Please try again later.",
+                        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+                    });
+                }
+
+                queueActions.addUpdateProjectLastAccessedJob(project.id).catch((error) => {
+                    logger.error(`Failed to add update last accessed job for project ${project.id}:`);
+                    logger.error(error);
+                });
+
+                return sendResponse(res, {
+                    success: true,
+                    message: "Project started successfully.",
+                    data: { 
+                        project: { ...project, passwordHash: undefined, ownerId: undefined },
+                        containerInfo 
+                    },
+                });
+
+
+            } catch (error) {
+                logger.error("Error starting project:");
+                logger.error(error);
+                return sendResponse(res, {
+                    success: false,
+                    message: "Failed to start project. Please try again later.",
+                    statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+                });
+            }
+            
+            
+        } catch (error) {
+            logger.error("Error in startProject controller:");
+            logger.error(error);
+            return sendResponse(res, {
+                success: false,
+                message: "Failed to create project. Please try again later.",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    }
 };
 
 export default controllers;

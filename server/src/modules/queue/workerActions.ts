@@ -1,5 +1,6 @@
 import { transporter } from "@config/mailer";
 import { MailerOptions } from "@config/mailer";
+import { prisma } from "@db/prisma";
 import logger from "@utils/logger";
 import type { Job } from "bullmq";
 import DockerManager from "services/dockerManager";
@@ -43,6 +44,20 @@ const workers = {
             throw error;
         }
     },
+    updateProjectLastAccessed: async (job: Job) => {
+        const { projectId } = job.data;
+        try {
+            await prisma.project.update({
+                where: { id: projectId },
+                data: { lastAccessedAt: new Date() },
+            });
+            logger.info(`Project last accessed updated for project ${projectId} by job id: ${job.id}`);
+        } catch (error) {
+            logger.error(`Failed to update project last accessed for project ${projectId} by job id: ${job.id}`);
+            logger.error(error);
+            throw error;
+        }
+    }
 };
 
 export default workers;

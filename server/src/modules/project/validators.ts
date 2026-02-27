@@ -11,6 +11,11 @@ const validators = {
     DeleteProjectSchema: z.object({
         projectId: z.string().uuid(),
     }),
+
+    startProjectSchema: z.object({
+        name: z.string().min(1).max(100),
+        password: z.string().min(6).max(100).optional(),
+     }),
 };
 
 export default validators;

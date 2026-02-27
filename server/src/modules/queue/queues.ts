@@ -36,4 +36,15 @@ const deleteProjectQueue = new Queue(queues.DELETE_PROJECT_QUEUE, {
     },
 });
 
-export { emailQueue, cleanContainersQueue, deleteProjectQueue };
+const updateProjectLastAccessedQueue = new Queue(queues.UPDATE_PROJECT_LAST_ACCESSED_QUEUE, {
+    connection: redisConfig,
+    defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+            type: "exponential",
+            delay: 3000,
+        },
+    },
+});
+
+export { emailQueue, cleanContainersQueue, deleteProjectQueue, updateProjectLastAccessedQueue };

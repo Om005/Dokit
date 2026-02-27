@@ -25,6 +25,15 @@ const initiatWorkers = () => {
         connection: redisConfig,
         concurrency: 5,
     });
+
+    const updateProjectLastAccessedWorker = new Worker(
+        queues.UPDATE_PROJECT_LAST_ACCESSED_QUEUE,
+        workers.updateProjectLastAccessed,
+        {
+            connection: redisConfig,
+            concurrency: 5,
+        }
+    );
 };
 
 export default initiatWorkers;
