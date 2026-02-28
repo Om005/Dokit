@@ -53,3 +53,4 @@ volumes:
 
 networks:
   dokit-network:
+    external: true 

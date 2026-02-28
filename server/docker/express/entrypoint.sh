@@ -1,6 +1,4 @@
 #!/bin/bash
-set -e
-
 # Configure rclone for Cloudflare R2
 mkdir -p ~/.config/rclone
 cat > ~/.config/rclone/rclone.conf << EOF
@@ -12,28 +10,23 @@ secret_access_key = ${R2_SECRET_ACCESS_KEY}
 endpoint = https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com
 EOF
 
-echo "Syncing project: ${PROJECT_ID}"
+mkdir -p /workspace
 
-# Pull project files from R2
-rclone copy r2:${R2_BUCKET_NAME}/code/${PROJECT_ID}/ /workspace/ --progress
+echo "Syncing project: ${PROJECT_ID}"
+rclone copy r2:${R2_BUCKET_NAME}/code/${PROJECT_ID}/ /workspace/ --progress || echo "Sync failed, continuing..."
 
 cd /workspace
-
-# Validate required files
-if [ ! -f "package.json" ]; then
-  echo "package.json not found!"
-  exit 1
+if [ -f "package.json" ]; then
+  echo "Installing dependencies..."
+  npm install || echo "npm install failed, you can run it manually."
 fi
 
-if [ ! -f "index.js" ]; then
-  echo "index.js not found!"
-  exit 1
-fi
+cat > /root/.bashrc << 'BASHRC'
+export PS1="\[\033[01;32m\]dokit\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ "
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+cd /workspace
+BASHRC
 
-echo "Installing dependencies..."
-npm install
+echo "Project is ready."
 
-echo "Project ready."
-
-# Start web terminal
-exec ttyd -W -t fontSize=14 -p 7681 bash
+exec ttyd -W -t fontSize=14 -p 7681 bash --rcfile /root/.bashrc

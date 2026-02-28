@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowLeft, Lock, Eye, EyeOff, Loader2, Check, X } from "lucide-react";
 import GuestRoute from "@/components/guest-route";
 import { Navbar } from "@/components/navbar";
+import { Payload } from "@/types/types";
 
 interface PasswordRequirement {
     label: string;
@@ -92,14 +93,15 @@ export default function ResetPasswordPage() {
         try {
             const result = await dispatch(
                 authActions.resetPassword({ email: passwordResetEmail, newPassword: password })
-            ).unwrap();
+            );
+            const payload = result.payload as Payload<void>;
 
-            if (result.success) {
+            if (payload.success) {
                 dispatch(setPasswordResetEmail(null));
                 toast.success("Password reset successfully");
                 router.push("/signin");
             } else {
-                toast.error(result.message || "Failed to reset password");
+                toast.error(payload.message || "Failed to reset password");
             }
         } catch (error) {
             const err = error as { message?: string };

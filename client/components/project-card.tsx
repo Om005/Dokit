@@ -1,13 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useDispatch, useSelector } from "react-redux";
 import { Lock, Trash2, Calendar } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DeleteProjectDialog } from "@/components/delete-project-dialog";
-import { getStackIcon } from "@/components/stack-logos";
+import { ProjectPasswordDialog } from "@/components/project-password-dialog";
+import { getStackIcon, getStackName } from "@/components/stack-logos";
+import { projectActions } from "@/store/project";
+import { AppDispatch, RootState } from "@/store/store";
 import { formatDistanceToNow } from "date-fns";
+import { Payload } from "@/types/types";
 
 interface ProjectCardProps {
     id: string;
@@ -26,11 +33,53 @@ export function ProjectCard({
     isPasswordProtected,
     createdAt,
 }: ProjectCardProps) {
+    const router = useRouter();
+    const dispatch = useDispatch<AppDispatch>();
+    const { startingProject } = useSelector((state: RootState) => state.project);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
     const stackInfo = getStackIcon(stack);
 
     const formattedDate = new Date(createdAt);
     const timeAgo = formatDistanceToNow(formattedDate, { addSuffix: true });
+
+    const handleOpenProject = async (password?: string) => {
+        try {
+            const result = await dispatch(
+                projectActions.startProject({
+                    name,
+                    password,
+                })
+            );
+
+            const payload = result.payload as Payload<{ project: { id: string } }>;
+
+            if (payload.success) {
+                toast.success("Project started successfully!");
+                const projectId = payload.data?.project?.id.toString().replaceAll("-", "");
+                if (projectId) {
+                    router.push(`/project/${projectId}`);
+                }
+                setPasswordDialogOpen(false);
+            } else {
+                toast.error(payload.message || "Failed to start project");
+            }
+        } catch (error) {
+            toast.error("An error occurred while starting the project");
+        }
+    };
+
+    const handleClickOpen = () => {
+        if (isPasswordProtected) {
+            setPasswordDialogOpen(true);
+        } else {
+            handleOpenProject();
+        }
+    };
+
+    const handlePasswordSubmit = async (password: string) => {
+        await handleOpenProject(password);
+    };
 
     return (
         <>
@@ -73,12 +122,10 @@ export function ProjectCard({
                     <div className="flex gap-2 pt-4 border-t">
                         <Button
                             variant="outline"
-                            // variant="secondary"
                             size="sm"
                             className="flex-1"
-                            onClick={() => {
-                                console.log("Open project:", id);
-                            }}
+                            onClick={handleClickOpen}
+                            disabled={startingProject}
                         >
                             Open
                         </Button>
@@ -99,6 +146,14 @@ export function ProjectCard({
                 onOpenChange={setDeleteDialogOpen}
                 projectId={id}
                 projectName={name}
+            />
+
+            <ProjectPasswordDialog
+                open={passwordDialogOpen}
+                projectName={name}
+                onOpenChange={setPasswordDialogOpen}
+                onSubmit={handlePasswordSubmit}
+                isLoading={startingProject}
             />
         </>
     );

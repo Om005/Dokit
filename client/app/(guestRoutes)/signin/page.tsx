@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Payload } from "@/types/types";
 
 export default function SignInPage() {
     const [email, setEmail] = useState("");
@@ -62,13 +63,14 @@ export default function SignInPage() {
                     email: email.trim(),
                     password,
                 })
-            ).unwrap();
+            );
+            const payload = result.payload as Payload<void>;
 
-            if (result.success) {
+            if (payload.success) {
                 toast.success("Signed in successfully!");
                 router.push("/");
             } else {
-                toast.error(result.message || "Invalid email or password");
+                toast.error(payload.message || "Invalid email or password");
             }
         } catch (error) {
             const err = error as { message?: string };

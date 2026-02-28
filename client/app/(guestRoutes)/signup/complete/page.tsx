@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, User, AtSign, Lock, Eye, EyeOff, Check, X } from "lucide-react";
+import { Payload } from "@/types/types";
 
 interface PasswordRequirement {
     label: string;
@@ -132,13 +133,14 @@ export default function CompletePage() {
                     username: userName.trim(),
                     password,
                 })
-            ).unwrap();
+            );
+            const payload = result.payload as Payload<void>;
 
-            if (result.success) {
+            if (payload.success) {
                 toast.success("Account created successfully!");
                 router.push("/");
             } else {
-                toast.error(result.message || "Failed to create account");
+                toast.error(payload.message || "Failed to create account");
             }
         } catch (error) {
             const err = error as { message?: string };

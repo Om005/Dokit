@@ -288,20 +288,20 @@ const controllers = {
                 }
 
                 queueActions.addUpdateProjectLastAccessedJob(project.id).catch((error) => {
-                    logger.error(`Failed to add update last accessed job for project ${project.id}:`);
+                    logger.error(
+                        `Failed to add update last accessed job for project ${project.id}:`
+                    );
                     logger.error(error);
                 });
 
                 return sendResponse(res, {
                     success: true,
                     message: "Project started successfully.",
-                    data: { 
+                    data: {
                         project: { ...project, passwordHash: undefined, ownerId: undefined },
-                        containerInfo 
+                        containerInfo,
                     },
                 });
-
-
             } catch (error) {
                 logger.error("Error starting project:");
                 logger.error(error);
@@ -311,8 +311,6 @@ const controllers = {
                     statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
                 });
             }
-            
-            
         } catch (error) {
             logger.error("Error in startProject controller:");
             logger.error(error);
@@ -322,7 +320,7 @@ const controllers = {
                 statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
             });
         }
-    }
+    },
 };
 
 export default controllers;

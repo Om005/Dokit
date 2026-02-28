@@ -8,7 +8,7 @@ const layout = ({ children }: { children: React.ReactNode }) => {
     return (
         <div>
             <ProtectedRoute>
-                <Navbar />
+                {/* <Navbar /> */}
                 {children}
             </ProtectedRoute>
         </div>

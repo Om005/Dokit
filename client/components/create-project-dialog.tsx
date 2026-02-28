@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store/store";
 import { projectActions } from "@/store/project";
 import { toast } from "sonner";
-import { Loader2, Lock } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -26,6 +26,8 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { STACKS } from "@/components/stack-logos";
+import { useRouter } from "next/navigation";
+import { ApiResponse, Payload } from "@/types/types";
 
 interface CreateProjectDialogProps {
     open: boolean;
@@ -34,12 +36,14 @@ interface CreateProjectDialogProps {
 
 export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogProps) {
     const dispatch = useDispatch<AppDispatch>();
+    const router = useRouter();
     const { creatingProject } = useSelector((state: RootState) => state.project);
     const [projectName, setProjectName] = useState("");
     const [description, setDescription] = useState("");
     const [selectedStack, setSelectedStack] = useState("REACT_VITE");
     const [isPasswordProtected, setIsPasswordProtected] = useState(false);
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -54,9 +58,19 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
             return;
         }
 
-        if (isPasswordProtected && !password.trim()) {
-            toast.error("Password is required when protection is enabled");
-            return;
+        if (isPasswordProtected) {
+            if (!password.trim()) {
+                toast.error("Password is required when protection is enabled");
+                return;
+            }
+            if (password.length < 6) {
+                toast.error("Password must be at least 6 characters");
+                return;
+            }
+            if (password.length > 50) {
+                toast.error("Password must be at most 50 characters");
+                return;
+            }
         }
 
         try {
@@ -70,7 +84,8 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
             );
             console.log("Create project result:", result.payload); // Debug log
 
-            if (result.payload?.success) {
+            const payload = result.payload as Payload<{ project: { id: string } }>;
+            if (payload.success) {
                 toast.success("Project created successfully!");
                 setProjectName("");
                 setDescription("");
@@ -78,6 +93,9 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                 setIsPasswordProtected(false);
                 setPassword("");
                 onOpenChange(false);
+                // const projectId = payload.data!.project.id.toString().substr(0, 13).replaceAll("-", "")
+                const projectId = payload.data!.project.id.toString().replaceAll("-", "");
+                router.push(`/project/${projectId}`);
             } else {
                 toast.error(result.payload?.message || "Failed to create project");
             }
@@ -159,16 +177,29 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                         </div>
 
                         {isPasswordProtected && (
-                            <div className="space-y-2">
+                            <div className="space-y-2 relative">
                                 <Label htmlFor="password">Password</Label>
                                 <Input
                                     id="password"
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
+                                    maxLength={50}
                                     placeholder="Enter a strong password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     disabled={creatingProject}
                                 />
+                                <p className="text-xs text-muted-foreground">6-50 characters</p>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute cursor-pointer right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="size-4" />
+                                    ) : (
+                                        <Eye className="size-4" />
+                                    )}
+                                </button>
                             </div>
                         )}
                     </div>
@@ -187,7 +218,8 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                             disabled={
                                 creatingProject ||
                                 !projectName.trim() ||
-                                (isPasswordProtected && !password.trim()) ||
+                                (isPasswordProtected &&
+                                    (!password.trim() || password.length < 6)) ||
                                 !selectedStack
                             }
                         >

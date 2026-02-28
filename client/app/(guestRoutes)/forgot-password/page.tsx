@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowLeft, Mail, Loader2 } from "lucide-react";
 import GuestRoute from "@/components/guest-route";
 import { Navbar } from "@/components/navbar";
+import { Payload } from "@/types/types";
 
 export default function ForgotPasswordPage() {
     const router = useRouter();
@@ -54,14 +55,16 @@ export default function ForgotPasswordPage() {
         }
 
         try {
-            const result = await dispatch(authActions.sendOtpForPasswordReset({ email })).unwrap();
+            const result = await dispatch(authActions.sendOtpForPasswordReset({ email }));
 
-            if (result.success) {
+            const payload = result.payload as Payload<void>;
+
+            if (payload.success) {
                 dispatch(setPasswordResetEmail(email));
                 toast.success("OTP sent to your email");
                 router.push("/forgot-password/verify");
             } else {
-                toast.error(result.message || "Failed to send OTP");
+                toast.error(payload.message || "Failed to send OTP");
             }
         } catch (error) {
             const err = error as { message?: string };

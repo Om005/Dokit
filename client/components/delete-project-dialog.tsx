@@ -15,6 +15,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Payload } from "@/types/types";
 
 interface DeleteProjectDialogProps {
     open: boolean;
@@ -35,12 +36,13 @@ export function DeleteProjectDialog({
     const handleDelete = async () => {
         try {
             const result = await dispatch(projectActions.deleteProject({ projectId }));
+            const payload = result.payload as Payload<void>;
 
-            if (result.payload?.success) {
+            if (payload.success) {
                 toast.success("Project deleted successfully");
                 onOpenChange(false);
             } else {
-                toast.error(result.payload?.message || "Failed to delete project");
+                toast.error(payload.message || "Failed to delete project");
             }
         } catch (error) {
             toast.error("An error occurred while deleting the project");

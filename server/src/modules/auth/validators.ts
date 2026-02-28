@@ -2,12 +2,12 @@ import { email, z } from "zod";
 
 const validators = {
     sendOtpForAccountCreation: z.object({
-        email: z.string().email(),
+        email: z.string().email("Invalid email address"),
     }),
 
     verifyAccountCreationOtp: z.object({
-        email: z.string().email(),
-        otp: z.string().length(6),
+        email: z.string().email("Invalid email address"),
+        otp: z.string().length(6, "OTP must be 6 characters long"),
     }),
 
     createAccount: z.object({

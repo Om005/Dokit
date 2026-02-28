@@ -18,6 +18,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Payload } from "@/types/types";
 
 export function Navbar() {
     const { theme, setTheme } = useTheme();
@@ -36,12 +37,14 @@ export function Navbar() {
 
     const handleLogout = async () => {
         try {
-            const result = await dispatch(authActions.signOut()).unwrap();
-            if (result.success) {
+            const result = await dispatch(authActions.signOut());
+            const payload = result.payload as Payload<void>;
+
+            if (payload.success) {
                 toast.success("Logged out successfully");
                 router.push("/");
             } else {
-                toast.error(result.message || "Failed to log out");
+                toast.error(payload.message || "Failed to log out");
             }
         } catch (error) {
             const err = error as { message?: string };

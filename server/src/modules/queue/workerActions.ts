@@ -51,13 +51,17 @@ const workers = {
                 where: { id: projectId },
                 data: { lastAccessedAt: new Date() },
             });
-            logger.info(`Project last accessed updated for project ${projectId} by job id: ${job.id}`);
+            logger.info(
+                `Project last accessed updated for project ${projectId} by job id: ${job.id}`
+            );
         } catch (error) {
-            logger.error(`Failed to update project last accessed for project ${projectId} by job id: ${job.id}`);
+            logger.error(
+                `Failed to update project last accessed for project ${projectId} by job id: ${job.id}`
+            );
             logger.error(error);
             throw error;
         }
-    }
+    },
 };
 
 export default workers;

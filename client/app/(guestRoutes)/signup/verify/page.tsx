@@ -16,6 +16,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { Loader2, ArrowLeft, ArrowRight } from "lucide-react";
 import GuestRoute from "@/components/guest-route";
 import { Navbar } from "@/components/navbar";
+import { Payload } from "@/types/types";
 
 export default function VerifyPage() {
     const [otp, setOtp] = useState("");
@@ -45,13 +46,14 @@ export default function VerifyPage() {
         try {
             const result = await dispatch(
                 authActions.verifyAccountCreationOtp({ email: accountCreationEmail, otp })
-            ).unwrap();
+            );
+            const payload = result.payload as Payload<void>;
 
-            if (result.success) {
-                toast.success(result.message || "OTP verified successfully");
+            if (payload.success) {
+                toast.success(payload.message || "OTP verified successfully");
                 router.push("/signup/complete");
             } else {
-                toast.error(result.message || "Invalid OTP");
+                toast.error(payload.message || "Invalid OTP");
             }
         } catch (error) {
             const err = error as { message?: string };
@@ -69,12 +71,13 @@ export default function VerifyPage() {
         try {
             const result = await dispatch(
                 authActions.sendOtpForAccountCreation({ email: accountCreationEmail })
-            ).unwrap();
+            );
+            const payload = result.payload as Payload<void>;
 
-            if (result.success) {
+            if (payload.success) {
                 toast.success("OTP resent to your email");
             } else {
-                toast.error(result.message || "Failed to resend OTP");
+                toast.error(payload.message || "Failed to resend OTP");
             }
         } catch (error) {
             const err = error as { message?: string };

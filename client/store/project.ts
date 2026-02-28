@@ -20,6 +20,7 @@ interface intialProjectState {
     loadingProjects: boolean;
     creatingProject: boolean;
     deletingProject: boolean;
+    startingProject: boolean;
 }
 
 const projectActions = {
@@ -48,6 +49,15 @@ const projectActions = {
         "project/deleteProject",
         createApiHandler<{ projectId: string }>("/api/project/delete-project", "delete")
     ),
+
+    startProject: createAsyncThunk<
+        ApiResponse,
+        { name: string; password?: string },
+        { rejectValue: ApiResponse }
+    >(
+        "project/startProject",
+        createApiHandler<{ name: string; password?: string }>("/api/project/start-project", "post")
+    ),
 };
 
 const initialState: intialProjectState = {
@@ -55,6 +65,7 @@ const initialState: intialProjectState = {
     loadingProjects: false,
     creatingProject: false,
     deletingProject: false,
+    startingProject: false,
 };
 
 const projectSlice = createSlice({
@@ -110,6 +121,18 @@ const projectSlice = createSlice({
             })
             .addCase(projectActions.deleteProject.rejected, (state) => {
                 state.deletingProject = false;
+            })
+
+            .addCase(projectActions.startProject.pending, (state) => {
+                state.startingProject = true;
+            })
+
+            .addCase(projectActions.startProject.fulfilled, (state, action) => {
+                state.startingProject = false;
+            })
+
+            .addCase(projectActions.startProject.rejected, (state) => {
+                state.startingProject = false;
             });
     },
 });

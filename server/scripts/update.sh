@@ -10,14 +10,12 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
-# Load env vars from file
 set -a
 source "$ENV_FILE"
 set +a
 
 : "${MAXMIND_LICENSE_KEY:?MAXMIND_LICENSE_KEY not set in $ENV_FILE}"
 
-# CONFIGURATION
 LICENSE_KEY="$MAXMIND_LICENSE_KEY"
 EDITION_ID="GeoLite2-City" # Or "GeoLite2-Country"
 DEST_DIR="./geoip"

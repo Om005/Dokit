@@ -4,6 +4,7 @@ import logger from "@utils/logger";
 import env from "@config/env";
 import queueActions from "@modules/queue/queueActions";
 import { prisma } from "@db/prisma";
+import net from "net";
 
 const docker = new Docker();
 
@@ -21,51 +22,60 @@ interface DokitContainer {
     created: Date;
 }
 
+// async function waitForPort(host: string, port: number, timeoutMs = 30000): Promise<void> {
+//     const start = Date.now();
+//     while (Date.now() - start < timeoutMs) {
+//         try {
+//             await new Promise<void>((resolve, reject) => {
+//                 const socket = new net.Socket();
+//                 socket.setTimeout(1000);
+//                 socket.on("connect", () => { socket.destroy(); resolve(); });
+//                 socket.on("error", reject);
+//                 socket.on("timeout", reject);
+//                 socket.connect(port, host);
+//             });
+//             console.log(`Port ${port} on ${host} is open!`);
+//             return;
+//         } catch {
+//             console.log(`Port ${port} on ${host} not open yet, retrying...`);
+//             await new Promise(r => setTimeout(r, 300));
+//         }
+//     }
+//     throw new Error(`Timed out waiting for ${host}:${port}`);
+// }
+
 async function waitForContainerReady(
     container: Docker.Container,
-    timeoutMs = 60000
-): Promise<boolean> {
-    const startTime = Date.now();
-
-    try {
-        while (Date.now() - startTime < timeoutMs) {
-            const info = await container.inspect();
-            const status = info.State.Status;
-
-            if (status === "exited" || status === "dead") {
-                const logsBuffer = await container.logs({ stdout: true, stderr: true });
-                logger.error(
-                    `Container ${info.Name} exited unexpectedly with status '${status}'. Logs:\n${logsBuffer.toString("utf8").trim()}`
-                );
-                return false;
+    timeoutMs = 30000
+): Promise<void> {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+        try {
+            const exec = await container.exec({
+                Cmd: ["sh", "-c", "curl -sf http://localhost:7681"],
+                AttachStdout: true,
+                AttachStderr: true,
+            });
+            const stream = await exec.start({ hijack: true, stdin: false });
+            await new Promise((r) => stream.on("end", r));
+            const inspectResult = await exec.inspect();
+            if (inspectResult.ExitCode === 0) {
+                console.log("ttyd is ready!");
+                return;
             }
-
-            if (status === "running") {
-                const logsBuffer = await container.logs({ stdout: true, stderr: true, tail: 50 });
-                const logs = logsBuffer.toString("utf8");
-
-                if (logs.includes("Project ready.")) {
-                    return true;
-                }
-            }
-
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
-
-        logger.error(`Container did not become ready within ${timeoutMs / 1000} seconds.`);
-        return false;
-    } catch (error) {
-        logger.error(`Error during waitForContainerReady for container ${container.id}:`);
-        logger.error(error);
-        return false;
+        } catch {}
+        await new Promise((r) => setTimeout(r, 300));
     }
+    throw new Error(`Container not ready after ${timeoutMs}ms`);
 }
 
 async function createDokitContainer(
     projectId: string,
     stack: ProjectStack
 ): Promise<{ containerId: string | null; containerName: string }> {
-    const containerName = `dokit-${projectId}`;
+    // const containerProjectId = projectId.replace(/-/g, "").slice(0, 12);
+    const containerProjectId = projectId.replaceAll("-", "");
+    const containerName = `dokit-${containerProjectId}`;
     const imageName = `dokit-${stack.toLowerCase()}:latest`;
 
     const existingContainer = docker.getContainer(containerName);
@@ -75,7 +85,11 @@ async function createDokitContainer(
 
         if (!info.State.Running) {
             await existingContainer.start();
-            await waitForContainerReady(existingContainer);
+            const containerInfo = await existingContainer.inspect();
+            // const hostPort = containerInfo.NetworkSettings.Ports["7681/tcp"]?.[0]?.HostPort;
+            // if (!hostPort) throw new Error("Could not get host port for container");
+            // await waitForPort("127.0.0.1", parseInt(hostPort));
+            // await waitForContainerReady(existingContainer);
         }
 
         return { containerId: info.Id, containerName };
@@ -105,11 +119,19 @@ async function createDokitContainer(
                 HostConfig: {
                     NetworkMode: NETWORK,
                     AutoRemove: false,
+                    PortBindings: {
+                        "7681/tcp": [{ HostPort: "0" }], // 0 = random available port
+                    },
                 },
             });
 
             await container.start();
-            await waitForContainerReady(container);
+
+            const containerInfo = await container.inspect();
+            // const hostPort = containerInfo.NetworkSettings.Ports["7681/tcp"]?.[0]?.HostPort;
+            // if (!hostPort) throw new Error("Could not get host port for container");
+            // await waitForPort("127.0.0.1", parseInt(hostPort));
+            // await waitForContainerReady(container);
 
             return { containerId: container.id, containerName };
         } catch (createError) {
@@ -127,7 +149,9 @@ async function createDokitContainer(
 }
 
 async function deleteDokitContainer(projectId: string): Promise<boolean> {
-    const containerName = `dokit-${projectId}`;
+    // const containerProjectId = projectId.replace(/-/g, "").slice(0, 12);
+    const containerProjectId = projectId.replaceAll("-", "");
+    const containerName = `dokit-${containerProjectId}`;
 
     try {
         const container = docker.getContainer(containerName);

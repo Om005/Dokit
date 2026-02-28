@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, Mail, ArrowRight } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import GuestRoute from "@/components/guest-route";
+import { Payload } from "@/types/types";
 
 export default function SignupPage() {
     const [email, setEmail] = useState("");
@@ -54,16 +55,15 @@ export default function SignupPage() {
         }
 
         try {
-            const result = await dispatch(
-                authActions.sendOtpForAccountCreation({ email })
-            ).unwrap();
+            const result = await dispatch(authActions.sendOtpForAccountCreation({ email }));
+            const payload = result.payload as Payload<void>;
 
-            if (result.success) {
+            if (payload.success) {
                 dispatch(setAccountCreationEmail(email));
                 toast.success("OTP sent to your email");
                 router.push("/signup/verify");
             } else {
-                toast.error(result.message || "Failed to send OTP");
+                toast.error(payload.message || "Failed to send OTP");
             }
         } catch (error) {
             const err = error as { message?: string };

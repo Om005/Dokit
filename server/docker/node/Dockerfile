@@ -1,7 +1,6 @@
 # docker/node/Dockerfile
 FROM node:20-bullseye-slim
 
-# Install system tools
 RUN apt-get update && apt-get install -y \
     git curl wget vim nano bash \
     build-essential \
@@ -16,11 +15,9 @@ RUN curl -Lo /usr/local/bin/ttyd \
 # Install rclone (to sync R2 bucket to local filesystem)
 RUN curl https://rclone.org/install.sh | bash
 
-# Create workspace directory
 RUN mkdir -p /workspace
 WORKDIR /workspace
 
-# Entrypoint script
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

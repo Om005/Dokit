@@ -1,12 +1,15 @@
 {
-    "name": "Repl3",
+    "name": "dokit",
     "version": "1.0.0",
     "description": "",
     "main": "index.js",
     "scripts": {
         "format": "prettier --write \"**/*.{js,ts,tsx,json,css}\"",
         "format:check": "prettier --check \"**/*.{js,ts,tsx,json,css}\"",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "docker:up": "docker compose -f server/docker-compose.yaml up -d",
+        "dev": "pnpm run docker:up && pnpm --parallel --filter ./server --filter ./client dev",
+        "down": "docker compose -f server/docker-compose.yaml down"
     },
     "keywords": [],
     "author": "",

@@ -13,6 +13,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { ArrowLeft, Loader2 } from "lucide-react";
 import GuestRoute from "@/components/guest-route";
 import { Navbar } from "@/components/navbar";
+import { Payload } from "@/types/types";
 
 export default function ForgotPasswordVerifyPage() {
     const router = useRouter();
@@ -50,13 +51,14 @@ export default function ForgotPasswordVerifyPage() {
         try {
             const result = await dispatch(
                 authActions.verifyPasswordResetOtp({ email: passwordResetEmail, otp })
-            ).unwrap();
+            );
+            const payload = result.payload as Payload<void>;
 
-            if (result.success) {
-                toast.success(result.message || "OTP verified successfully");
+            if (payload.success) {
+                toast.success(payload.message || "OTP verified successfully");
                 router.push("/forgot-password/reset-password");
             } else {
-                toast.error(result.message || "Invalid OTP");
+                toast.error(payload.message || "Invalid OTP");
                 setOtp("");
             }
         } catch (error) {
@@ -72,14 +74,15 @@ export default function ForgotPasswordVerifyPage() {
         try {
             const result = await dispatch(
                 authActions.sendOtpForPasswordReset({ email: passwordResetEmail })
-            ).unwrap();
+            );
+            const payload = result.payload as Payload<void>;
 
-            if (result.success) {
+            if (payload.success) {
                 toast.success("New OTP sent to your email");
                 setResendCooldown(60);
                 setOtp("");
             } else {
-                toast.error(result.message || "Failed to resend OTP");
+                toast.error(payload.message || "Failed to resend OTP");
             }
         } catch (error) {
             const err = error as { message?: string };
