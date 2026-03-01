@@ -11,6 +11,15 @@ const initializeScheduler = () => {
             logger.error(error);
         }
     });
+
+    cron.schedule("0 * * * *", async () => {
+        try {
+            await DockerManager.syncAllcontainersToR2();
+        } catch (error) {
+            logger.error("Error running scheduled sync to R2:");
+            logger.error(error);
+        }
+    });
 };
 
 export default initializeScheduler;

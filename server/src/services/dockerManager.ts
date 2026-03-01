@@ -22,53 +22,6 @@ interface DokitContainer {
     created: Date;
 }
 
-// async function waitForPort(host: string, port: number, timeoutMs = 30000): Promise<void> {
-//     const start = Date.now();
-//     while (Date.now() - start < timeoutMs) {
-//         try {
-//             await new Promise<void>((resolve, reject) => {
-//                 const socket = new net.Socket();
-//                 socket.setTimeout(1000);
-//                 socket.on("connect", () => { socket.destroy(); resolve(); });
-//                 socket.on("error", reject);
-//                 socket.on("timeout", reject);
-//                 socket.connect(port, host);
-//             });
-//             console.log(`Port ${port} on ${host} is open!`);
-//             return;
-//         } catch {
-//             console.log(`Port ${port} on ${host} not open yet, retrying...`);
-//             await new Promise(r => setTimeout(r, 300));
-//         }
-//     }
-//     throw new Error(`Timed out waiting for ${host}:${port}`);
-// }
-
-async function waitForContainerReady(
-    container: Docker.Container,
-    timeoutMs = 30000
-): Promise<void> {
-    const start = Date.now();
-    while (Date.now() - start < timeoutMs) {
-        try {
-            const exec = await container.exec({
-                Cmd: ["sh", "-c", "curl -sf http://localhost:7681"],
-                AttachStdout: true,
-                AttachStderr: true,
-            });
-            const stream = await exec.start({ hijack: true, stdin: false });
-            await new Promise((r) => stream.on("end", r));
-            const inspectResult = await exec.inspect();
-            if (inspectResult.ExitCode === 0) {
-                console.log("ttyd is ready!");
-                return;
-            }
-        } catch {}
-        await new Promise((r) => setTimeout(r, 300));
-    }
-    throw new Error(`Container not ready after ${timeoutMs}ms`);
-}
-
 async function createDokitContainer(
     projectId: string,
     stack: ProjectStack
@@ -86,10 +39,6 @@ async function createDokitContainer(
         if (!info.State.Running) {
             await existingContainer.start();
             const containerInfo = await existingContainer.inspect();
-            // const hostPort = containerInfo.NetworkSettings.Ports["7681/tcp"]?.[0]?.HostPort;
-            // if (!hostPort) throw new Error("Could not get host port for container");
-            // await waitForPort("127.0.0.1", parseInt(hostPort));
-            // await waitForContainerReady(existingContainer);
         }
 
         return { containerId: info.Id, containerName };
@@ -119,19 +68,12 @@ async function createDokitContainer(
                 HostConfig: {
                     NetworkMode: NETWORK,
                     AutoRemove: false,
-                    PortBindings: {
-                        "7681/tcp": [{ HostPort: "0" }], // 0 = random available port
-                    },
                 },
             });
 
             await container.start();
 
             const containerInfo = await container.inspect();
-            // const hostPort = containerInfo.NetworkSettings.Ports["7681/tcp"]?.[0]?.HostPort;
-            // if (!hostPort) throw new Error("Could not get host port for container");
-            // await waitForPort("127.0.0.1", parseInt(hostPort));
-            // await waitForContainerReady(container);
 
             return { containerId: container.id, containerName };
         } catch (createError) {
@@ -149,7 +91,6 @@ async function createDokitContainer(
 }
 
 async function deleteDokitContainer(projectId: string): Promise<boolean> {
-    // const containerProjectId = projectId.replace(/-/g, "").slice(0, 12);
     const containerProjectId = projectId.replaceAll("-", "");
     const containerName = `dokit-${containerProjectId}`;
 
@@ -196,7 +137,9 @@ async function cleanupOldContainers(): Promise<void> {
         const twoHrs = 2 * 60 * 60 * 1000;
         const fifteenMins = 15 * 60 * 1000;
         for (const container of conainers) {
-            const projectId = container.name.replace("dokit-", "");
+            const projectId = container.name
+                .replace("dokit-", "")
+                .replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, "$1-$2-$3-$4-$5");
             const existingProject = await prisma.project.findUnique({ where: { id: projectId } });
 
             if (
@@ -216,11 +159,91 @@ async function cleanupOldContainers(): Promise<void> {
     }
 }
 
+async function syncWorkspaceToR2(projectId: string): Promise<void> {
+    try {
+        const containerProjectId = projectId.replaceAll("-", "");
+        const containerName = `dokit-${containerProjectId}`;
+        const container = docker.getContainer(containerName);
+
+        const rcloneCmd = `
+                rclone sync /workspace/ r2:${env.R2_BUCKET_NAME}/code/${projectId}/ \\
+                --exclude "node_modules/**" \\
+                --exclude "dist/**" \\
+                --exclude "build/**" \\
+                --exclude "out/**" \\
+                --exclude ".next/**" \\
+                --exclude ".nuxt/**" \\
+                --exclude ".svelte-kit/**" \\
+                --exclude ".angular/**" \\
+                --exclude ".cache/**" \\
+                --exclude "coverage/**" \\
+                --exclude "__pycache__/**" \\
+                --exclude "*.py[cod]" \\
+                --exclude "*\$py.class" \\
+                --exclude "venv/**" \\
+                --exclude ".venv/**" \\
+                --exclude "env/**" \\
+                --exclude ".pytest_cache/**" \\
+                --exclude ".tox/**" \\
+                --exclude "vendor/**" \\
+                --exclude "target/**" \\
+                --exclude "bin/**" \\
+                --exclude "obj/**" \\
+                --exclude ".gradle/**" \\
+                --exclude "*.log" \\
+                --exclude "npm-debug.log*" \\
+                --exclude "yarn-error.log*" \\
+                --exclude ".DS_Store" \\
+                --exclude "Thumbs.db"
+            `;
+        const exec = await container.exec({
+            Cmd: ["bash", "-c", rcloneCmd],
+            AttachStdout: true,
+            AttachStderr: true,
+        });
+        const stream = await exec.start({ hijack: true, stdin: false });
+        await new Promise((resolve, reject) => {
+            stream.on("end", resolve);
+            stream.on("error", reject);
+        });
+        const inspectResult = await exec.inspect();
+        if (inspectResult.ExitCode !== 0) {
+            logger.error(
+                `Rclone sync failed for project ${projectId} with exit code ${inspectResult.ExitCode}`
+            );
+        } else {
+            logger.info(`Rclone sync completed successfully for project ${projectId}`);
+        }
+    } catch (error) {
+        logger.error(`Error syncing workspace to R2 for project ${projectId}:`);
+        logger.error(error);
+    }
+}
+
+async function syncAllcontainersToR2(): Promise<void> {
+    try {
+        const containers = await listDokitContainers();
+        for (const container of containers) {
+            const projectId = container.name
+                .replace("dokit-", "")
+                .replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, "$1-$2-$3-$4-$5");
+            queueActions.addSyncToR2Job(projectId).catch((error) => {
+                logger.error(`Failed to add sync to R2 job for container ${container.name}:`);
+                logger.error(error);
+            });
+        }
+    } catch (error) {
+        logger.error("Error syncing all workspaces to R2:");
+        logger.error(error);
+    }
+}
 const DockerManager = {
     createDokitContainer,
     deleteDokitContainer,
     listDokitContainers,
     cleanupOldContainers,
+    syncWorkspaceToR2,
+    syncAllcontainersToR2,
 };
 
 export default DockerManager;

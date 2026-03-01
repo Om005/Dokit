@@ -21,6 +21,7 @@ const workers = {
     cleanupContainer: async (job: Job) => {
         const { projectId } = job.data;
         try {
+            await DockerManager.syncWorkspaceToR2(projectId);
             await DockerManager.deleteDokitContainer(projectId);
             logger.info(
                 `Container cleanup completed for project ${projectId} by job id: ${job.id}`
@@ -57,6 +58,19 @@ const workers = {
         } catch (error) {
             logger.error(
                 `Failed to update project last accessed for project ${projectId} by job id: ${job.id}`
+            );
+            logger.error(error);
+            throw error;
+        }
+    },
+    syncToR2: async (job: Job) => {
+        try {
+            const { projectId } = job.data;
+            await DockerManager.syncWorkspaceToR2(projectId);
+            logger.info(`Sync to R2 completed for project ${projectId} by job id: ${job.id}`);
+        } catch (error) {
+            logger.error(
+                `Failed to sync to R2 for project ${job.data.projectId} by job id: ${job.id}`
             );
             logger.error(error);
             throw error;

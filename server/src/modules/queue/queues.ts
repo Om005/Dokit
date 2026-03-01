@@ -47,4 +47,21 @@ const updateProjectLastAccessedQueue = new Queue(queues.UPDATE_PROJECT_LAST_ACCE
     },
 });
 
-export { emailQueue, cleanContainersQueue, deleteProjectQueue, updateProjectLastAccessedQueue };
+const syncToR2Queue = new Queue(queues.SYNC_TO_R2_QUEUE, {
+    connection: redisConfig,
+    defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+            type: "exponential",
+            delay: 3000,
+        },
+    },
+});
+
+export {
+    emailQueue,
+    cleanContainersQueue,
+    deleteProjectQueue,
+    updateProjectLastAccessedQueue,
+    syncToR2Queue,
+};

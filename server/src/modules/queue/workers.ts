@@ -34,6 +34,11 @@ const initiatWorkers = () => {
             concurrency: 5,
         }
     );
+
+    const syncToR2Worker = new Worker(queues.SYNC_TO_R2_QUEUE, workers.syncToR2, {
+        connection: redisConfig,
+        concurrency: 5,
+    });
 };
 
 export default initiatWorkers;

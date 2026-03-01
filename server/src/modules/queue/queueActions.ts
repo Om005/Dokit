@@ -4,6 +4,7 @@ import {
     cleanContainersQueue,
     deleteProjectQueue,
     emailQueue,
+    syncToR2Queue,
     updateProjectLastAccessedQueue,
 } from "./queues";
 
@@ -82,6 +83,24 @@ const queueActions = {
             );
         } catch (error) {
             logger.error("Error adding update project last accessed job to queue:");
+            logger.error(error);
+            throw error;
+        }
+    },
+
+    addSyncToR2Job: async (projectId: string) => {
+        try {
+            syncToR2Queue.add(
+                "sync-to-r2",
+                { projectId },
+                {
+                    removeOnComplete: true,
+                    removeOnFail: { count: 5 },
+                }
+            );
+            logger.info(`Sync to R2 job added to the queue for project ${projectId}`);
+        } catch (error) {
+            logger.error("Error adding sync to R2 job to queue:");
             logger.error(error);
             throw error;
         }

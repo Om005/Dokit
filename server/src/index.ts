@@ -43,6 +43,20 @@ app.use(globalErrorHandler);
 app.use("/api/auth", authRoutes);
 app.use("/api/project", projectRoutes);
 
+app.post("/sync", async (req: Request, res: Response) => {
+    try {
+        const { projectId } = req.body;
+        if (!projectId) {
+            return res.status(400).json({ error: "Missing projectId" });
+        }
+        const result = await DockerManager.syncWorkspaceToR2(projectId);
+        res.json(result);
+    } catch (error) {
+        console.error("Error syncing workspace to R2:", error);
+        res.status(500).json({ error: "Failed to sync workspace to R2" });
+    }
+});
+
 const PORT = env.PORT;
 
 app.listen(PORT, () => {

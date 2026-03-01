@@ -14,6 +14,7 @@ import { getStackIcon, getStackName } from "@/components/stack-logos";
 import { projectActions } from "@/store/project";
 import { AppDispatch, RootState } from "@/store/store";
 import { formatDistanceToNow } from "date-fns";
+import { Payload, Project } from "@/types/types";
 
 interface ProjectCardProps {
     id: string;
@@ -51,15 +52,21 @@ export function ProjectCard({
                     password,
                 })
             );
+            const payload = result.payload as Payload<{ project: Project }>;
 
-            if (result.payload?.success) {
-                toast.success("Project started successfully!");
-                const projectId = (result.payload?.data as any)?.project?.id;
+            if (payload?.success) {
+                const projectId = payload?.data?.project?.id;
                 if (projectId) {
-                    router.push(`/project/${projectId}`);
+                    toast.success("Project started successfully!");
+                    const containerProjectId = projectId.replaceAll("-", "");
+                    if (projectId) {
+                        router.push(`/project/${containerProjectId}`);
+                    }
+                } else {
+                    toast.error("Project started but failed to retrieve project ID");
                 }
             } else {
-                toast.error(result.payload?.message || "Failed to start project");
+                toast.error(payload?.message || "Failed to start project");
             }
         } catch (error) {
             toast.error("An error occurred while starting the project");
