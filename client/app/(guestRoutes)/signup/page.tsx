@@ -15,8 +15,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Mail, ArrowRight } from "lucide-react";
-import { Navbar } from "@/components/navbar";
-import GuestRoute from "@/components/guest-route";
 import { Payload } from "@/types/types";
 
 export default function SignupPage() {

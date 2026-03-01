@@ -14,8 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Lock, Eye, EyeOff, Loader2, Check, X } from "lucide-react";
-import GuestRoute from "@/components/guest-route";
-import { Navbar } from "@/components/navbar";
 import { Payload } from "@/types/types";
 
 interface PasswordRequirement {

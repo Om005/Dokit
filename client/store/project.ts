@@ -21,12 +21,23 @@ interface intialProjectState {
     creatingProject: boolean;
     deletingProject: boolean;
     startingProject: boolean;
+    changingSettings: boolean;
+    gettingProjectDetails: boolean;
 }
 
 const projectActions = {
     fetchProjects: createAsyncThunk<ApiResponse, void, { rejectValue: ApiResponse }>(
         "project/fetchProjects",
         createApiHandler<void>("/api/project/list-projects", "get")
+    ),
+
+    getProjectDetails: createAsyncThunk<
+        ApiResponse,
+        { projectId: string },
+        { rejectValue: ApiResponse }
+    >(
+        "project/getProjectDetails",
+        createApiHandler<{ projectId: string }>("/api/project/project-details", "get")
     ),
 
     createProject: createAsyncThunk<
@@ -43,11 +54,14 @@ const projectActions = {
 
     deleteProject: createAsyncThunk<
         ApiResponse,
-        { projectId: string },
+        { projectId: string; accountPassword: string },
         { rejectValue: ApiResponse }
     >(
         "project/deleteProject",
-        createApiHandler<{ projectId: string }>("/api/project/delete-project", "delete")
+        createApiHandler<{ projectId: string; accountPassword: string }>(
+            "/api/project/delete-project",
+            "post"
+        )
     ),
 
     startProject: createAsyncThunk<
@@ -58,6 +72,33 @@ const projectActions = {
         "project/startProject",
         createApiHandler<{ name: string; password?: string }>("/api/project/start-project", "post")
     ),
+
+    changeProjectSettings: createAsyncThunk<
+        ApiResponse,
+        {
+            name: string;
+            newName: string;
+            description: string;
+            isPasswordProtected: boolean;
+            visibility: string;
+            isArchived: boolean;
+            password?: string;
+            accountPassword: string;
+        },
+        { rejectValue: ApiResponse }
+    >(
+        "project/changeProjectSettings",
+        createApiHandler<{
+            name: string;
+            newName: string;
+            description?: string;
+            isPasswordProtected: boolean;
+            visibility: string;
+            isArchived: boolean;
+            password?: string;
+            accountPassword: string;
+        }>("/api/project/change-settings", "post")
+    ),
 };
 
 const initialState: intialProjectState = {
@@ -66,6 +107,8 @@ const initialState: intialProjectState = {
     creatingProject: false,
     deletingProject: false,
     startingProject: false,
+    changingSettings: false,
+    gettingProjectDetails: false,
 };
 
 const projectSlice = createSlice({
@@ -133,6 +176,44 @@ const projectSlice = createSlice({
 
             .addCase(projectActions.startProject.rejected, (state) => {
                 state.startingProject = false;
+            })
+
+            .addCase(projectActions.changeProjectSettings.pending, (state) => {
+                state.changingSettings = true;
+            })
+
+            .addCase(projectActions.changeProjectSettings.fulfilled, (state, action) => {
+                const payload = action.payload as ApiResponse & { data?: { project: Project } };
+                if (payload.success && payload.data && payload.data.project) {
+                    const updatedProject = payload.data.project;
+                    state.projects = state.projects.map((project) =>
+                        project.id === updatedProject.id ? updatedProject : project
+                    );
+                }
+                state.changingSettings = false;
+            })
+
+            .addCase(projectActions.changeProjectSettings.rejected, (state) => {
+                state.changingSettings = false;
+            })
+
+            .addCase(projectActions.getProjectDetails.pending, (state) => {
+                state.gettingProjectDetails = true;
+            })
+
+            .addCase(projectActions.getProjectDetails.fulfilled, (state, action) => {
+                state.gettingProjectDetails = false;
+                const payload = action.payload as ApiResponse & { data?: { project: Project } };
+                if (payload.success && payload.data && payload.data.project) {
+                    const updatedProject = payload.data.project;
+                    state.projects = state.projects.map((project) =>
+                        project.id === updatedProject.id ? updatedProject : project
+                    );
+                }
+            })
+
+            .addCase(projectActions.getProjectDetails.rejected, (state) => {
+                state.gettingProjectDetails = false;
             });
     },
 });

@@ -3,16 +3,21 @@
 import ProtectedRoute from "@/components/protected-route";
 import { Navbar } from "@/components/navbar";
 import React from "react";
+import { usePathname } from "next/navigation";
 
-const layout = ({ children }: { children: React.ReactNode }) => {
+const Layout = ({ children }: { children: React.ReactNode }) => {
+    const pathname = usePathname();
+    console.log("Current Pathname:", pathname);
+    const noNavbarPaths = ["/projects/"];
+    const showNavbar = !(noNavbarPaths.includes(pathname) || pathname.startsWith("/project/"));
     return (
         <div>
             <ProtectedRoute>
-                {/* <Navbar /> */}
+                {showNavbar && <Navbar />}
                 {children}
             </ProtectedRoute>
         </div>
     );
 };
 
-export default layout;
+export default Layout;

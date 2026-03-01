@@ -43,19 +43,10 @@ app.use(globalErrorHandler);
 app.use("/api/auth", authRoutes);
 app.use("/api/project", projectRoutes);
 
-app.post("/temp", async (req: Request, res: Response) => {
-    try {
-        const { projectId, stack } = req.body;
-        await DockerManager.createDokitContainer(projectId, stack);
-        res.json({ message: "Container created" });
-    } catch (error) {
-        return res.status(500).json({ error: "Failed to create container" });
-    }
-});
 const PORT = env.PORT;
 
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 
-    // initializeScheduler();
+    initializeScheduler();
 });

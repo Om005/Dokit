@@ -3,18 +3,17 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
-import { Lock, Trash2, Calendar } from "lucide-react";
+import { Lock, Calendar, Archive } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DeleteProjectDialog } from "@/components/delete-project-dialog";
+import { ProjectMenu } from "@/components/project-menu";
 import { ProjectPasswordDialog } from "@/components/project-password-dialog";
 import { getStackIcon, getStackName } from "@/components/stack-logos";
 import { projectActions } from "@/store/project";
 import { AppDispatch, RootState } from "@/store/store";
 import { formatDistanceToNow } from "date-fns";
-import { Payload } from "@/types/types";
 
 interface ProjectCardProps {
     id: string;
@@ -22,6 +21,7 @@ interface ProjectCardProps {
     description?: string;
     stack: string;
     isPasswordProtected: boolean;
+    isArchived?: boolean;
     createdAt: string;
 }
 
@@ -31,12 +31,12 @@ export function ProjectCard({
     description,
     stack,
     isPasswordProtected,
+    isArchived = false,
     createdAt,
 }: ProjectCardProps) {
     const router = useRouter();
     const dispatch = useDispatch<AppDispatch>();
     const { startingProject } = useSelector((state: RootState) => state.project);
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
     const stackInfo = getStackIcon(stack);
 
@@ -52,17 +52,14 @@ export function ProjectCard({
                 })
             );
 
-            const payload = result.payload as Payload<{ project: { id: string } }>;
-
-            if (payload.success) {
+            if (result.payload?.success) {
                 toast.success("Project started successfully!");
-                const projectId = payload.data?.project?.id.toString().replaceAll("-", "");
+                const projectId = (result.payload?.data as any)?.project?.id;
                 if (projectId) {
                     router.push(`/project/${projectId}`);
                 }
-                setPasswordDialogOpen(false);
             } else {
-                toast.error(payload.message || "Failed to start project");
+                toast.error(result.payload?.message || "Failed to start project");
             }
         } catch (error) {
             toast.error("An error occurred while starting the project");
@@ -84,26 +81,42 @@ export function ProjectCard({
     return (
         <>
             <Card className="overflow-hidden transition-all hover:shadow-lg dark:hover:shadow-lg/20">
-                <div className="flex h-full flex-col p-4 sm:p-6">
-                    <div className="mb-4 flex items-start justify-between gap-4">
-                        <div className="flex-1 space-y-2">
-                            <h3 className="text-balance text-lg font-semibold leading-tight">
-                                {name}
-                            </h3>
+                <div className="flex h-full flex-col">
+                    {/* Header with Menu */}
+                    <div className="flex items-start justify-between gap-4 p-4 sm:p-6 pb-4">
+                        <div className="flex-1 space-y-2 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="text-balance text-lg font-semibold leading-tight truncate">
+                                    {name}
+                                </h3>
+                                {isArchived && (
+                                    <Badge
+                                        variant="secondary"
+                                        className="text-xs whitespace-nowrap"
+                                    >
+                                        <Archive className="size-3 mr-1" />
+                                        Archived
+                                    </Badge>
+                                )}
+                            </div>
                             {description && (
                                 <p className="line-clamp-2 text-sm text-muted-foreground">
                                     {description}
                                 </p>
                             )}
                         </div>
-                        {isPasswordProtected && (
-                            <Lock className="mt-1 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                        )}
+                        <div className="flex gap-2 items-center">
+                            {isPasswordProtected && (
+                                <Lock className="size-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                            )}
+                            <ProjectMenu projectId={id} projectName={name} />
+                        </div>
                     </div>
 
-                    <div className="mb-4 flex-1">
+                    {/* Stack and Metadata */}
+                    <div className="flex flex-col gap-3 px-4 sm:px-6 flex-1">
                         {stackInfo && (
-                            <div className="inline-flex items-center gap-2">
+                            <div className="inline-flex items-center gap-2 w-fit">
                                 <div className={`rounded-md p-1.5 ${stackInfo.color}`}>
                                     <stackInfo.icon className="size-4" />
                                 </div>
@@ -112,14 +125,14 @@ export function ProjectCard({
                                 </Badge>
                             </div>
                         )}
+
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Calendar className="size-3 flex-shrink-0" />
+                            {timeAgo}
+                        </div>
                     </div>
 
-                    <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
-                        <Calendar className="size-3" />
-                        {timeAgo}
-                    </div>
-
-                    <div className="flex gap-2 pt-4 border-t">
+                    <div className="flex gap-2 p-4 sm:p-6 pt-4">
                         <Button
                             variant="outline"
                             size="sm"
@@ -129,24 +142,9 @@ export function ProjectCard({
                         >
                             Open
                         </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => setDeleteDialogOpen(true)}
-                        >
-                            <Trash2 className="size-4" />
-                        </Button>
                     </div>
                 </div>
             </Card>
-
-            <DeleteProjectDialog
-                open={deleteDialogOpen}
-                onOpenChange={setDeleteDialogOpen}
-                projectId={id}
-                projectName={name}
-            />
 
             <ProjectPasswordDialog
                 open={passwordDialogOpen}

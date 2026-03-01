@@ -11,3 +11,14 @@ export interface Payload<T> {
     message: string;
     data?: T;
 }
+
+export interface Project {
+    id: string;
+    isPasswordProtected: boolean;
+    isArchived: boolean;
+    visibility: "PUBLIC" | "PRIVATE";
+    name: string;
+    description: string;
+    createdAt: string;
+    lastAccessedAt: string;
+}

@@ -2,30 +2,51 @@
 
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useSearchParams, useRouter } from "next/navigation";
 import { AppDispatch, RootState } from "@/store/store";
 import { projectActions } from "@/store/project";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreateProjectDialog } from "@/components/create-project-dialog";
 import { ProjectCard } from "@/components/project-card";
 
 export default function ProjectsDashboard() {
     const dispatch = useDispatch<AppDispatch>();
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const { projects, loadingProjects } = useSelector((state: RootState) => state.project);
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const [activeTab, setActiveTab] = useState(
+        searchParams.get("archived") === "true" ? "archived" : "active"
+    );
 
     useEffect(() => {
         dispatch(projectActions.fetchProjects());
     }, [dispatch]);
 
-    const filteredProjects = projects.filter((project) =>
-        project.name.toLowerCase().includes(searchQuery.toLowerCase())
+    const handleTabChange = (newTab: string) => {
+        setActiveTab(newTab);
+        if (newTab === "archived") {
+            router.push("/dashboard/projects?archived=true");
+        } else {
+            router.push("/dashboard/projects");
+        }
+    };
+
+    const activeProjects = projects.filter(
+        (project) =>
+            !project.isArchived && project.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    const archivedProjects = projects.filter(
+        (project) =>
+            project.isArchived && project.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     return (
-        <div className="min-h-screen bg-background pt-10">
+        <div className="min-h-screen bg-background">
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                 <div className="mb-8 space-y-4">
                     <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
@@ -59,27 +80,69 @@ export default function ProjectsDashboard() {
                             <p className="text-muted-foreground">Loading projects...</p>
                         </div>
                     </div>
-                ) : filteredProjects.length === 0 ? (
-                    <div className="rounded-lg border border-dashed p-12 text-center">
-                        <h3 className="mb-2 text-lg font-semibold">No projects yet</h3>
-                        <p className="mb-4 text-sm text-muted-foreground">
-                            {searchQuery
-                                ? "No projects match your search"
-                                : "Create your first project to get started"}
-                        </p>
-                        {!searchQuery && (
-                            <Button onClick={() => setCreateDialogOpen(true)}>
-                                <Plus className="size-4" />
-                                Create Project
-                            </Button>
-                        )}
-                    </div>
                 ) : (
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {filteredProjects.map((project) => (
-                            <ProjectCard key={project.id} {...project} />
-                        ))}
-                    </div>
+                    <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="active">
+                                Active Projects{" "}
+                                {activeProjects.length > 0 && `(${activeProjects.length})`}
+                            </TabsTrigger>
+                            <TabsTrigger value="archived">
+                                <Archive className="size-4 mr-2" />
+                                Archived{" "}
+                                {archivedProjects.length > 0 && `(${archivedProjects.length})`}
+                            </TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="active" className="mt-6">
+                            {activeProjects.length === 0 ? (
+                                <div className="rounded-lg border border-dashed p-12 text-center">
+                                    <h3 className="mb-2 text-lg font-semibold">
+                                        No active projects
+                                    </h3>
+                                    <p className="mb-4 text-sm text-muted-foreground">
+                                        {searchQuery
+                                            ? "No projects match your search"
+                                            : "Create your first project to get started"}
+                                    </p>
+                                    {!searchQuery && (
+                                        <Button onClick={() => setCreateDialogOpen(true)}>
+                                            <Plus className="size-4" />
+                                            Create Project
+                                        </Button>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                    {activeProjects.map((project) => (
+                                        <ProjectCard key={project.id} {...project} />
+                                    ))}
+                                </div>
+                            )}
+                        </TabsContent>
+
+                        <TabsContent value="archived" className="mt-6">
+                            {archivedProjects.length === 0 ? (
+                                <div className="rounded-lg border border-dashed p-12 text-center">
+                                    <Archive className="mx-auto mb-4 size-12 text-muted-foreground" />
+                                    <h3 className="mb-2 text-lg font-semibold">
+                                        No archived projects
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        {searchQuery
+                                            ? "No archived projects match your search"
+                                            : "Archive a project to see it here"}
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                    {archivedProjects.map((project) => (
+                                        <ProjectCard key={project.id} {...project} />
+                                    ))}
+                                </div>
+                            )}
+                        </TabsContent>
+                    </Tabs>
                 )}
             </div>
 

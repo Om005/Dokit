@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { STACKS } from "@/components/stack-logos";
 import { useRouter } from "next/navigation";
-import { ApiResponse, Payload } from "@/types/types";
+import { Payload } from "@/types/types";
 
 interface CreateProjectDialogProps {
     open: boolean;
