@@ -2,7 +2,7 @@
 FROM node:20-bullseye-slim
 
 RUN apt-get update && apt-get install -y \
-    git curl wget vim nano bash \
+    git curl wget vim nano bash inotify-tools \
     build-essential \
     unzip \
     && rm -rf /var/lib/apt/lists/*

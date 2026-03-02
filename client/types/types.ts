@@ -22,3 +22,12 @@ export interface Project {
     createdAt: string;
     lastAccessedAt: string;
 }
+
+export interface FileNode {
+    path: string;
+    name: string;
+    type: "file" | "directory";
+    children: string[];
+    isExpanded: boolean;
+    isLoaded: boolean;
+}

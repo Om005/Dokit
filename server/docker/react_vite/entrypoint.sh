@@ -33,4 +33,4 @@ BASHRC
 echo "Vite + React Project ready"
 echo "Run: npm run dev"
 
-exec ttyd -W -t fontSize=14 -p 7681 bash --rcfile /root/.bashrc & 
+exec ttyd -W -t fontSize=14 -p 7681 bash --rcfile /root/.bashrc

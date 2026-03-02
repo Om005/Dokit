@@ -4,10 +4,12 @@ import { persistedProjectReducer } from "./project";
 
 import { FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from "redux-persist";
 import { persistStore } from "redux-persist";
+import { persistedEditorReducer } from "./editor";
 
 const rootReducer = combineReducers({
     auth: persistedAuthReducer,
     project: persistedProjectReducer,
+    editor: persistedEditorReducer,
 });
 
 export const store = configureStore({

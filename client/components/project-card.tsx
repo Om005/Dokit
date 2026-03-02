@@ -14,7 +14,8 @@ import { getStackIcon, getStackName } from "@/components/stack-logos";
 import { projectActions } from "@/store/project";
 import { AppDispatch, RootState } from "@/store/store";
 import { formatDistanceToNow } from "date-fns";
-import { Payload, Project } from "@/types/types";
+import { FileNode, Payload, Project } from "@/types/types";
+import { setCurrProject, setFileTree } from "@/store/editor";
 
 interface ProjectCardProps {
     id: string;
@@ -52,12 +53,17 @@ export function ProjectCard({
                     password,
                 })
             );
-            const payload = result.payload as Payload<{ project: Project }>;
+            const payload = result.payload as Payload<{
+                project: Project;
+                FileTree: Record<string, FileNode>;
+            }>;
 
             if (payload?.success) {
                 const projectId = payload?.data?.project?.id;
                 if (projectId) {
                     toast.success("Project started successfully!");
+                    await dispatch(setFileTree(payload.data!.FileTree));
+                    await dispatch(setCurrProject(payload.data!.project));
                     const containerProjectId = projectId.replaceAll("-", "");
                     if (projectId) {
                         router.push(`/project/${containerProjectId}`);

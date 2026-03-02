@@ -5,6 +5,8 @@ import env from "@config/env";
 import queueActions from "@modules/queue/queueActions";
 import { prisma } from "@db/prisma";
 import net from "net";
+import { Server } from "socket.io";
+import { PassThrough } from "stream";
 
 const docker = new Docker();
 
@@ -20,6 +22,15 @@ interface DokitContainer {
     name: string;
     state: string;
     created: Date;
+}
+
+export interface FileNode {
+    path: string;
+    name: string;
+    type: "file" | "directory";
+    children: string[];
+    isExpanded: boolean;
+    isLoaded: boolean;
 }
 
 async function createDokitContainer(
@@ -104,7 +115,7 @@ async function deleteDokitContainer(projectId: string): Promise<boolean> {
 
         logger.error(`Error deleting container ${containerName}:`);
         logger.error(dockerError);
-        return false;
+        throw dockerError;
     }
 }
 
@@ -156,6 +167,7 @@ async function cleanupOldContainers(): Promise<void> {
     } catch (error) {
         logger.error("Error cleaning up old Dokit containers:");
         logger.error(error);
+        throw error;
     }
 }
 
@@ -167,6 +179,8 @@ async function syncWorkspaceToR2(projectId: string): Promise<void> {
 
         const rcloneCmd = `
                 rclone sync /workspace/ r2:${env.R2_BUCKET_NAME}/code/${projectId}/ \\
+                --create-empty-src-dirs \\
+                --s3-directory-markers \\
                 --exclude "node_modules/**" \\
                 --exclude "dist/**" \\
                 --exclude "build/**" \\
@@ -217,6 +231,7 @@ async function syncWorkspaceToR2(projectId: string): Promise<void> {
     } catch (error) {
         logger.error(`Error syncing workspace to R2 for project ${projectId}:`);
         logger.error(error);
+        throw error;
     }
 }
 
@@ -235,8 +250,73 @@ async function syncAllcontainersToR2(): Promise<void> {
     } catch (error) {
         logger.error("Error syncing all workspaces to R2:");
         logger.error(error);
+        throw error;
     }
 }
+
+async function getFolderContent(
+    projectId: string,
+    folderPath: string
+): Promise<Record<string, FileNode> | null> {
+    try {
+        const containerProjectId = projectId.replaceAll("-", "");
+        const containerName = `dokit-${containerProjectId}`;
+        const container = docker.getContainer(containerName);
+
+        const targetPath = folderPath === "/" ? "/workspace" : `/workspace/${folderPath}`;
+        const command = `find ${targetPath} -maxdepth 1 -mindepth 1 -not -name "*.git" -not -name "node_modules" -printf "%y|%f\\n"`;
+
+        const exec = await container.exec({
+            Cmd: ["bash", "-c", command],
+            AttachStdout: true,
+            AttachStderr: true,
+        });
+
+        const stream = await exec.start({ hijack: true, stdin: false });
+
+        let output = "";
+
+        const stdout = new PassThrough();
+        const stderr = new PassThrough();
+
+        container.modem.demuxStream(stream, stdout, stderr);
+
+        stdout.on("data", (chunk) => {
+            output += chunk.toString();
+        });
+
+        await new Promise((resolve, reject) => {
+            stream.on("end", resolve);
+            stream.on("error", reject);
+        });
+
+        let nodes: Record<string, FileNode> = {};
+        const lines = output.trim().split("\n");
+
+        for (const line of lines) {
+            const [nodeType, name] = line.split("|");
+            if (!nodeType || !name) continue;
+
+            const nodePath = folderPath === "/" ? `/${name}` : `${folderPath}/${name}`;
+            nodes[nodePath] = {
+                path: nodePath,
+                name,
+                type: nodeType === "d" ? "directory" : "file",
+                children: [],
+                isExpanded: false,
+                isLoaded: false,
+            };
+        }
+        return nodes;
+    } catch (error) {
+        logger.error(
+            `Failed to get folder content for project ${projectId} and path ${folderPath}:`
+        );
+        logger.error(error);
+        return null;
+    }
+}
+
 const DockerManager = {
     createDokitContainer,
     deleteDokitContainer,
@@ -244,6 +324,7 @@ const DockerManager = {
     cleanupOldContainers,
     syncWorkspaceToR2,
     syncAllcontainersToR2,
+    getFolderContent,
 };
 
 export default DockerManager;

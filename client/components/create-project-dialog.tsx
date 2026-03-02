@@ -27,7 +27,8 @@ import {
 } from "@/components/ui/select";
 import { STACKS } from "@/components/stack-logos";
 import { useRouter } from "next/navigation";
-import { Payload } from "@/types/types";
+import { FileNode, Payload } from "@/types/types";
+import { setCurrProject, setFileTree } from "@/store/editor";
 
 interface CreateProjectDialogProps {
     open: boolean;
@@ -84,7 +85,10 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
             );
             console.log("Create project result:", result.payload); // Debug log
 
-            const payload = result.payload as Payload<{ project: { id: string } }>;
+            const payload = result.payload as Payload<{
+                project: { id: string };
+                FileTree: Record<string, FileNode>;
+            }>;
             if (payload.success) {
                 toast.success("Project created successfully!");
                 setProjectName("");
@@ -93,8 +97,10 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                 setIsPasswordProtected(false);
                 setPassword("");
                 onOpenChange(false);
-                // const projectId = payload.data!.project.id.toString().substr(0, 13).replaceAll("-", "")
+
                 const projectId = payload.data!.project.id.toString().replaceAll("-", "");
+                await dispatch(setFileTree(payload.data!.FileTree));
+                await dispatch(setCurrProject(payload.data!.project));
                 router.push(`/project/${projectId}`);
             } else {
                 toast.error(result.payload?.message || "Failed to create project");

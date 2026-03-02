@@ -105,6 +105,7 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/components/auth-provider";
 import { Toaster } from "@/components/ui/sonner";
 import StoreProvider from "@/components/store-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const outfit = Outfit({
     subsets: ["latin"],
@@ -139,7 +140,7 @@ export default function RootLayout({
                 >
                     <StoreProvider>
                         <AuthProvider>
-                            {children}
+                            <TooltipProvider>{children}</TooltipProvider>
                             <Toaster position="top-right" richColors={true} />
                         </AuthProvider>
                     </StoreProvider>

@@ -13,6 +13,15 @@ import validators from "./validators";
 import queueActions from "@modules/queue/queueActions";
 import argon2 from "argon2";
 
+export interface FileNode {
+    path: string;
+    name: string;
+    type: "file" | "directory";
+    children: string[];
+    isExpanded: boolean;
+    isLoaded: boolean;
+}
+
 const controllers = {
     createProject: async (req: Request, res: Response) => {
         try {
@@ -74,6 +83,8 @@ const controllers = {
                         statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
                     });
                 }
+                const FileTree: Record<string, FileNode> | null =
+                    await DockerManager.getFolderContent(projectId, "/");
                 const project = await prisma.project.create({
                     data: {
                         id: projectId,
@@ -93,6 +104,7 @@ const controllers = {
                     data: {
                         project: { ...project, passwordHash: undefined, ownerId: undefined },
                         containerInfo,
+                        FileTree,
                     },
                 });
             } catch (error) {
@@ -316,7 +328,15 @@ const controllers = {
     startProject: async (req: Request, res: Response) => {
         try {
             const { name, password } = req.body;
+
             const userId = req.meta.user?.id;
+            if (!userId) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Unauthorized",
+                    statusCode: StatusCodes.UNAUTHORIZED,
+                });
+            }
 
             const project = await prisma.project.findFirst({
                 where: {
@@ -366,6 +386,9 @@ const controllers = {
                     });
                 }
 
+                const FileTree: Record<string, FileNode> | null =
+                    await DockerManager.getFolderContent(project.id, "/");
+
                 queueActions.addUpdateProjectLastAccessedJob(project.id).catch((error) => {
                     logger.error(
                         `Failed to add update last accessed job for project ${project.id}:`
@@ -379,6 +402,7 @@ const controllers = {
                     data: {
                         project: { ...project, passwordHash: undefined, ownerId: undefined },
                         containerInfo,
+                        FileTree,
                     },
                 });
             } catch (error) {
@@ -400,6 +424,7 @@ const controllers = {
             });
         }
     },
+
     changeProjectSettings: async (req: Request, res: Response) => {
         try {
             const {
