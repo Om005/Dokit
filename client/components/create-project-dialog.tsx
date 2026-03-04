@@ -28,7 +28,8 @@ import {
 import { STACKS } from "@/components/stack-logos";
 import { useRouter } from "next/navigation";
 import { FileNode, Payload } from "@/types/types";
-import { editorActions, setCurrProject } from "@/store/editor";
+import { setCurrProject } from "@/store/editor";
+import { setPendingPassword } from "@/store/project";
 
 interface CreateProjectDialogProps {
     open: boolean;
@@ -90,6 +91,13 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
             }>;
             if (payload.success) {
                 toast.success("Project created successfully!");
+
+                const projectId = payload.data!.project.id.toString().replaceAll("-", "");
+                await dispatch(setCurrProject(payload.data!.project));
+                if (isPasswordProtected && password) {
+                    dispatch(setPendingPassword(password));
+                }
+
                 setProjectName("");
                 setDescription("");
                 setSelectedStack("REACT_VITE");
@@ -97,9 +105,6 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                 setPassword("");
                 onOpenChange(false);
 
-                const projectId = payload.data!.project.id.toString().replaceAll("-", "");
-                await dispatch(setCurrProject(payload.data!.project));
-                await dispatch(editorActions.getRootContent({ projectId, folderPath: "/" }));
                 router.push(`/project/${projectId}`);
             } else {
                 toast.error(result.payload?.message || "Failed to create project");

@@ -21,10 +21,8 @@ const validators = {
     }),
 
     startProjectSchema: z.object({
-        name: z
-            .string()
-            .min(1, "Project name is required")
-            .max(100, "Project name must be at most 100 characters"),
+        projectId: z.string().uuid("Invalid project ID format"),
+
         password: z.string().min(1, "Password is required for protected projects").optional(),
     }),
 

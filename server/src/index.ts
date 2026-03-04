@@ -21,7 +21,7 @@ import DockerManager from "services/dockerManager";
 
 checkEnv();
 connectToDatabase();
-verifyTransporter();
+// verifyTransporter();
 initiatWorkers();
 initGeoIP();
 connectRedis();

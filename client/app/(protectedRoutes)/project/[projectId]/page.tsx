@@ -6,12 +6,25 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store/store";
 import TerminalLoader from "@/components/terminal-loader";
-import { use, useCallback, useRef, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import { Editor } from "@/components/editor";
-import { closeTab, editorActions, openTab, setActiveTab, setFileContent } from "@/store/editor";
-import { X, FileIcon } from "lucide-react";
+import {
+    closeTab,
+    editorActions,
+    openTab,
+    setActiveTab,
+    setCurrProject,
+    setFileContent,
+    setOpenTabs,
+} from "@/store/editor";
+import { projectActions, setPendingPassword } from "@/store/project";
+import { Eye, EyeOff, Loader2, X, FileIcon, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Payload } from "@/types/types";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 interface Props {
     params: Promise<{ projectId: string }>;
@@ -26,10 +39,21 @@ export default function ProjectPage({ params }: Props) {
     const openTabs = useSelector((state: RootState) => state.editor.openTabs);
     const activeTab = useSelector((state: RootState) => state.editor.activeTab);
     const gettingFileContent = useSelector((state: RootState) => state.editor.gettingFileContent);
+    const pendingPassword = useSelector((state: RootState) => state.project.pendingPassword);
 
-    const activeFile = activeTab && fileTree ? fileTree[activeTab] : null;
+    const apiProjectId =
+        currProject?.id ??
+        `${projectId.slice(0, 8)}-${projectId.slice(8, 12)}-${projectId.slice(12, 16)}-${projectId.slice(16, 20)}-${projectId.slice(20)}`;
 
-    const wsUrl = `ws://${process.env.NEXT_PUBLIC_NGINX_HOST}/terminal/${projectId}/ws`;
+    const [isBooting, setIsBooting] = useState(true);
+    const [bootError, setBootError] = useState<string | null>(null);
+    const hasBoot = useRef(false);
+
+    const [showPasswordForm, setShowPasswordForm] = useState(false);
+    const [passwordInput, setPasswordInput] = useState("");
+    const [showPasswordInput, setShowPasswordInput] = useState(false);
+    const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
+    const [passwordFormError, setPasswordFormError] = useState<string | null>(null);
 
     const [terminalWidth, setTerminalWidth] = useState(400);
     const isDragging = useRef(false);
@@ -60,6 +84,207 @@ export default function ProjectPage({ params }: Props) {
         },
         [terminalWidth]
     );
+
+    const runBoot = async () => {
+        try {
+            const result = await dispatch(
+                projectActions.startProject({
+                    projectId: apiProjectId,
+                    password: pendingPassword ?? undefined,
+                })
+            );
+
+            if (pendingPassword) {
+                dispatch(setPendingPassword(null));
+            }
+
+            const payload = result.payload as Payload<{ project: typeof currProject }>;
+            if (payload?.success) {
+                if (payload.data?.project) {
+                    dispatch(setCurrProject(payload.data.project));
+                }
+                await dispatch(
+                    editorActions.getRootContent({ projectId: apiProjectId, folderPath: "/" })
+                );
+                dispatch(setOpenTabs([]));
+                dispatch(setActiveTab(null));
+                setIsBooting(false);
+            } else {
+                setBootError(payload?.message ?? "Failed to start project.");
+                setIsBooting(false);
+            }
+        } catch (err) {
+            console.error("Boot error:", err);
+            setBootError("Failed to boot project. Please try again.");
+            setIsBooting(false);
+        }
+    };
+
+    useEffect(() => {
+        if (hasBoot.current) return;
+        hasBoot.current = true;
+
+        if (currProject?.isPasswordProtected && !pendingPassword) {
+            setIsBooting(false);
+            setShowPasswordForm(true);
+            return;
+        }
+
+        runBoot();
+    }, []);
+
+    const handlePasswordFormSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!passwordInput.trim()) return;
+        setShowPasswordForm(false);
+        setIsBooting(true);
+        setIsSubmittingPassword(true);
+        setPasswordFormError(null);
+        try {
+            const result = await dispatch(
+                projectActions.startProject({
+                    projectId: apiProjectId,
+                    password: passwordInput,
+                })
+            );
+            const payload = result.payload as Payload<{ project: typeof currProject }>;
+            if (payload?.success) {
+                if (payload.data?.project) {
+                    dispatch(setCurrProject(payload.data.project));
+                }
+                await dispatch(
+                    editorActions.getRootContent({ projectId: apiProjectId, folderPath: "/" })
+                );
+                dispatch(setOpenTabs([]));
+                dispatch(setActiveTab(null));
+                setShowPasswordForm(false);
+            } else {
+                setIsBooting(false);
+                setBootError(payload?.message ?? "Failed to start project.");
+                setPasswordFormError(payload?.message ?? "Incorrect password.");
+            }
+        } catch (err) {
+            console.error("Password submit error:", err);
+            setPasswordFormError("An error occurred. Please try again.");
+        } finally {
+            setIsSubmittingPassword(false);
+            setIsBooting(false);
+        }
+    };
+
+    const activeFile = activeTab && fileTree ? fileTree[activeTab] : null;
+
+    const wsUrl = `ws://${process.env.NEXT_PUBLIC_NGINX_HOST}/terminal/${projectId}/ws`;
+
+    if (showPasswordForm) {
+        return (
+            <div className="flex flex-col h-screen items-center justify-center bg-background px-4">
+                <div className="w-full max-w-sm space-y-6">
+                    <div className="space-y-2 text-center">
+                        <div className="flex justify-center">
+                            <Lock className="size-8 text-amber-500" />
+                        </div>
+                        <h2 className="text-lg font-semibold">Password Protected</h2>
+                        <p className="text-sm text-muted-foreground">
+                            &ldquo;{currProject?.name ?? "This project"}&rdquo; requires a password
+                            to open.
+                        </p>
+                    </div>
+
+                    <form onSubmit={handlePasswordFormSubmit} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="project-password">Password</Label>
+                            <div className="relative">
+                                <Input
+                                    id="project-password"
+                                    type={showPasswordInput ? "text" : "password"}
+                                    placeholder="Enter project password"
+                                    maxLength={50}
+                                    value={passwordInput}
+                                    onChange={(e) => setPasswordInput(e.target.value)}
+                                    disabled={isSubmittingPassword}
+                                    autoFocus
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPasswordInput(!showPasswordInput)}
+                                    className="absolute cursor-pointer right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    {showPasswordInput ? (
+                                        <EyeOff className="size-4" />
+                                    ) : (
+                                        <Eye className="size-4" />
+                                    )}
+                                </button>
+                            </div>
+                            {passwordFormError && (
+                                <p className="text-xs text-destructive">{passwordFormError}</p>
+                            )}
+                        </div>
+
+                        <Button
+                            type="submit"
+                            className="w-full"
+                            disabled={isSubmittingPassword || !passwordInput.trim()}
+                        >
+                            {isSubmittingPassword && <Loader2 className="size-4 animate-spin" />}
+                            Unlock Project
+                        </Button>
+                    </form>
+                </div>
+            </div>
+        );
+    }
+
+    if (isBooting) {
+        return (
+            <div className="flex flex-col h-screen items-center justify-center bg-background gap-8 px-4">
+                <div className="w-full max-w-sm space-y-3">
+                    <div className="h-3 bg-muted rounded-full animate-pulse" />
+                    <div className="h-3 bg-muted rounded-full animate-pulse w-5/6" />
+                    <div className="h-3 bg-muted rounded-full animate-pulse w-4/6" />
+                    <div className="mt-6 h-3 bg-muted rounded-full animate-pulse w-3/6" />
+                    <div className="h-3 bg-muted rounded-full animate-pulse w-5/6" />
+                    <div className="h-3 bg-muted rounded-full animate-pulse w-2/6" />
+                </div>
+                <div className="text-center space-y-1">
+                    <p className="text-sm font-semibold tracking-wide">Booting your project</p>
+                    <p className="text-xs text-muted-foreground">
+                        Hold tight, this might take a few seconds&hellip;
+                    </p>
+                </div>
+                <div className="flex gap-2">
+                    <span className="h-2 w-2 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
+                    <span className="h-2 w-2 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
+                    <span className="h-2 w-2 rounded-full bg-primary animate-bounce" />
+                </div>
+            </div>
+        );
+    }
+
+    if (bootError) {
+        return (
+            <div className="flex flex-col h-screen items-center justify-center bg-background gap-4 px-4">
+                <p className="text-sm font-medium text-destructive">{bootError}</p>
+                <button
+                    className="text-xs text-muted-foreground underline"
+                    onClick={() => {
+                        hasBoot.current = false;
+                        setBootError(null);
+                        if (bootError === "Incorrect password.") {
+                            setShowPasswordForm(true);
+                            setIsBooting(false);
+                        } else {
+                            setIsBooting(true);
+                            runBoot();
+                        }
+                    }}
+                >
+                    Retry
+                </button>
+            </div>
+        );
+    }
 
     const handleCloseTab = (e: React.MouseEvent, filePath: string) => {
         e.stopPropagation();

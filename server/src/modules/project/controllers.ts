@@ -63,20 +63,20 @@ const controllers = {
                         statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
                     });
                 }
-                const containerInfo = await DockerManager.createDokitContainer(
-                    projectId,
-                    stack as ProjectStack
-                );
-                if (!containerInfo.containerId) {
-                    logger.error("Failed to create dokit container for project.");
-                    return sendResponse(res, {
-                        success: false,
-                        message: "Failed to create project. Please try again later.",
-                        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-                    });
-                }
-                const FileTree: Record<string, FileNode> | null =
-                    await DockerManager.getFolderContent(projectId, "/");
+                // const containerInfo = await DockerManager.createDokitContainer(
+                //     projectId,
+                //     stack as ProjectStack
+                // );
+                // if (!containerInfo.containerId) {
+                //     logger.error("Failed to create dokit container for project.");
+                //     return sendResponse(res, {
+                //         success: false,
+                //         message: "Failed to create project. Please try again later.",
+                //         statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+                //     });
+                // }
+                // const FileTree: Record<string, FileNode> | null =
+                //     await DockerManager.getFolderContent(projectId, "/");
                 const project = await prisma.project.create({
                     data: {
                         id: projectId,
@@ -95,8 +95,8 @@ const controllers = {
                     message: "Project created successfully.",
                     data: {
                         project: { ...project, passwordHash: undefined, ownerId: undefined },
-                        containerInfo,
-                        FileTree,
+                        // containerInfo,
+                        // FileTree,
                     },
                 });
             } catch (error) {
@@ -318,9 +318,10 @@ const controllers = {
     },
 
     startProject: async (req: Request, res: Response) => {
+        const { projectId, password } = req.body;
+        console.log("Starting project with ID:", projectId);
+        console.log("Received password:", password);
         try {
-            const { name, password } = req.body;
-
             const userId = req.meta.user?.id;
             if (!userId) {
                 return sendResponse(res, {
@@ -332,7 +333,7 @@ const controllers = {
 
             const project = await prisma.project.findFirst({
                 where: {
-                    name: name,
+                    id: projectId,
                     ownerId: userId,
                 },
             });
@@ -426,7 +427,7 @@ const controllers = {
                 visibility,
                 isArchived,
                 isPasswordProtected,
-                newPassword,
+                password,
                 accountPassword,
             } = req.body;
 
@@ -497,9 +498,11 @@ const controllers = {
                     description: description,
                     visibility: visibility as Visibility,
                     passwordHash:
-                        newPassword !== undefined
-                            ? await argon2.hash(newPassword)
-                            : project.passwordHash,
+                        password !== undefined
+                            ? await argon2.hash(password)
+                            : isPasswordProtected
+                              ? project.passwordHash
+                              : null,
                     isPasswordProtected: isPasswordProtected,
                     isArchived: isArchived,
                 },

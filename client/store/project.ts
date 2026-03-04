@@ -23,6 +23,7 @@ interface intialProjectState {
     startingProject: boolean;
     changingSettings: boolean;
     gettingProjectDetails: boolean;
+    pendingPassword: string | null;
 }
 
 const projectActions = {
@@ -66,11 +67,14 @@ const projectActions = {
 
     startProject: createAsyncThunk<
         ApiResponse,
-        { name: string; password?: string },
+        { projectId: string; password?: string },
         { rejectValue: ApiResponse }
     >(
         "project/startProject",
-        createApiHandler<{ name: string; password?: string }>("/api/project/start-project", "post")
+        createApiHandler<{ projectId: string; password?: string }>(
+            "/api/project/start-project",
+            "post"
+        )
     ),
 
     changeProjectSettings: createAsyncThunk<
@@ -109,12 +113,17 @@ const initialState: intialProjectState = {
     startingProject: false,
     changingSettings: false,
     gettingProjectDetails: false,
+    pendingPassword: null,
 };
 
 const projectSlice = createSlice({
     name: "project",
     initialState,
-    reducers: {},
+    reducers: {
+        setPendingPassword(state, action) {
+            state.pendingPassword = action.payload;
+        },
+    },
     extraReducers: (builder) => {
         builder
             .addCase(projectActions.fetchProjects.pending, (state) => {
@@ -226,4 +235,5 @@ const projectPersistConfig = {
 
 const persistedProjectReducer = persistReducer(projectPersistConfig, projectSlice.reducer);
 
+export const { setPendingPassword } = projectSlice.actions;
 export { projectActions, persistedProjectReducer };
