@@ -12,15 +12,7 @@ import DockerManager from "services/dockerManager";
 import validators from "./validators";
 import queueActions from "@modules/queue/queueActions";
 import argon2 from "argon2";
-
-export interface FileNode {
-    path: string;
-    name: string;
-    type: "file" | "directory";
-    children: string[];
-    isExpanded: boolean;
-    isLoaded: boolean;
-}
+import { FileNode } from "types/express";
 
 const controllers = {
     createProject: async (req: Request, res: Response) => {
@@ -438,15 +430,6 @@ const controllers = {
                 accountPassword,
             } = req.body;
 
-            console.log("Received changeProjectSettings request with data:", {
-                name,
-                newName,
-                description,
-                visibility,
-                isArchived,
-                isPasswordProtected,
-                newPassword,
-            });
             const userId = req.meta.user?.id;
             if (!userId) {
                 return sendResponse(res, {

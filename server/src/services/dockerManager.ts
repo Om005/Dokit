@@ -7,6 +7,7 @@ import { prisma } from "@db/prisma";
 import net from "net";
 import { Server } from "socket.io";
 import { PassThrough } from "stream";
+import { FileNode } from "types/express";
 
 const docker = new Docker();
 
@@ -24,13 +25,72 @@ interface DokitContainer {
     created: Date;
 }
 
-export interface FileNode {
-    path: string;
-    name: string;
-    type: "file" | "directory";
-    children: string[];
-    isExpanded: boolean;
-    isLoaded: boolean;
+// export async function waitForContainerReady(projectId: string, maxRetries = 20): Promise<boolean> {
+//     const containerProjectId = projectId.replaceAll("-", "");
+//     const containerName = `dokit-${containerProjectId}`;
+//     const container = docker.getContainer(containerName);
+
+//     for (let i = 0; i < maxRetries; i++) {
+//         try {
+//             // The 'test -f' command checks if a file exists.
+//             // It returns ExitCode 0 if true, and ExitCode 1 if false.
+//             const exec = await container.exec({
+//                 Cmd: ['test', '-f', '/tmp/.init_done'],
+//                 AttachStdout: true,
+//                 AttachStderr: true,
+//             });
+
+//             const stream = await exec.start({ hijack: true, stdin: false });
+//             await new Promise((resolve) => stream.on('end', resolve));
+//             const inspectResult = await exec.inspect();
+
+//             if (inspectResult.ExitCode === 0) {
+//                 // The file exists! rclone has finished downloading.
+//                 return true;
+//             }
+//         } catch (error) {
+//             // Ignore temporary exec errors while the container is booting
+//         }
+
+//         // Wait 500ms before checking again
+//         await new Promise(resolve => setTimeout(resolve, 100));
+//     }
+
+//     // throw new Error(`Container ${containerName} failed to become ready in time.`);
+// }
+
+async function waitForContainerReady(containerId: string, timeoutMs = 60_000): Promise<void> {
+    const container = docker.getContainer(containerId);
+
+    const logStream = await container.logs({
+        follow: true,
+        stdout: true,
+        stderr: true,
+        timestamps: false,
+    });
+
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            logStream.destroy();
+            reject(
+                new Error(`Container ${containerId} did not become ready within ${timeoutMs}ms`)
+            );
+        }, timeoutMs);
+
+        logStream.on("data", (chunk: Buffer) => {
+            const line = chunk.toString("utf8");
+            if (line.includes("CONTAINER_READY")) {
+                clearTimeout(timer);
+                logStream.destroy();
+                resolve();
+            }
+        });
+
+        logStream.on("error", (err) => {
+            clearTimeout(timer);
+            reject(err);
+        });
+    });
 }
 
 async function createDokitContainer(
@@ -49,7 +109,6 @@ async function createDokitContainer(
 
         if (!info.State.Running) {
             await existingContainer.start();
-            const containerInfo = await existingContainer.inspect();
         }
 
         return { containerId: info.Id, containerName };
@@ -83,8 +142,9 @@ async function createDokitContainer(
             });
 
             await container.start();
+            await waitForContainerReady(container.id);
 
-            const containerInfo = await container.inspect();
+            // const containerInfo = await container.inspect();
 
             return { containerId: container.id, containerName };
         } catch (createError) {
@@ -302,6 +362,7 @@ async function getFolderContent(
                 path: nodePath,
                 name,
                 type: nodeType === "d" ? "directory" : "file",
+                code: null,
                 children: [],
                 isExpanded: false,
                 isLoaded: false,
@@ -317,6 +378,45 @@ async function getFolderContent(
     }
 }
 
+async function getFileContent(projectId: string, filePath: string): Promise<string | null> {
+    try {
+        const containerProjectId = projectId.replaceAll("-", "");
+        const containerName = `dokit-${containerProjectId}`;
+        const container = docker.getContainer(containerName);
+
+        const targetPath = `/workspace/${filePath}`;
+        const command = `cat ${targetPath}`;
+
+        const exec = await container.exec({
+            Cmd: ["bash", "-c", command],
+            AttachStdout: true,
+            AttachStderr: true,
+        });
+
+        const stream = await exec.start({ hijack: true, stdin: false });
+        let output = "";
+
+        const stdout = new PassThrough();
+        const stderr = new PassThrough();
+
+        container.modem.demuxStream(stream, stdout, stderr);
+
+        stdout.on("data", (chunk) => {
+            output += chunk.toString();
+        });
+
+        await new Promise((resolve, reject) => {
+            stream.on("end", resolve);
+            stream.on("error", reject);
+        });
+
+        return output;
+    } catch (error) {
+        logger.error(`Failed to get file content for project ${projectId} and file ${filePath}:`);
+        logger.error(error);
+        return null;
+    }
+}
 const DockerManager = {
     createDokitContainer,
     deleteDokitContainer,
@@ -325,6 +425,7 @@ const DockerManager = {
     syncWorkspaceToR2,
     syncAllcontainersToR2,
     getFolderContent,
+    getFileContent,
 };
 
 export default DockerManager;

@@ -27,6 +27,7 @@ export interface FileNode {
     path: string;
     name: string;
     type: "file" | "directory";
+    code: string | null;
     children: string[];
     isExpanded: boolean;
     isLoaded: boolean;

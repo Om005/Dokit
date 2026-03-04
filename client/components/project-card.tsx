@@ -15,7 +15,13 @@ import { projectActions } from "@/store/project";
 import { AppDispatch, RootState } from "@/store/store";
 import { formatDistanceToNow } from "date-fns";
 import { FileNode, Payload, Project } from "@/types/types";
-import { setCurrProject, setFileTree } from "@/store/editor";
+import {
+    editorActions,
+    setActiveTab,
+    setCurrProject,
+    setFileTree,
+    setOpenTabs,
+} from "@/store/editor";
 
 interface ProjectCardProps {
     id: string;
@@ -62,8 +68,10 @@ export function ProjectCard({
                 const projectId = payload?.data?.project?.id;
                 if (projectId) {
                     toast.success("Project started successfully!");
-                    await dispatch(setFileTree(payload.data!.FileTree));
                     await dispatch(setCurrProject(payload.data!.project));
+                    await dispatch(editorActions.getRootContent({ projectId, folderPath: "/" }));
+                    await dispatch(setOpenTabs([]));
+                    await dispatch(setActiveTab(null));
                     const containerProjectId = projectId.replaceAll("-", "");
                     if (projectId) {
                         router.push(`/project/${containerProjectId}`);
@@ -76,6 +84,7 @@ export function ProjectCard({
             }
         } catch (error) {
             toast.error("An error occurred while starting the project");
+            console.error(error);
         }
     };
 

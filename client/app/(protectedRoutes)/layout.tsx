@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
     const pathname = usePathname();
-    console.log("Current Pathname:", pathname);
     const noNavbarPaths = ["/projects/"];
     const showNavbar = !(noNavbarPaths.includes(pathname) || pathname.startsWith("/project/"));
     return (

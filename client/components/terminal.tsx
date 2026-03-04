@@ -5,6 +5,7 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
+import { useTheme } from "next-themes";
 
 interface TerminalProps {
     wsUrl: string;
@@ -12,7 +13,60 @@ interface TerminalProps {
 
 type ConnectionStatus = "connecting" | "connected" | "failed";
 
-function TerminalCore({ wsUrl, forceRemount }: TerminalProps & { forceRemount: () => void }) {
+const DARK_THEME = {
+    background: "#1e1e1e",
+    foreground: "#d4d4d4",
+    cursor: "#ffffff",
+    cursorAccent: "#1e1e1e",
+    selectionBackground: "#264f78",
+    black: "#1e1e1e",
+    red: "#f44747",
+    green: "#4ec9b0",
+    yellow: "#dcdcaa",
+    blue: "#569cd6",
+    magenta: "#c678dd",
+    cyan: "#4ec9b0",
+    white: "#d4d4d4",
+    brightBlack: "#808080",
+    brightRed: "#f44747",
+    brightGreen: "#4ec9b0",
+    brightYellow: "#dcdcaa",
+    brightBlue: "#569cd6",
+    brightMagenta: "#c678dd",
+    brightCyan: "#4ec9b0",
+    brightWhite: "#ffffff",
+};
+
+const LIGHT_THEME = {
+    background: "#ffffff",
+    foreground: "#1e1e1e",
+    cursor: "#000000",
+    cursorAccent: "#ffffff",
+    selectionBackground: "#b5d5ff",
+    black: "#000000",
+    red: "#cd3131",
+    green: "#00bc00",
+    yellow: "#949800",
+    blue: "#0451a5",
+    magenta: "#bc05bc",
+    cyan: "#0598bc",
+    white: "#555555",
+    brightBlack: "#666666",
+    brightRed: "#cd3131",
+    brightGreen: "#14ce14",
+    brightYellow: "#b5ba00",
+    brightBlue: "#0451a5",
+    brightMagenta: "#bc05bc",
+    brightCyan: "#0598bc",
+    brightWhite: "#a5a5a5",
+};
+
+function TerminalCore({
+    wsUrl,
+    forceRemount,
+    isDark,
+}: TerminalProps & { forceRemount: () => void; isDark: boolean }) {
+    const xtermTheme = isDark ? DARK_THEME : LIGHT_THEME;
     const terminalRef = useRef<HTMLDivElement>(null);
     const [status, setStatus] = useState<ConnectionStatus>("connecting");
 
@@ -31,11 +85,7 @@ function TerminalCore({ wsUrl, forceRemount }: TerminalProps & { forceRemount: (
             cursorBlink: true,
             fontSize: 14,
             fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-            theme: {
-                background: "#1e1e1e",
-                foreground: "#d4d4d4",
-                cursor: "#ffffff",
-            },
+            theme: xtermTheme,
             convertEol: true,
         });
 
@@ -182,7 +232,22 @@ function TerminalCore({ wsUrl, forceRemount }: TerminalProps & { forceRemount: (
             }
             term.dispose();
         };
-    }, [wsUrl]);
+    }, [wsUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Update xterm theme when light/dark mode changes without remounting
+    useEffect(() => {
+        if (xtermRef.current) {
+            xtermRef.current.options.theme = xtermTheme;
+        }
+    }, [isDark]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const bg = xtermTheme.background;
+    const fg = xtermTheme.foreground;
+    const spinnerBorder = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
+    const btnBg = isDark ? "#333333" : "#e5e5e5";
+    const btnBgHover = isDark ? "#444444" : "#d4d4d4";
+    const btnColor = isDark ? "#ffffff" : "#1e1e1e";
+    const btnBorder = isDark ? "#555555" : "#bbbbbb";
 
     return (
         <div style={{ position: "relative", width: "100%", height: "100%", minHeight: "400px" }}>
@@ -190,8 +255,8 @@ function TerminalCore({ wsUrl, forceRemount }: TerminalProps & { forceRemount: (
                 {`
                     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
                     .terminal-spinner {
-                        border: 3px solid rgba(255, 255, 255, 0.1);
-                        border-top: 3px solid #d4d4d4;
+                        border: 3px solid ${spinnerBorder};
+                        border-top: 3px solid ${fg};
                         border-radius: 50%;
                         width: 32px;
                         height: 32px;
@@ -209,13 +274,13 @@ function TerminalCore({ wsUrl, forceRemount }: TerminalProps & { forceRemount: (
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        backgroundColor: "#1e1e1e",
+                        backgroundColor: bg,
                         zIndex: 10,
                         display: "flex",
                         flexDirection: "column",
                         alignItems: "center",
                         justifyContent: "center",
-                        color: "#d4d4d4",
+                        color: fg,
                         fontFamily: 'Menlo, Monaco, "Courier New", monospace',
                         fontSize: "14px",
                     }}
@@ -239,20 +304,18 @@ function TerminalCore({ wsUrl, forceRemount }: TerminalProps & { forceRemount: (
                                 onClick={forceRemount}
                                 style={{
                                     padding: "8px 16px",
-                                    backgroundColor: "#333333",
-                                    color: "#ffffff",
-                                    border: "1px solid #555555",
+                                    backgroundColor: btnBg,
+                                    color: btnColor,
+                                    border: `1px solid ${btnBorder}`,
                                     borderRadius: "4px",
                                     cursor: "pointer",
                                     fontFamily: "inherit",
                                     transition: "background-color 0.2s",
                                 }}
                                 onMouseOver={(e) =>
-                                    (e.currentTarget.style.backgroundColor = "#444444")
+                                    (e.currentTarget.style.backgroundColor = btnBgHover)
                                 }
-                                onMouseOut={(e) =>
-                                    (e.currentTarget.style.backgroundColor = "#333333")
-                                }
+                                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = btnBg)}
                             >
                                 Retry Connection
                             </button>
@@ -267,7 +330,7 @@ function TerminalCore({ wsUrl, forceRemount }: TerminalProps & { forceRemount: (
                 style={{
                     width: "100%",
                     height: "100%",
-                    backgroundColor: "#1e1e1e",
+                    backgroundColor: bg,
                     padding: "4px",
                 }}
             />
@@ -281,12 +344,15 @@ function sendResize(ws: WebSocket, cols: number, rows: number) {
 
 export default function TerminalComponent(props: TerminalProps) {
     const [remountKey, setRemountKey] = useState(0);
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme !== "light";
 
     return (
         <TerminalCore
             {...props}
             key={remountKey}
             forceRemount={() => setRemountKey((prev) => prev + 1)}
+            isDark={isDark}
         />
     );
 }

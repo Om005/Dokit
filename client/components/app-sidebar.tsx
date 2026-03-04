@@ -3,9 +3,9 @@
 import * as React from "react";
 import { ChevronRight } from "lucide-react";
 import { Icon } from "@iconify/react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
-import { RootState } from "@/store/store";
+import { RootState, AppDispatch } from "@/store/store";
 import { FileNode } from "@/types/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -20,6 +20,7 @@ import {
     SidebarMenuSub,
     SidebarRail,
 } from "@/components/ui/sidebar";
+import { editorActions, setActiveTab } from "@/store/editor";
 
 function getFileIconId(name: string): string {
     const lower = name.toLowerCase();
@@ -385,10 +386,29 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 }
 
 function FileTreeNode({ node, fileTree }: { node: FileNode; fileTree: Record<string, FileNode> }) {
+    const dispatch = useDispatch<AppDispatch>();
+    const projectId = useSelector((state: RootState) => state.editor.currProject?.id);
     if (node.type === "file") {
         return (
             <SidebarMenuItem>
-                <SidebarMenuButton className="data-[active=true]:bg-transparent">
+                <SidebarMenuButton
+                    onClick={async () => {
+                        try {
+                            if (!node.isLoaded) {
+                                await dispatch(
+                                    editorActions.getFileContent({
+                                        projectId: projectId!,
+                                        filePath: node.path,
+                                    })
+                                );
+                            }
+                            await dispatch(setActiveTab(node.path));
+                        } catch (error) {
+                            console.error("Failed to load file content:", error);
+                        }
+                    }}
+                    className="data-[active=true]:bg-transparent"
+                >
                     <Icon
                         icon={getFileIconId(node.name)}
                         width={16}
@@ -401,7 +421,6 @@ function FileTreeNode({ node, fileTree }: { node: FileNode; fileTree: Record<str
         );
     }
 
-    // directory — track open/closed to swap folder icon
     const [isOpen, setIsOpen] = React.useState(node.isExpanded);
     const [closedIcon, openIcon] = getFolderIconIds(node.name);
 
@@ -417,7 +436,17 @@ function FileTreeNode({ node, fileTree }: { node: FileNode; fileTree: Record<str
         <SidebarMenuItem>
             <Collapsible
                 open={isOpen}
-                onOpenChange={setIsOpen}
+                onOpenChange={async () => {
+                    setIsOpen(!isOpen);
+                    if (node.type === "directory" && !node.isLoaded) {
+                        await dispatch(
+                            editorActions.getFolderContent({
+                                projectId: projectId!,
+                                folderPath: node.path,
+                            })
+                        );
+                    }
+                }}
                 className="group/collapsible [&[data-state=open]>button>svg.chevron]:rotate-90"
             >
                 <CollapsibleTrigger asChild>

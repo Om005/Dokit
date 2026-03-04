@@ -13,10 +13,13 @@ EOF
 echo "Syncing code for project: ${PROJECT_ID}"
 rclone copy r2:${R2_BUCKET_NAME}/code/${PROJECT_ID}/ /workspace/ --progress || true
 
+
 cat > /root/.bashrc << 'BASHRC'
 export PS1="\[\033[01;32m\]dokit\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ "
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 cd /workspace
 BASHRC
+
+echo "CONTAINER_READY"
 
 exec ttyd -W -t fontSize=14 -p 7681 bash --rcfile /root/.bashrc

@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import authRoutes from "@modules/auth/routes";
 import projectRoutes from "@modules/project/routes";
+import editorRoutes from "@modules/editor/routes";
 import httpLogger from "@middlewares/httpLogger";
 import extractIpMiddleware from "@middlewares/IP";
 import { verifyTransporter } from "@config/mailer";
@@ -42,6 +43,7 @@ app.use(extractIpMiddleware);
 app.use(globalErrorHandler);
 app.use("/api/auth", authRoutes);
 app.use("/api/project", projectRoutes);
+app.use("/api/editor", editorRoutes);
 
 app.post("/sync", async (req: Request, res: Response) => {
     try {
@@ -62,5 +64,5 @@ const PORT = env.PORT;
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 
-    initializeScheduler();
+    // initializeScheduler();
 });

@@ -27,6 +27,6 @@ export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 cd /workspace
 BASHRC
 
-echo "Project is ready."
+echo "CONTAINER_READY"
 
 exec ttyd -W -t fontSize=14 -p 7681 bash --rcfile /root/.bashrc

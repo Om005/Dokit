@@ -24,7 +24,6 @@ export default function VerifyPage() {
     const dispatch = useDispatch<AppDispatch>();
     const { isLoading, accountCreationEmail } = useSelector((state: RootState) => state.auth);
 
-    console.log("Temp Email:", accountCreationEmail);
     useEffect(() => {
         if (!accountCreationEmail) {
             router.push("/signup");

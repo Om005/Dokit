@@ -138,7 +138,6 @@ export default function ProjectSettings() {
 
             if (payload.success && payload.data?.project) {
                 const updatedProject = payload.data.project;
-                console.log("Project settings updated successfully:", updatedProject);
                 setProject(updatedProject);
                 toast.success("Project settings updated successfully");
                 setNewPassword("");
@@ -154,7 +153,6 @@ export default function ProjectSettings() {
 
     const handleDeleteProject = async (accountPassword: string) => {
         try {
-            console.log("Attempting to delete project with ID:", projectId);
             const result = await dispatch(
                 projectActions.deleteProject({
                     projectId,
