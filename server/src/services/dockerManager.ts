@@ -4,10 +4,9 @@ import logger from "@utils/logger";
 import env from "@config/env";
 import queueActions from "@modules/queue/queueActions";
 import { prisma } from "@db/prisma";
-import net from "net";
-import { Server } from "socket.io";
 import { PassThrough } from "stream";
 import { FileNode } from "types/express";
+import { syncDockerToYjs } from "sockets/yjsServer";
 
 const docker = new Docker();
 
@@ -24,40 +23,6 @@ interface DokitContainer {
     state: string;
     created: Date;
 }
-
-// export async function waitForContainerReady(projectId: string, maxRetries = 20): Promise<boolean> {
-//     const containerProjectId = projectId.replaceAll("-", "");
-//     const containerName = `dokit-${containerProjectId}`;
-//     const container = docker.getContainer(containerName);
-
-//     for (let i = 0; i < maxRetries; i++) {
-//         try {
-//             // The 'test -f' command checks if a file exists.
-//             // It returns ExitCode 0 if true, and ExitCode 1 if false.
-//             const exec = await container.exec({
-//                 Cmd: ['test', '-f', '/tmp/.init_done'],
-//                 AttachStdout: true,
-//                 AttachStderr: true,
-//             });
-
-//             const stream = await exec.start({ hijack: true, stdin: false });
-//             await new Promise((resolve) => stream.on('end', resolve));
-//             const inspectResult = await exec.inspect();
-
-//             if (inspectResult.ExitCode === 0) {
-//                 // The file exists! rclone has finished downloading.
-//                 return true;
-//             }
-//         } catch (error) {
-//             // Ignore temporary exec errors while the container is booting
-//         }
-
-//         // Wait 500ms before checking again
-//         await new Promise(resolve => setTimeout(resolve, 100));
-//     }
-
-//     // throw new Error(`Container ${containerName} failed to become ready in time.`);
-// }
 
 async function waitForContainerReady(containerId: string, timeoutMs = 60_000): Promise<void> {
     const container = docker.getContainer(containerId);
@@ -410,13 +375,115 @@ async function getFileContent(projectId: string, filePath: string): Promise<stri
             stream.on("error", reject);
         });
 
-        return output;
+        return output.replace(/\r/g, "");
     } catch (error) {
         logger.error(`Failed to get file content for project ${projectId} and file ${filePath}:`);
         logger.error(error);
         return null;
     }
 }
+
+async function writeFileToContainer(
+    projectId: string,
+    filePath: string,
+    content: string
+): Promise<void> {
+    try {
+        const containerProjectId = projectId.replaceAll("-", "");
+        const containerName = `dokit-${containerProjectId}`;
+        const container = docker.getContainer(containerName);
+
+        const targetPath = `/workspace/${filePath}`;
+
+        const base64Content = Buffer.from(content).toString("base64");
+
+        const command = `echo ${base64Content} | base64 -d > ${targetPath}`;
+
+        const exec = await container.exec({
+            Cmd: ["bash", "-c", command],
+            AttachStdout: true,
+            AttachStderr: true,
+        });
+
+        await exec.start({ hijack: true, stdin: false });
+    } catch (error) {
+        logger.error(`Failed to write file content for project ${projectId} and file ${filePath}:`);
+        logger.error(error);
+        throw error;
+    }
+}
+
+async function startFileSystemWatcher(projectId: string): Promise<void> {
+    const containerProjectId = projectId.replaceAll("-", "");
+    const containerName = `dokit-${containerProjectId}`;
+    const excluded = [
+        ".git",
+        "node_modules",
+        "dist",
+        "build",
+        "out",
+        ".next",
+        ".nuxt",
+        ".svelte-kit",
+        ".angular",
+        ".cache",
+        "coverage",
+        "__pycache__",
+        "venv",
+        ".venv",
+        "env",
+        ".pytest_cache",
+        ".tox",
+        "vendor",
+        "target",
+        "bin",
+        "obj",
+        ".gradle",
+    ];
+    try {
+        const container = await docker.getContainer(containerName);
+        const command = "inotifywait -m -r -e close_write --format '%w%f' /workspace";
+        const exec = await container.exec({
+            Cmd: ["bash", "-c", command],
+            AttachStdout: true,
+            AttachStderr: true,
+        });
+
+        const stream = await exec.start({ hijack: true, stdin: false });
+
+        const stdout = new PassThrough();
+        const stderr = new PassThrough();
+
+        container.modem.demuxStream(stream, stdout, stderr);
+
+        stdout.on("data", (chunk) => {
+            const output = chunk.toString().trim();
+            const changedFiles = output.split("\n");
+            changedFiles.forEach((filePath: string) => {
+                if (!filePath.startsWith("/workspace/")) return;
+                if (excluded.some((ex) => filePath.startsWith(`${ex}/`))) return;
+                if (excluded.some((ex) => filePath.includes(`/${ex}`))) return;
+                const relativePath = filePath.replace("/workspace", "");
+
+                syncDockerToYjs(containerProjectId, relativePath).catch((err) => {
+                    logger.error(
+                        `Failed to sync changed file ${relativePath} to Yjs for project ${containerProjectId}:`
+                    );
+                    logger.error(err);
+                });
+            });
+
+            stream.on("end", () => {
+                logger.info(`File system watcher stream ended for project ${containerProjectId}`);
+            });
+        });
+    } catch (error) {
+        logger.error(`Failed to start file system watcher for project ${containerProjectId}:`);
+        logger.error(error);
+        throw error;
+    }
+}
+
 const DockerManager = {
     createDokitContainer,
     deleteDokitContainer,
@@ -426,6 +493,8 @@ const DockerManager = {
     syncAllcontainersToR2,
     getFolderContent,
     getFileContent,
+    writeFileToContainer,
+    startFileSystemWatcher,
 };
 
 export default DockerManager;

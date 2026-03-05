@@ -20,7 +20,7 @@ import {
     SidebarMenuSub,
     SidebarRail,
 } from "@/components/ui/sidebar";
-import { editorActions, setActiveTab } from "@/store/editor";
+import { editorActions, openTab, setActiveTab } from "@/store/editor";
 
 function getFileIconId(name: string): string {
     const lower = name.toLowerCase();
@@ -394,14 +394,7 @@ function FileTreeNode({ node, fileTree }: { node: FileNode; fileTree: Record<str
                 <SidebarMenuButton
                     onClick={async () => {
                         try {
-                            if (!node.isLoaded) {
-                                await dispatch(
-                                    editorActions.getFileContent({
-                                        projectId: projectId!,
-                                        filePath: node.path,
-                                    })
-                                );
-                            }
+                            await dispatch(openTab(node.path));
                             await dispatch(setActiveTab(node.path));
                         } catch (error) {
                             console.error("Failed to load file content:", error);

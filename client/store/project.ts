@@ -24,6 +24,7 @@ interface intialProjectState {
     changingSettings: boolean;
     gettingProjectDetails: boolean;
     pendingPassword: string | null;
+    lastProject: string | null;
 }
 
 const projectActions = {
@@ -114,6 +115,7 @@ const initialState: intialProjectState = {
     changingSettings: false,
     gettingProjectDetails: false,
     pendingPassword: null,
+    lastProject: null,
 };
 
 const projectSlice = createSlice({
@@ -122,6 +124,9 @@ const projectSlice = createSlice({
     reducers: {
         setPendingPassword(state, action) {
             state.pendingPassword = action.payload;
+        },
+        setLastProject(state, action) {
+            state.lastProject = action.payload;
         },
     },
     extraReducers: (builder) => {
@@ -230,10 +235,10 @@ const projectSlice = createSlice({
 const projectPersistConfig = {
     key: "project",
     storage,
-    whitelist: ["projects"],
+    whitelist: ["projects", "lastProject"],
 };
 
 const persistedProjectReducer = persistReducer(projectPersistConfig, projectSlice.reducer);
 
-export const { setPendingPassword } = projectSlice.actions;
+export const { setPendingPassword, setLastProject } = projectSlice.actions;
 export { projectActions, persistedProjectReducer };

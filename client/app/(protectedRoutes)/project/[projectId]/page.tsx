@@ -8,16 +8,8 @@ import { AppDispatch, RootState } from "@/store/store";
 import TerminalLoader from "@/components/terminal-loader";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { Editor } from "@/components/editor";
-import {
-    closeTab,
-    editorActions,
-    openTab,
-    setActiveTab,
-    setCurrProject,
-    setFileContent,
-    setOpenTabs,
-} from "@/store/editor";
-import { projectActions, setPendingPassword } from "@/store/project";
+import { closeTab, editorActions, setActiveTab, setCurrProject, setOpenTabs } from "@/store/editor";
+import { projectActions, setLastProject, setPendingPassword } from "@/store/project";
 import { Eye, EyeOff, Loader2, X, FileIcon, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -33,6 +25,7 @@ interface Props {
 export default function ProjectPage({ params }: Props) {
     const { projectId } = use(params);
     const dispatch = useDispatch<AppDispatch>();
+    const { lastProject } = useSelector((state: RootState) => state.project);
 
     const currProject = useSelector((state: RootState) => state.editor.currProject);
     const fileTree = useSelector((state: RootState) => state.editor.fileTree);
@@ -103,11 +96,14 @@ export default function ProjectPage({ params }: Props) {
                 if (payload.data?.project) {
                     dispatch(setCurrProject(payload.data.project));
                 }
-                await dispatch(
-                    editorActions.getRootContent({ projectId: apiProjectId, folderPath: "/" })
-                );
-                dispatch(setOpenTabs([]));
-                dispatch(setActiveTab(null));
+                if (lastProject !== apiProjectId) {
+                    await dispatch(
+                        editorActions.getRootContent({ projectId: apiProjectId, folderPath: "/" })
+                    );
+                    dispatch(setOpenTabs([]));
+                    dispatch(setActiveTab(null));
+                }
+                await dispatch(setLastProject(apiProjectId));
                 setIsBooting(false);
             } else {
                 setBootError(payload?.message ?? "Failed to start project.");
@@ -352,28 +348,16 @@ export default function ProjectPage({ params }: Props) {
                 <div className="flex flex-1 overflow-hidden min-h-0">
                     <div className="flex flex-col flex-1 overflow-hidden min-h-0">
                         {activeTab && activeFile ? (
-                            gettingFileContent && activeFile.code === null ? (
+                            gettingFileContent ? (
                                 <div className="flex flex-1 items-center justify-center text-muted-foreground text-sm">
                                     Loading…
                                 </div>
                             ) : (
                                 <Editor
+                                    key={activeFile.path}
                                     className="flex-1 min-h-0"
-                                    filename={activeFile.name}
-                                    value={activeFile.code ?? ""}
-                                    onChange={async (value: string) => {
-                                        try {
-                                            await dispatch(
-                                                setFileContent({
-                                                    filePath: activeFile.path,
-                                                    content: value,
-                                                })
-                                            );
-                                        } catch (error) {
-                                            toast.error("Failed to update file content");
-                                            console.error(error);
-                                        }
-                                    }}
+                                    filePath={activeFile.path}
+                                    projectId={projectId}
                                 />
                             )
                         ) : (

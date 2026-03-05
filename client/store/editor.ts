@@ -104,12 +104,6 @@ const editorSlice = createSlice({
         setActiveTab(state, action: PayloadAction<string | null>) {
             state.activeTab = action.payload;
         },
-        setFileContent(state, action: PayloadAction<{ filePath: string; content: string }>) {
-            const { filePath, content } = action.payload;
-            if (state.fileTree && state.fileTree[filePath]) {
-                state.fileTree[filePath].code = content;
-            }
-        },
     },
     extraReducers: (builder) => {
         builder
@@ -160,7 +154,6 @@ const editorSlice = createSlice({
                 if (payload.success && payload.data?.content !== undefined) {
                     const filePath = action.meta.arg.filePath;
                     if (state.fileTree && state.fileTree[filePath]) {
-                        state.fileTree[filePath].code = payload.data.content;
                         state.fileTree[filePath].isLoaded = true;
                     }
                 }
@@ -177,15 +170,8 @@ const editorPersistConfig = {
     whitelist: ["fileTree", "currProject", "openTabs", "activeTab"],
 };
 
-export const {
-    setFileTree,
-    setCurrProject,
-    openTab,
-    closeTab,
-    setActiveTab,
-    setFileContent,
-    setOpenTabs,
-} = editorSlice.actions;
+export const { setFileTree, setCurrProject, openTab, closeTab, setActiveTab, setOpenTabs } =
+    editorSlice.actions;
 
 const persistedEditorReducer = persistReducer(editorPersistConfig, editorSlice.reducer);
 

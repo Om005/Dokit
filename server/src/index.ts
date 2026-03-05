@@ -17,11 +17,12 @@ import { connectToDatabase } from "@db/prisma";
 import { initGeoIP } from "@middlewares/location";
 import { initializeBloomFilter } from "@config/bloomFilter";
 import initializeScheduler from "jobs/scheduler";
-import DockerManager from "services/dockerManager";
+import { createServer } from "http";
+import { yjsWss } from "sockets/yjsServer";
 
 checkEnv();
 connectToDatabase();
-// verifyTransporter();
+verifyTransporter();
 initiatWorkers();
 initGeoIP();
 connectRedis();
@@ -45,24 +46,18 @@ app.use("/api/auth", authRoutes);
 app.use("/api/project", projectRoutes);
 app.use("/api/editor", editorRoutes);
 
-app.post("/sync", async (req: Request, res: Response) => {
-    try {
-        const { projectId } = req.body;
-        if (!projectId) {
-            return res.status(400).json({ error: "Missing projectId" });
-        }
-        const result = await DockerManager.syncWorkspaceToR2(projectId);
-        res.json(result);
-    } catch (error) {
-        console.error("Error syncing workspace to R2:", error);
-        res.status(500).json({ error: "Failed to sync workspace to R2" });
-    }
+const httpServer = createServer(app);
+
+httpServer.on("upgrade", (request, socket, head) => {
+    yjsWss.handleUpgrade(request, socket, head, (ws) => {
+        yjsWss.emit("connection", ws, request);
+    });
 });
 
 const PORT = env.PORT;
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 
-    // initializeScheduler();
+    initializeScheduler();
 });
