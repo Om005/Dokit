@@ -12,7 +12,8 @@
             "@generated/*": ["generated/*"],
             "@db/*": ["db/*"],
             "@utils/*": ["utils/*"],
-            "@middlewares/*": ["middlewares/*"]
+            "@middlewares/*": ["middlewares/*"],
+            "@sockets/*": ["sockets/*"]
         },
 
         "strict": true,

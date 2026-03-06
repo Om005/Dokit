@@ -2,6 +2,7 @@ interface EnvConfig {
     NEXT_PUBLIC_BACKEND_URL: string;
     NEXT_PUBLIC_EDITOR_SOCKET_URL: string;
     NEXT_PUBLIC_NGINX_HOST: string;
+    NEXT_PUBLIC_PROJECT_SOCKET_URL: string;
 }
 
 const env: EnvConfig = {
@@ -9,6 +10,8 @@ const env: EnvConfig = {
     NEXT_PUBLIC_EDITOR_SOCKET_URL:
         process.env.NEXT_PUBLIC_EDITOR_SOCKET_URL || "ws://localhost:4000",
     NEXT_PUBLIC_NGINX_HOST: process.env.NEXT_PUBLIC_NGINX_HOST || "localhost:8080",
+    NEXT_PUBLIC_PROJECT_SOCKET_URL:
+        process.env.NEXT_PUBLIC_PROJECT_SOCKET_URL || "http://localhost:4000",
 };
 
 export default env;

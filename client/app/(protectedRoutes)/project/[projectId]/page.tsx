@@ -8,15 +8,25 @@ import { AppDispatch, RootState } from "@/store/store";
 import TerminalLoader from "@/components/terminal-loader";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { Editor } from "@/components/editor";
-import { closeTab, editorActions, setActiveTab, setCurrProject, setOpenTabs } from "@/store/editor";
+import {
+    addNode,
+    closeTab,
+    deleteNode,
+    editorActions,
+    renameNode,
+    setActiveTab,
+    setCurrProject,
+    setOpenTabs,
+} from "@/store/editor";
 import { projectActions, setLastProject, setPendingPassword } from "@/store/project";
 import { Eye, EyeOff, Loader2, X, FileIcon, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Payload } from "@/types/types";
+import { Payload, TreeNode } from "@/types/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import useFileTreeSocket from "@/hooks/use-filetree-socket";
 
 interface Props {
     params: Promise<{ projectId: string }>;
@@ -52,6 +62,39 @@ export default function ProjectPage({ params }: Props) {
     const isDragging = useRef(false);
     const startX = useRef(0);
     const startWidth = useRef(0);
+
+    const onNodeCreation = useCallback(
+        (parentPath: string, newNode: TreeNode) => {
+            try {
+                dispatch(addNode({ parentPath, newNode }));
+            } catch (error) {
+                console.error("Error creating node:", error);
+            }
+        },
+        [dispatch]
+    );
+    const onNodeDeletion = useCallback(
+        (path: string, isDir: boolean) => {
+            try {
+                dispatch(deleteNode({ path, isDir }));
+            } catch (error) {
+                console.error("Error deleting node:", error);
+            }
+        },
+        [dispatch]
+    );
+    const onRenameNode = useCallback(
+        (fromPath: string, toPath: string, isDir: boolean) => {
+            try {
+                // console.log(`rere ${fromPath} to ${toPath}, ${isDir}`);
+                dispatch(renameNode({ fromPath, toPath, isDir }));
+            } catch (error) {
+                console.error("Error renaming node:", error);
+            }
+        },
+        [dispatch]
+    );
+    useFileTreeSocket(apiProjectId, onNodeCreation, onNodeDeletion, onRenameNode);
 
     const onMouseDown = useCallback(
         (e: React.MouseEvent) => {

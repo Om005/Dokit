@@ -19,6 +19,8 @@ import { initializeBloomFilter } from "@config/bloomFilter";
 import initializeScheduler from "jobs/scheduler";
 import { createServer } from "http";
 import { yjsWss } from "sockets/yjsServer";
+import { Server } from "socket.io";
+import projectSocket from "@sockets/projectSocket";
 
 checkEnv();
 connectToDatabase();
@@ -48,7 +50,21 @@ app.use("/api/editor", editorRoutes);
 
 const httpServer = createServer(app);
 
+export const io = new Server(httpServer, {
+    cors: {
+        origin: env.FRONTEND_URL,
+        credentials: true,
+    },
+});
+
+projectSocket(io);
+
 httpServer.on("upgrade", (request, socket, head) => {
+    const pathname = request.url || "";
+
+    if (pathname.startsWith("/socket.io/")) {
+        return;
+    }
     yjsWss.handleUpgrade(request, socket, head, (ws) => {
         yjsWss.emit("connection", ws, request);
     });

@@ -7,6 +7,8 @@ import { prisma } from "@db/prisma";
 import { PassThrough } from "stream";
 import { FileNode } from "types/express";
 import { syncDockerToYjs } from "sockets/yjsServer";
+import { io } from "index";
+import e from "express";
 
 const docker = new Docker();
 
@@ -23,6 +25,8 @@ interface DokitContainer {
     state: string;
     created: Date;
 }
+
+const syncLocks = new Set<string>();
 
 async function waitForContainerReady(containerId: string, timeoutMs = 60_000): Promise<void> {
     const container = docker.getContainer(containerId);
@@ -397,7 +401,7 @@ async function writeFileToContainer(
 
         const base64Content = Buffer.from(content).toString("base64");
 
-        const command = `echo ${base64Content} | base64 -d > ${targetPath}`;
+        const command = `echo "${base64Content}" | base64 -d > ${targetPath}`;
 
         const exec = await container.exec({
             Cmd: ["bash", "-c", command],
@@ -405,7 +409,11 @@ async function writeFileToContainer(
             AttachStderr: true,
         });
 
-        await exec.start({ hijack: true, stdin: false });
+        const stream = await exec.start({ hijack: true, stdin: false });
+        await new Promise((resolve, reject) => {
+            stream.on("end", resolve);
+            stream.on("error", reject);
+        });
     } catch (error) {
         logger.error(`Failed to write file content for project ${projectId} and file ${filePath}:`);
         logger.error(error);
@@ -442,7 +450,8 @@ async function startFileSystemWatcher(projectId: string): Promise<void> {
     ];
     try {
         const container = await docker.getContainer(containerName);
-        const command = "inotifywait -m -r -e close_write --format '%w%f' /workspace";
+        const command =
+            "inotifywait -m -r -e close_write,create,delete,move --format '%e|%w%f' /workspace";
         const exec = await container.exec({
             Cmd: ["bash", "-c", command],
             AttachStdout: true,
@@ -458,19 +467,90 @@ async function startFileSystemWatcher(projectId: string): Promise<void> {
 
         stdout.on("data", (chunk) => {
             const output = chunk.toString().trim();
-            const changedFiles = output.split("\n");
-            changedFiles.forEach((filePath: string) => {
+            const events = output.split("\n");
+            let pendingEvent: string | null = null;
+            events.forEach(async (event: string) => {
+                const [action, filePath] = event.split("|");
                 if (!filePath.startsWith("/workspace/")) return;
                 if (excluded.some((ex) => filePath.startsWith(`${ex}/`))) return;
                 if (excluded.some((ex) => filePath.includes(`/${ex}`))) return;
                 const relativePath = filePath.replace("/workspace", "");
+                const isDir = action.includes("ISDIR");
 
-                syncDockerToYjs(containerProjectId, relativePath).catch((err) => {
-                    logger.error(
-                        `Failed to sync changed file ${relativePath} to Yjs for project ${containerProjectId}:`
-                    );
-                    logger.error(err);
-                });
+                // console.log(action);
+                if (action.includes("CLOSE_WRITE") || action.includes("MODIFY")) {
+                    if (!isDir) {
+                        syncDockerToYjs(containerProjectId, relativePath).catch((err) => {
+                            logger.error(
+                                `Failed to sync changed file ${relativePath} to Yjs for project ${containerProjectId}:`
+                            );
+                            logger.error(err);
+                        });
+                    }
+                } else if (action.includes("CREATE")) {
+                    if (
+                        syncLocks.has(
+                            `CREATE-${projectId}-${relativePath}-${isDir ? "dir" : "file"}`
+                        )
+                    ) {
+                        return;
+                    }
+                    syncLocks.add(`CREATE-${projectId}-${relativePath}-${isDir ? "dir" : "file"}`);
+                    io.to(projectId).emit("fs-change", {
+                        action: "CREATE",
+                        path: relativePath,
+                        isDir: isDir,
+                    });
+                    await new Promise((resolve) => {
+                        setTimeout(() => {
+                            syncLocks.delete(
+                                `CREATE-${projectId}-${relativePath}-${isDir ? "dir" : "file"}`
+                            );
+                            resolve(null);
+                        }, 3000);
+                    });
+                } else if (action.includes("DELETE")) {
+                    io.to(projectId).emit("fs-change", {
+                        action: "DELETE",
+                        path: relativePath,
+                        isDir: isDir,
+                    });
+                } else {
+                    const [action, path] = event.split("|");
+                    if (action.includes("MOVED_FROM")) {
+                        pendingEvent = event;
+                    } else if (action.includes("MOVED_TO") && pendingEvent) {
+                        const [fromAction, fromPath] = pendingEvent.split("|");
+                        pendingEvent = null;
+                        const fromPathRelative = fromPath.replace("/workspace", "");
+                        const isDir = action.includes("ISDIR");
+                        const toPathRelative = path.replace("/workspace", "");
+                        if (
+                            syncLocks.has(
+                                `MOVE-${projectId}-${fromPathRelative}-${toPathRelative}-${isDir ? "dir" : "file"}`
+                            )
+                        ) {
+                            return;
+                        }
+                        syncLocks.add(
+                            `MOVE-${projectId}-${fromPathRelative}-${toPathRelative}-${isDir ? "dir" : "file"}`
+                        );
+                        io.to(projectId).emit("fs-change", {
+                            action: "RENAME",
+                            fromPath: fromPathRelative,
+                            toPath: toPathRelative,
+                            isDir: isDir,
+                        });
+                        await new Promise((resolve) => {
+                            setTimeout(() => {
+                                syncLocks.delete(
+                                    `MOVE-${projectId}-${fromPathRelative}-${toPathRelative}-${isDir ? "dir" : "file"}`
+                                );
+                                resolve(null);
+                            }, 3000);
+                        });
+                    }
+                }
             });
 
             stream.on("end", () => {

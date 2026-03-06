@@ -6,7 +6,7 @@ import { Icon } from "@iconify/react";
 import { useDispatch, useSelector } from "react-redux";
 
 import { RootState, AppDispatch } from "@/store/store";
-import { FileNode } from "@/types/types";
+import { FileNode, TreeNode } from "@/types/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
     Sidebar,
@@ -20,7 +20,8 @@ import {
     SidebarMenuSub,
     SidebarRail,
 } from "@/components/ui/sidebar";
-import { editorActions, openTab, setActiveTab } from "@/store/editor";
+import { addNode, deleteNode, editorActions, openTab, setActiveTab } from "@/store/editor";
+import useFileTreeSocket from "@/hooks/use-filetree-socket";
 
 function getFileIconId(name: string): string {
     const lower = name.toLowerCase();
@@ -339,6 +340,29 @@ function getFolderIconIds(name: string): [string, string] {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const fileTree = useSelector((state: RootState) => state.editor.fileTree);
+    // const dispatch = useDispatch<AppDispatch>();
+    // const projectId = useSelector((state: RootState) => state.editor.currProject?.id);
+    // const onNodeCreation = React.useCallback(
+    //     (parentPath: string, newNode: TreeNode) => {
+    //         try {
+    //             dispatch(addNode({ parentPath, newNode }));
+    //         } catch (error) {
+    //             console.error("Error creating node:", error);
+    //         }
+    //     },
+    //     [dispatch]
+    // );
+    // const onNodeDeletion = React.useCallback(
+    //     (path: string, isDir: boolean) => {
+    //         try {
+    //             dispatch(deleteNode({ path, isDir }));
+    //         } catch (error) {
+    //             console.error("Error deleting node:", error);
+    //         }
+    //     },
+    //     [dispatch]
+    // );
+    // useFileTreeSocket(projectId!, onNodeCreation, onNodeDeletion);
 
     const rootNodes = React.useMemo(() => {
         if (!fileTree) return [];

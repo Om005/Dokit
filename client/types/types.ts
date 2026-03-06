@@ -31,3 +31,17 @@ export interface FileNode {
     isExpanded: boolean;
     isLoaded: boolean;
 }
+
+export interface FileSystemEvent {
+    action: "CREATE" | "DELETE";
+    path?: string;
+    isDir: boolean;
+    fromPath?: string;
+    toPath?: string;
+}
+
+export interface TreeNode {
+    name: string;
+    path: string;
+    isDir: boolean;
+}
