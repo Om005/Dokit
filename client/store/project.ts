@@ -25,6 +25,7 @@ interface intialProjectState {
     gettingProjectDetails: boolean;
     pendingPassword: string | null;
     lastProject: string | null;
+    closingProject: boolean;
 }
 
 const projectActions = {
@@ -104,6 +105,14 @@ const projectActions = {
             accountPassword: string;
         }>("/api/project/change-settings", "post")
     ),
+    closeProject: createAsyncThunk<
+        ApiResponse,
+        { projectId: string },
+        { rejectValue: ApiResponse }
+    >(
+        "project/closeProject",
+        createApiHandler<{ projectId: string }>("/api/project/close-project", "post")
+    ),
 };
 
 const initialState: intialProjectState = {
@@ -116,6 +125,7 @@ const initialState: intialProjectState = {
     gettingProjectDetails: false,
     pendingPassword: null,
     lastProject: null,
+    closingProject: false,
 };
 
 const projectSlice = createSlice({
@@ -184,7 +194,7 @@ const projectSlice = createSlice({
                 state.startingProject = true;
             })
 
-            .addCase(projectActions.startProject.fulfilled, (state, action) => {
+            .addCase(projectActions.startProject.fulfilled, (state) => {
                 state.startingProject = false;
             })
 
@@ -228,6 +238,16 @@ const projectSlice = createSlice({
 
             .addCase(projectActions.getProjectDetails.rejected, (state) => {
                 state.gettingProjectDetails = false;
+            })
+            .addCase(projectActions.closeProject.pending, (state) => {
+                state.closingProject = true;
+            })
+
+            .addCase(projectActions.closeProject.fulfilled, (state) => {
+                state.closingProject = false;
+            })
+            .addCase(projectActions.closeProject.rejected, (state) => {
+                state.closingProject = false;
             });
     },
 });

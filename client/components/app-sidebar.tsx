@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { ChevronRight, FilePlus, FolderPlus } from "lucide-react";
+import { ChevronRight, FilePlus, FolderPlus, Sun, Moon } from "lucide-react";
 import { Icon } from "@iconify/react";
 import { useDispatch, useSelector } from "react-redux";
+import { useTheme } from "next-themes";
 
 import { RootState, AppDispatch } from "@/store/store";
 import { FileNode, Payload, TreeNode } from "@/types/types";
@@ -11,6 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import {
     Sidebar,
     SidebarContent,
+    SidebarFooter,
     SidebarGroup,
     SidebarGroupContent,
     SidebarGroupLabel,
@@ -54,8 +56,8 @@ function getFileIconId(name: string): string {
         makefile: "vscode-icons:file-type-makefile",
         gemfile: "vscode-icons:file-type-ruby",
         "gemfile.lock": "vscode-icons:file-type-ruby",
-        "readme.md": "vscode-icons:file-type-readme",
-        readme: "vscode-icons:file-type-readme",
+        "readme.md": "vscode-icons:file-type-markdown",
+        readme: "vscode-icons:file-type-markdown",
         license: "vscode-icons:file-type-license",
         licence: "vscode-icons:file-type-license",
         "changelog.md": "vscode-icons:file-type-changelog",
@@ -228,7 +230,7 @@ function getFolderIconIds(name: string): [string, string] {
         libs: ["vscode-icons:folder-type-lib", "vscode-icons:folder-type-lib-opened"],
         public: ["vscode-icons:folder-type-public", "vscode-icons:folder-type-public-opened"],
         static: ["vscode-icons:folder-type-static", "vscode-icons:folder-type-static-opened"],
-        assets: ["vscode-icons:folder-type-assets", "vscode-icons:folder-type-assets-opened"],
+        assets: ["vscode-icons:folder-type-asset", "vscode-icons:folder-type-asset-opened"],
         images: ["vscode-icons:folder-type-images", "vscode-icons:folder-type-images-opened"],
         img: ["vscode-icons:folder-type-images", "vscode-icons:folder-type-images-opened"],
         icons: ["vscode-icons:folder-type-icons", "vscode-icons:folder-type-icons-opened"],
@@ -348,6 +350,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const creatingNode = useSelector((state: RootState) => state.editor.creatingNode);
     const [rootDialogOpen, setRootDialogOpen] = React.useState(false);
     const [rootDialogNodeType, setRootDialogNodeType] = React.useState<"file" | "folder">("file");
+    const { resolvedTheme, setTheme } = useTheme();
 
     const handleRootCreate = async (value?: string) => {
         if (!projectId || !value) return;
@@ -435,6 +438,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     </SidebarGroupContent>
                 </SidebarGroup>
             </SidebarContent>
+            <SidebarFooter className="flex items-center justify-end border-t p-2">
+                <button
+                    onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                    className="cursor-pointer rounded p-1.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                    title={
+                        resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"
+                    }
+                >
+                    {resolvedTheme === "dark" ? (
+                        <Sun className="h-4 w-4" />
+                    ) : (
+                        <Moon className="h-4 w-4" />
+                    )}
+                </button>
+            </SidebarFooter>
             <SidebarRail />
             <NodeActionDialog
                 open={rootDialogOpen}

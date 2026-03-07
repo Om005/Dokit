@@ -31,4 +31,10 @@ router.post(
     controllers.changeProjectSettings
 );
 
+router.post(
+    "/close-project",
+    validationMiddleware(validators.closeProjectSchema),
+    controllers.closeProject
+);
+
 export default router;

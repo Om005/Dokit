@@ -96,7 +96,9 @@ function TerminalCore({
         term.open(terminalRef.current);
 
         setTimeout(() => {
-            fitAddon.fit();
+            if (terminalRef.current && terminalRef.current.getBoundingClientRect().height > 0) {
+                fitAddon.fit();
+            }
             term.focus();
         }, 100);
 
@@ -115,6 +117,8 @@ function TerminalCore({
         });
 
         const resizeObserver = new ResizeObserver(() => {
+            if (!terminalRef.current || terminalRef.current.getBoundingClientRect().height === 0)
+                return;
             fitAddon.fit();
             const ws = wsRef.current;
             if (ws && ws.readyState === WebSocket.OPEN) {
@@ -234,7 +238,6 @@ function TerminalCore({
         };
     }, [wsUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Update xterm theme when light/dark mode changes without remounting
     useEffect(() => {
         if (xtermRef.current) {
             xtermRef.current.options.theme = xtermTheme;
@@ -250,7 +253,7 @@ function TerminalCore({
     const btnBorder = isDark ? "#555555" : "#bbbbbb";
 
     return (
-        <div style={{ position: "relative", width: "100%", height: "100%", minHeight: "400px" }}>
+        <div style={{ position: "relative", width: "100%", height: "100%" }}>
             <style>
                 {`
                     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }

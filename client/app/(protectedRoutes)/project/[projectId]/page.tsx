@@ -6,7 +6,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store/store";
 import TerminalLoader from "@/components/terminal-loader";
-import { use, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, use, useCallback, useEffect, useRef, useState } from "react";
 import { Editor } from "@/components/editor";
 import {
     addNode,
@@ -17,9 +17,23 @@ import {
     setActiveTab,
     setCurrProject,
     setOpenTabs,
+    toggleLineWrapping,
 } from "@/store/editor";
 import { projectActions, setLastProject, setPendingPassword } from "@/store/project";
-import { Eye, EyeOff, Loader2, X, FileIcon, Lock } from "lucide-react";
+import {
+    Eye,
+    EyeOff,
+    Loader2,
+    X,
+    FileIcon,
+    Lock,
+    Play,
+    ChevronRight,
+    PanelBottom,
+    PanelRight,
+    WrapText,
+    AlignLeft,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Payload, TreeNode } from "@/types/types";
@@ -27,6 +41,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import useFileTreeSocket from "@/hooks/use-filetree-socket";
+import { useRouter } from "next/navigation";
+import { toggleTerminalPosition } from "@/store/editor";
 
 interface Props {
     params: Promise<{ projectId: string }>;
@@ -35,7 +51,8 @@ interface Props {
 export default function ProjectPage({ params }: Props) {
     const { projectId } = use(params);
     const dispatch = useDispatch<AppDispatch>();
-    const { lastProject } = useSelector((state: RootState) => state.project);
+    const router = useRouter();
+    const { lastProject, closingProject } = useSelector((state: RootState) => state.project);
 
     const currProject = useSelector((state: RootState) => state.editor.currProject);
     const fileTree = useSelector((state: RootState) => state.editor.fileTree);
@@ -43,7 +60,8 @@ export default function ProjectPage({ params }: Props) {
     const activeTab = useSelector((state: RootState) => state.editor.activeTab);
     const gettingFileContent = useSelector((state: RootState) => state.editor.gettingFileContent);
     const pendingPassword = useSelector((state: RootState) => state.project.pendingPassword);
-
+    const terminalPosition = useSelector((state: RootState) => state.editor.terminalPosition);
+    const lineWrapping = useSelector((state: RootState) => state.editor.lineWrapping);
     const apiProjectId =
         currProject?.id ??
         `${projectId.slice(0, 8)}-${projectId.slice(8, 12)}-${projectId.slice(12, 16)}-${projectId.slice(16, 20)}-${projectId.slice(20)}`;
@@ -58,10 +76,12 @@ export default function ProjectPage({ params }: Props) {
     const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
     const [passwordFormError, setPasswordFormError] = useState<string | null>(null);
 
-    const [terminalWidth, setTerminalWidth] = useState(400);
+    // const [terminalPosition, setTerminalPosition] = useState<"bottom" | "right">("bottom");
+    const [terminalHeight, setTerminalHeight] = useState(250);
+    const [terminalWidth, setTerminalWidth] = useState(380);
     const isDragging = useRef(false);
-    const startX = useRef(0);
-    const startWidth = useRef(0);
+    const startPos = useRef(0);
+    const startSize = useRef(0);
 
     const onNodeCreation = useCallback(
         (parentPath: string, newNode: TreeNode) => {
@@ -96,25 +116,50 @@ export default function ProjectPage({ params }: Props) {
     );
     useFileTreeSocket(apiProjectId, onNodeCreation, onNodeDeletion, onRenameNode);
 
-    const onMouseDown = useCallback(
+    // const toggleTerminalPosition = useCallback(() => {
+    //     dispatch(toggleTerminalPosition());
+    // }, [dispatch]);
+
+    const onBottomDragStart = useCallback(
         (e: React.MouseEvent) => {
             isDragging.current = true;
-            startX.current = e.clientX;
-            startWidth.current = terminalWidth;
+            startPos.current = e.clientY;
+            startSize.current = terminalHeight;
 
             const onMouseMove = (ev: MouseEvent) => {
                 if (!isDragging.current) return;
-                const delta = startX.current - ev.clientX;
-                const newWidth = Math.max(200, Math.min(900, startWidth.current + delta));
-                setTerminalWidth(newWidth);
+                const delta = startPos.current - ev.clientY;
+                const newHeight = Math.max(0, Math.min(600, startSize.current + delta));
+                setTerminalHeight(newHeight);
             };
-
             const onMouseUp = () => {
                 isDragging.current = false;
                 window.removeEventListener("mousemove", onMouseMove);
                 window.removeEventListener("mouseup", onMouseUp);
             };
+            window.addEventListener("mousemove", onMouseMove);
+            window.addEventListener("mouseup", onMouseUp);
+        },
+        [terminalHeight]
+    );
 
+    const onRightDragStart = useCallback(
+        (e: React.MouseEvent) => {
+            isDragging.current = true;
+            startPos.current = e.clientX;
+            startSize.current = terminalWidth;
+
+            const onMouseMove = (ev: MouseEvent) => {
+                if (!isDragging.current) return;
+                const delta = startPos.current - ev.clientX;
+                const newWidth = Math.max(220, Math.min(900, startSize.current + delta));
+                setTerminalWidth(newWidth);
+            };
+            const onMouseUp = () => {
+                isDragging.current = false;
+                window.removeEventListener("mousemove", onMouseMove);
+                window.removeEventListener("mouseup", onMouseUp);
+            };
             window.addEventListener("mousemove", onMouseMove);
             window.addEventListener("mouseup", onMouseUp);
         },
@@ -330,6 +375,25 @@ export default function ProjectPage({ params }: Props) {
         dispatch(closeTab(filePath));
     };
 
+    const handleCloseProject = async () => {
+        try {
+            const response = await dispatch(
+                projectActions.closeProject({ projectId: currProject!.id })
+            );
+            const payload = response.payload as Payload<void>;
+            if (payload?.success) {
+                toast.success("Project closed successfully.");
+            } else {
+                toast.error(payload?.message ?? "Failed to close project.");
+            }
+        } catch (error) {
+            toast.error("An unexpected error occurred while closing the project.");
+            console.error(error);
+        } finally {
+            router.push("/dashboard/projects");
+        }
+    };
+
     const getFileName = (filePath: string) => filePath.split("/").pop() ?? filePath;
 
     return (
@@ -337,14 +401,67 @@ export default function ProjectPage({ params }: Props) {
             <AppSidebar />
             <SidebarInset className="flex flex-col overflow-hidden min-h-0">
                 <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-                    <SidebarTrigger className="-ml-1" />
+                    <SidebarTrigger className="-ml-1 shrink-0" />
                     <Separator
                         orientation="vertical"
-                        className="mr-2 data-[orientation=vertical]:h-4"
+                        className="data-[orientation=vertical]:h-4 shrink-0"
                     />
-                    <span className="text-sm font-medium truncate">
+                    <span className="text-sm font-medium truncate shrink-0">
                         {currProject?.name ?? "Project"}
                     </span>
+                    <div className="flex-1 flex justify-center">
+                        <Button size="sm" variant="secondary" className="gap-1.5">
+                            <Play className="size-3.5" />
+                            Run
+                        </Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            className="gap-1.5"
+                            onClick={() => dispatch(toggleLineWrapping())}
+                            title={lineWrapping ? "Disable line wrapping" : "Enable line wrapping"}
+                        >
+                            {lineWrapping ? (
+                                <AlignLeft className="size-3.5" />
+                            ) : (
+                                <WrapText className="size-3.5" />
+                            )}
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            className="gap-1.5"
+                            onClick={() => dispatch(toggleTerminalPosition())}
+                            title={
+                                terminalPosition === "bottom"
+                                    ? "Move terminal to right"
+                                    : "Move terminal to bottom"
+                            }
+                        >
+                            {terminalPosition === "bottom" ? (
+                                <PanelRight className="size-3.5" />
+                            ) : (
+                                <PanelBottom className="size-3.5" />
+                            )}
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={handleCloseProject}
+                            disabled={closingProject}
+                        >
+                            {closingProject ? (
+                                <>
+                                    <Loader2 className="size-3.5 animate-spin" />
+                                    Closing...
+                                </>
+                            ) : (
+                                "Close Project"
+                            )}
+                        </Button>
+                    </div>
                 </header>
 
                 {openTabs.length > 0 && (
@@ -388,38 +505,78 @@ export default function ProjectPage({ params }: Props) {
                     </div>
                 )}
 
-                <div className="flex flex-1 overflow-hidden min-h-0">
-                    <div className="flex flex-col flex-1 overflow-hidden min-h-0">
-                        {activeTab && activeFile ? (
-                            gettingFileContent ? (
-                                <div className="flex flex-1 items-center justify-center text-muted-foreground text-sm">
-                                    Loading…
-                                </div>
-                            ) : (
-                                <Editor
-                                    key={activeFile.path}
-                                    className="flex-1 min-h-0"
-                                    filePath={activeFile.path}
-                                    projectId={projectId}
-                                />
-                            )
-                        ) : (
-                            <div className="flex flex-1 items-center justify-center text-muted-foreground text-sm">
-                                Select a file to start editing
-                            </div>
+                <div className="flex flex-col flex-1 overflow-hidden min-h-0">
+                    {activeTab && (
+                        <div className="flex items-center shrink-0 px-3 py-1 gap-0.5 text-xs text-muted-foreground border-b bg-muted/20 select-none w-full">
+                            {activeTab
+                                .replace(/^\//, "")
+                                .split("/")
+                                .map((part, i, arr) => (
+                                    <Fragment key={i}>
+                                        {i > 0 && (
+                                            <ChevronRight className="size-3 text-muted-foreground/50 shrink-0" />
+                                        )}
+                                        <span
+                                            className={
+                                                i === arr.length - 1 ? "text-foreground/80" : ""
+                                            }
+                                        >
+                                            {part}
+                                        </span>
+                                    </Fragment>
+                                ))}
+                        </div>
+                    )}
+
+                    <div
+                        className={cn(
+                            "flex flex-1 overflow-hidden min-h-0",
+                            terminalPosition === "bottom" ? "flex-col" : "flex-row"
                         )}
-                    </div>
-
-                    <div
-                        onMouseDown={onMouseDown}
-                        className="w-1 cursor-col-resize bg-border hover:bg-primary/50 transition-colors shrink-0 select-none"
-                    />
-
-                    <div
-                        style={{ width: terminalWidth }}
-                        className="flex flex-col shrink-0 overflow-hidden border-l border-border bg-background"
                     >
-                        <TerminalLoader wsUrl={wsUrl} />
+                        <div className="flex-1 overflow-hidden min-h-0 min-w-0">
+                            {activeTab && activeFile ? (
+                                gettingFileContent ? (
+                                    <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
+                                        Loading…
+                                    </div>
+                                ) : (
+                                    <Editor
+                                        key={activeFile.path}
+                                        className="h-full"
+                                        filePath={activeFile.path}
+                                        projectId={projectId}
+                                    />
+                                )
+                            ) : (
+                                <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
+                                    Select a file to start editing
+                                </div>
+                            )}
+                        </div>
+
+                        {terminalPosition === "bottom" ? (
+                            <div
+                                onMouseDown={onBottomDragStart}
+                                className="h-1.5 cursor-row-resize bg-border hover:bg-primary/50 transition-colors shrink-0 select-none"
+                            />
+                        ) : (
+                            <div
+                                onMouseDown={onRightDragStart}
+                                className="w-1.5 cursor-col-resize bg-border hover:bg-primary/50 transition-colors shrink-0 select-none"
+                            />
+                        )}
+
+                        <div
+                            style={
+                                terminalPosition === "bottom"
+                                    ? { height: terminalHeight }
+                                    : { width: terminalWidth }
+                            }
+                            className="shrink-0 overflow-hidden bg-background"
+                        >
+                            <TerminalLoader wsUrl={wsUrl} />
+                        </div>
                     </div>
                 </div>
             </SidebarInset>

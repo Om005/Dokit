@@ -529,6 +529,61 @@ const controllers = {
             });
         }
     },
+    closeProject: async (req: Request, res: Response) => {
+        try {
+            const { projectId } = req.body;
+
+            const userId = req.meta.user?.id;
+            if (!userId) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Unauthorized",
+                    statusCode: StatusCodes.UNAUTHORIZED,
+                });
+            }
+
+            const project = await prisma.project.findFirst({
+                where: {
+                    id: projectId,
+                    ownerId: userId,
+                },
+            });
+
+            if (!project) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Project not found.",
+                    statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+
+            try {
+                await queueActions.addContainerCleanupJob(projectId);
+            } catch (error) {
+                logger.error("Error stopping container in closeProject controller:");
+                logger.error(error);
+                return sendResponse(res, {
+                    success: false,
+                    message: "Failed to close project. Please try again later.",
+                    statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+                });
+            }
+
+            return sendResponse(res, {
+                success: true,
+                message: "Project closed successfully.",
+                statusCode: StatusCodes.OK,
+            });
+        } catch (error) {
+            logger.error("Error in closeProject controller:");
+            logger.error(error);
+            return sendResponse(res, {
+                success: false,
+                message: "Failed to close project.",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    },
 };
 
 export default controllers;

@@ -49,6 +49,10 @@ const validators = {
         accountPassword: z.string().min(1, "Account password is required to change settings"),
         isPasswordProtected: z.boolean(),
     }),
+
+    closeProjectSchema: z.object({
+        projectId: z.string().uuid("Invalid project ID format"),
+    }),
 };
 
 export default validators;

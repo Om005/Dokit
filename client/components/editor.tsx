@@ -7,6 +7,10 @@ import { yCollab } from "y-codemirror.next";
 import { getLanguageExtension } from "@/utils/getLanguageExtension";
 import { useEffect, useState } from "react";
 import env from "@/config/env";
+import { EditorView } from "@codemirror/view";
+import { useTheme } from "next-themes";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
 
 interface EditorProps {
     filePath: string;
@@ -24,6 +28,7 @@ export function Editor({
     className = "",
 }: EditorProps) {
     const [yjsExtension, setYjsExtension] = useState<any[]>([]);
+    const lineWrapping = useSelector((state: RootState) => state.editor.lineWrapping);
     useEffect(() => {
         if (!projectId || !filePath) return;
 
@@ -31,6 +36,7 @@ export function Editor({
         const roomName = `${projectId}-${filePath}`;
 
         const provider = new WebsocketProvider(env.NEXT_PUBLIC_EDITOR_SOCKET_URL!, roomName, ydoc);
+
         const ytext = ydoc.getText("codemirror");
 
         const collabExtension = yCollab(ytext, provider.awareness);
@@ -45,13 +51,21 @@ export function Editor({
     }, [projectId, filePath]);
     const filename = filePath.split("/").pop() || "untitled.txt";
     const language = getLanguageExtension(filename!);
-    const extensions = language ? [language, ...yjsExtension] : [...yjsExtension];
-
+    // const extensions = language ? [language, ...yjsExtension] : [...yjsExtension];
+    const extensions = lineWrapping
+        ? language
+            ? [language, EditorView.lineWrapping, ...yjsExtension]
+            : [EditorView.lineWrapping, ...yjsExtension]
+        : language
+          ? [language, ...yjsExtension]
+          : [...yjsExtension];
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme !== "light";
     return (
         <div className={`overflow-hidden ${className}`} style={{ height: "100%" }}>
             <CodeMirror
                 // value={value}
-                theme={oneDark}
+                theme={isDark ? oneDark : undefined}
                 // theme={dracula}
                 extensions={extensions}
                 // onChange={onChange}

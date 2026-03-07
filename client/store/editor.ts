@@ -4,6 +4,7 @@ import { persistReducer } from "redux-persist";
 import storage from "redux-persist/lib/storage";
 import createApiHandler from "@/utils/apiHandler";
 import { current } from "@reduxjs/toolkit";
+
 interface currProject {
     id: string;
     name: string;
@@ -26,6 +27,8 @@ interface initialEditorState {
     creatingNode: boolean;
     deletingNode: boolean;
     renamingNode: boolean;
+    terminalPosition: "bottom" | "right";
+    lineWrapping: boolean;
 }
 
 const editorActions = {
@@ -105,6 +108,8 @@ const initialState: initialEditorState = {
     creatingNode: false,
     deletingNode: false,
     renamingNode: false,
+    terminalPosition: "bottom",
+    lineWrapping: false,
 };
 
 const editorSlice = createSlice({
@@ -273,6 +278,12 @@ const editorSlice = createSlice({
                 renameRecursively(fromPath, toPath);
             }
         },
+        toggleTerminalPosition(state) {
+            state.terminalPosition = state.terminalPosition === "bottom" ? "right" : "bottom";
+        },
+        toggleLineWrapping(state) {
+            state.lineWrapping = !state.lineWrapping;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -383,7 +394,14 @@ const editorSlice = createSlice({
 const editorPersistConfig = {
     key: "editor",
     storage,
-    whitelist: ["fileTree", "currProject", "openTabs", "activeTab"],
+    whitelist: [
+        "fileTree",
+        "currProject",
+        "openTabs",
+        "activeTab",
+        "terminalPosition",
+        "lineWrapping",
+    ],
 };
 
 export const {
@@ -396,6 +414,8 @@ export const {
     addNode,
     deleteNode,
     renameNode,
+    toggleTerminalPosition,
+    toggleLineWrapping,
 } = editorSlice.actions;
 
 const persistedEditorReducer = persistReducer(editorPersistConfig, editorSlice.reducer);
