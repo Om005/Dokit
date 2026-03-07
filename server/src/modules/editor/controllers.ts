@@ -113,6 +113,152 @@ const controllers = {
             });
         }
     },
+    createNode: async (req: Request, res: Response) => {
+        try {
+            const { projectId, nodePath, isDir } = req.body;
+            const userId = req.meta.user?.id;
+            if (!userId) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Unauthorized",
+                    statusCode: StatusCodes.UNAUTHORIZED,
+                });
+            }
+            const project = await prisma.project.findFirst({
+                where: {
+                    id: projectId,
+                    ownerId: userId,
+                },
+            });
+            if (!project) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Project not found",
+                    statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+            await DockerManager.createNode(projectId, nodePath, isDir).catch((error) => {
+                const errorMessage = error instanceof Error ? error.message : "Unknown error";
+                return sendResponse(res, {
+                    success: false,
+                    message: `Error creating node: ${errorMessage}`,
+                    statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+                });
+            });
+
+            return sendResponse(res, {
+                success: true,
+                message: "Node created successfully",
+                statusCode: StatusCodes.OK,
+            });
+        } catch (error) {
+            logger.error("Error in createNode controller:");
+            logger.error(error);
+            sendResponse(res, {
+                success: false,
+                message: "Error creating node",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    },
+    deleteNode: async (req: Request, res: Response) => {
+        try {
+            const { projectId, nodePath } = req.body;
+            const userId = req.meta.user?.id;
+            if (!userId) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Unauthorized",
+                    statusCode: StatusCodes.UNAUTHORIZED,
+                });
+            }
+            const project = await prisma.project.findFirst({
+                where: {
+                    id: projectId,
+                    ownerId: userId,
+                },
+            });
+            if (!project) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Project not found",
+                    statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+
+            await DockerManager.deleteNode(projectId, nodePath).catch((error) => {
+                const errorMessage = error instanceof Error ? error.message : "Unknown error";
+                return sendResponse(res, {
+                    success: false,
+                    message: `Error deleting node: ${errorMessage}`,
+                    statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+                });
+            });
+
+            return sendResponse(res, {
+                success: true,
+                message: "Node deleted successfully",
+                statusCode: StatusCodes.OK,
+            });
+        } catch (error) {
+            logger.error("Error in deleteNode controller:");
+            logger.error(error);
+            sendResponse(res, {
+                success: false,
+                message: "Error deleting node",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    },
+    renameNode: async (req: Request, res: Response) => {
+        try {
+            const { projectId, oldPath, newPath } = req.body;
+            const userId = req.meta.user?.id;
+            if (!userId) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Unauthorized",
+                    statusCode: StatusCodes.UNAUTHORIZED,
+                });
+            }
+            const project = await prisma.project.findFirst({
+                where: {
+                    id: projectId,
+                    ownerId: userId,
+                },
+            });
+            if (!project) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Project not found",
+                    statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+
+            await DockerManager.renameNode(projectId, oldPath, newPath).catch((error) => {
+                const errorMessage = error instanceof Error ? error.message : "Unknown error";
+                return sendResponse(res, {
+                    success: false,
+                    message: `Error renaming node: ${errorMessage}`,
+                    statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+                });
+            });
+
+            return sendResponse(res, {
+                success: true,
+                message: "Node renamed successfully",
+                statusCode: StatusCodes.OK,
+            });
+        } catch (error) {
+            logger.error("Error in renameNode controller:");
+            logger.error(error);
+            sendResponse(res, {
+                success: false,
+                message: "Error renaming node",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    },
 };
 
 export default controllers;

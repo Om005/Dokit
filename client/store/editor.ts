@@ -23,6 +23,9 @@ interface initialEditorState {
     gettingFileContent: boolean;
     openTabs: string[];
     activeTab: string | null;
+    creatingNode: boolean;
+    deletingNode: boolean;
+    renamingNode: boolean;
 }
 
 const editorActions = {
@@ -59,6 +62,36 @@ const editorActions = {
             "post"
         )
     ),
+    createNode: createAsyncThunk<
+        ApiResponse,
+        { projectId: string; nodePath: string; isDir: boolean },
+        { rejectValue: ApiResponse }
+    >(
+        "editor/createNode",
+        createApiHandler<{ projectId: string; nodePath: string; isDir: boolean }>(
+            "/api/editor/create-node",
+            "post"
+        )
+    ),
+    deleteNode: createAsyncThunk<
+        ApiResponse,
+        { projectId: string; nodePath: string },
+        { rejectValue: ApiResponse }
+    >(
+        "editor/deleteNode",
+        createApiHandler<{ projectId: string; nodePath: string }>("/api/editor/delete-node", "post")
+    ),
+    renameNode: createAsyncThunk<
+        ApiResponse,
+        { projectId: string; oldPath: string; newPath: string },
+        { rejectValue: ApiResponse }
+    >(
+        "editor/renameNode",
+        createApiHandler<{ projectId: string; oldPath: string; newPath: string }>(
+            "/api/editor/rename-node",
+            "post"
+        )
+    ),
 };
 
 const initialState: initialEditorState = {
@@ -69,6 +102,9 @@ const initialState: initialEditorState = {
     gettingFileContent: false,
     openTabs: [],
     activeTab: null,
+    creatingNode: false,
+    deletingNode: false,
+    renamingNode: false,
 };
 
 const editorSlice = createSlice({
@@ -127,7 +163,7 @@ const editorSlice = createSlice({
         deleteNode(state, action: PayloadAction<{ path: string; isDir: boolean }>) {
             const { path, isDir } = action.payload;
             if (!state.fileTree[path]) return;
-            console.log("this is", current(state.fileTree[path].children));
+
             if (isDir) {
                 const deleteRecursively = (nodePath: string) => {
                     const node = state.fileTree[nodePath];
@@ -147,7 +183,6 @@ const editorSlice = createSlice({
             state,
             action: PayloadAction<{ fromPath: string; toPath: string; isDir: boolean }>
         ) {
-            console.log("Renaming node in state:", action.payload);
             const { fromPath, toPath, isDir } = action.payload;
 
             const lastSlashIndexFrom = fromPath.lastIndexOf("/");
@@ -174,7 +209,6 @@ const editorSlice = createSlice({
                 (parentTo === "/" ||
                     (state.fileTree[parentTo] && state.fileTree[parentTo].isLoaded))
             ) {
-                console.log("11111");
                 const newNode: FileNode = {
                     path: toPath,
                     name: toPath.substring(toPath.lastIndexOf("/") + 1),
@@ -194,8 +228,6 @@ const editorSlice = createSlice({
 
             // Node exists and needs to be renamed/moved.
             else if (state.fileTree[fromPath]) {
-                console.log("22222");
-
                 // Remove from the old parent's children array
                 if (parentFrom !== "/" && state.fileTree[parentFrom]) {
                     state.fileTree[parentFrom].children = state.fileTree[
@@ -297,6 +329,53 @@ const editorSlice = createSlice({
             })
             .addCase(editorActions.getFileContent.rejected, (state) => {
                 state.gettingFileContent = false;
+            })
+
+            .addCase(editorActions.createNode.pending, (state) => {
+                state.creatingNode = true;
+            })
+            .addCase(editorActions.createNode.fulfilled, (state) => {
+                state.creatingNode = false;
+            })
+            .addCase(editorActions.createNode.rejected, (state) => {
+                state.creatingNode = false;
+            })
+            .addCase(editorActions.deleteNode.pending, (state) => {
+                state.deletingNode = true;
+            })
+            .addCase(editorActions.deleteNode.fulfilled, (state, action) => {
+                state.deletingNode = false;
+                const { nodePath } = action.meta.arg;
+
+                if (state.openTabs.some((p) => p === nodePath || p.startsWith(nodePath + "/"))) {
+                    const removedTabs = state.openTabs.filter(
+                        (p) => p === nodePath || p.startsWith(nodePath + "/")
+                    );
+
+                    state.openTabs = state.openTabs.filter(
+                        (p) => !(p === nodePath || p.startsWith(nodePath + "/"))
+                    );
+
+                    if (state.activeTab && removedTabs.includes(state.activeTab)) {
+                        if (state.openTabs.length > 0) {
+                            state.activeTab = state.openTabs[state.openTabs.length - 1];
+                        } else {
+                            state.activeTab = null;
+                        }
+                    }
+                }
+            })
+            .addCase(editorActions.deleteNode.rejected, (state) => {
+                state.deletingNode = false;
+            })
+            .addCase(editorActions.renameNode.pending, (state) => {
+                state.renamingNode = true;
+            })
+            .addCase(editorActions.renameNode.fulfilled, (state) => {
+                state.renamingNode = false;
+            })
+            .addCase(editorActions.renameNode.rejected, (state) => {
+                state.renamingNode = false;
             });
     },
 });

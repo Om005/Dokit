@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, FilePlus, FolderPlus } from "lucide-react";
 import { Icon } from "@iconify/react";
 import { useDispatch, useSelector } from "react-redux";
 
 import { RootState, AppDispatch } from "@/store/store";
-import { FileNode, TreeNode } from "@/types/types";
+import { FileNode, Payload, TreeNode } from "@/types/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
     Sidebar,
@@ -22,6 +22,9 @@ import {
 } from "@/components/ui/sidebar";
 import { addNode, deleteNode, editorActions, openTab, setActiveTab } from "@/store/editor";
 import useFileTreeSocket from "@/hooks/use-filetree-socket";
+import { FileNodeContextMenu } from "@/components/file-node-context-menu";
+import { NodeActionDialog } from "@/components/node-action-dialog";
+import { toast } from "sonner";
 
 function getFileIconId(name: string): string {
     const lower = name.toLowerCase();
@@ -339,30 +342,33 @@ function getFolderIconIds(name: string): [string, string] {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+    const dispatch = useDispatch<AppDispatch>();
     const fileTree = useSelector((state: RootState) => state.editor.fileTree);
-    // const dispatch = useDispatch<AppDispatch>();
-    // const projectId = useSelector((state: RootState) => state.editor.currProject?.id);
-    // const onNodeCreation = React.useCallback(
-    //     (parentPath: string, newNode: TreeNode) => {
-    //         try {
-    //             dispatch(addNode({ parentPath, newNode }));
-    //         } catch (error) {
-    //             console.error("Error creating node:", error);
-    //         }
-    //     },
-    //     [dispatch]
-    // );
-    // const onNodeDeletion = React.useCallback(
-    //     (path: string, isDir: boolean) => {
-    //         try {
-    //             dispatch(deleteNode({ path, isDir }));
-    //         } catch (error) {
-    //             console.error("Error deleting node:", error);
-    //         }
-    //     },
-    //     [dispatch]
-    // );
-    // useFileTreeSocket(projectId!, onNodeCreation, onNodeDeletion);
+    const projectId = useSelector((state: RootState) => state.editor.currProject?.id);
+    const creatingNode = useSelector((state: RootState) => state.editor.creatingNode);
+    const [rootDialogOpen, setRootDialogOpen] = React.useState(false);
+    const [rootDialogNodeType, setRootDialogNodeType] = React.useState<"file" | "folder">("file");
+
+    const handleRootCreate = async (value?: string) => {
+        if (!projectId || !value) return;
+        try {
+            const response = await dispatch(
+                editorActions.createNode({
+                    projectId,
+                    nodePath: `/${value}`,
+                    isDir: rootDialogNodeType === "folder",
+                })
+            );
+            const payload = response.payload as Payload<void>;
+            if (!payload.success) {
+                toast.error(payload.message || "An error occurred. Please try again.");
+                return;
+            }
+            setRootDialogOpen(false);
+        } catch (error) {
+            console.error("Error creating root node:", error);
+        }
+    };
 
     const rootNodes = React.useMemo(() => {
         if (!fileTree) return [];
@@ -378,7 +384,32 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <Sidebar {...props}>
             <SidebarContent>
                 <SidebarGroup>
-                    <SidebarGroupLabel>Files</SidebarGroupLabel>
+                    <SidebarGroupLabel className="flex items-center justify-between pr-1">
+                        <span>Files</span>
+                        <div className="flex items-center gap-0.5">
+                            <button
+                                title="New File"
+                                className="cursor-pointer rounded p-0.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                                onClick={() => {
+                                    setRootDialogNodeType("file");
+                                    setRootDialogOpen(true);
+                                }}
+                            >
+                                <FilePlus className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                                title="New Folder"
+                                className="cursor-pointer rounded p-0.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                                onClick={() => {
+                                    setRootDialogNodeType("folder");
+                                    setRootDialogOpen(true);
+                                }}
+                            >
+                                <FolderPlus className="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+                    </SidebarGroupLabel>
+
                     <SidebarGroupContent>
                         <SidebarMenu>
                             {fileTree ? (
@@ -405,6 +436,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarGroup>
             </SidebarContent>
             <SidebarRail />
+            <NodeActionDialog
+                open={rootDialogOpen}
+                action="create"
+                nodeType={rootDialogNodeType}
+                isLoading={creatingNode}
+                onOpenChange={setRootDialogOpen}
+                onConfirm={handleRootCreate}
+            />
         </Sidebar>
     );
 }
@@ -412,34 +451,122 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 function FileTreeNode({ node, fileTree }: { node: FileNode; fileTree: Record<string, FileNode> }) {
     const dispatch = useDispatch<AppDispatch>();
     const projectId = useSelector((state: RootState) => state.editor.currProject?.id);
-    if (node.type === "file") {
-        return (
-            <SidebarMenuItem>
-                <SidebarMenuButton
-                    onClick={async () => {
-                        try {
-                            await dispatch(openTab(node.path));
-                            await dispatch(setActiveTab(node.path));
-                        } catch (error) {
-                            console.error("Failed to load file content:", error);
-                        }
-                    }}
-                    className="data-[active=true]:bg-transparent"
-                >
-                    <Icon
-                        icon={getFileIconId(node.name)}
-                        width={16}
-                        height={16}
-                        className="shrink-0"
-                    />
-                    <span className="truncate">{node.name}</span>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
-        );
-    }
+    const creatingNode = useSelector((state: RootState) => state.editor.creatingNode);
+    const deletingNode = useSelector((state: RootState) => state.editor.deletingNode);
+    const renamingNode = useSelector((state: RootState) => state.editor.renamingNode);
 
     const [isOpen, setIsOpen] = React.useState(node.isExpanded);
+    const [dialogOpen, setDialogOpen] = React.useState(false);
+    const [dialogAction, setDialogAction] = React.useState<"create" | "rename" | "delete" | null>(
+        null
+    );
+    const [dialogNodeType, setDialogNodeType] = React.useState<"file" | "folder">("file");
+
+    const isLoading =
+        dialogAction === "create"
+            ? creatingNode
+            : dialogAction === "delete"
+              ? deletingNode
+              : dialogAction === "rename"
+                ? renamingNode
+                : false;
+
+    const openDialog = (action: "create" | "rename" | "delete", nodeType: "file" | "folder") => {
+        setDialogAction(action);
+        setDialogNodeType(nodeType);
+        setDialogOpen(true);
+    };
+
+    const handleConfirm = async (value?: string) => {
+        if (!projectId) return;
+        try {
+            let response;
+            if (dialogAction === "create" && value) {
+                response = await dispatch(
+                    editorActions.createNode({
+                        projectId,
+                        nodePath: `${node.path}/${value}`,
+                        isDir: dialogNodeType === "folder",
+                    })
+                );
+            } else if (dialogAction === "delete") {
+                response = await dispatch(
+                    editorActions.deleteNode({
+                        projectId,
+                        nodePath: node.path,
+                    })
+                );
+            } else if (dialogAction === "rename" && value) {
+                const lastSlash = node.path.lastIndexOf("/");
+                const parentPath = lastSlash > 0 ? node.path.substring(0, lastSlash) : "";
+                response = await dispatch(
+                    editorActions.renameNode({
+                        projectId,
+                        oldPath: node.path,
+                        newPath: `${parentPath}/${value}`,
+                    })
+                );
+            }
+            const payload = response!.payload as Payload<void>;
+            if (!payload.success) {
+                toast.error(payload.message || "An error occurred. Please try again.");
+                return;
+            }
+            setDialogOpen(false);
+        } catch (error) {
+            console.error("Error occurred while handling dialog confirmation:", error);
+        }
+    };
+
     const [closedIcon, openIcon] = getFolderIconIds(node.name);
+
+    const dialog = (
+        <NodeActionDialog
+            open={dialogOpen}
+            action={dialogAction}
+            nodeType={dialogNodeType}
+            nodeName={node.name}
+            initialValue={dialogAction === "rename" ? node.name : undefined}
+            isLoading={isLoading}
+            onOpenChange={setDialogOpen}
+            onConfirm={handleConfirm}
+        />
+    );
+
+    if (node.type === "file") {
+        return (
+            <>
+                <SidebarMenuItem>
+                    <FileNodeContextMenu
+                        node={node}
+                        onRename={() => openDialog("rename", "file")}
+                        onDelete={() => openDialog("delete", "file")}
+                    >
+                        <SidebarMenuButton
+                            onClick={async () => {
+                                try {
+                                    await dispatch(openTab(node.path));
+                                    await dispatch(setActiveTab(node.path));
+                                } catch (error) {
+                                    console.error("Failed to load file content:", error);
+                                }
+                            }}
+                            className="data-[active=true]:bg-transparent"
+                        >
+                            <Icon
+                                icon={getFileIconId(node.name)}
+                                width={16}
+                                height={16}
+                                className="shrink-0"
+                            />
+                            <span className="truncate">{node.name}</span>
+                        </SidebarMenuButton>
+                    </FileNodeContextMenu>
+                </SidebarMenuItem>
+                {dialog}
+            </>
+        );
+    }
 
     const childNodes = node.children
         .map((childPath) => fileTree[childPath])
@@ -450,48 +577,63 @@ function FileTreeNode({ node, fileTree }: { node: FileNode; fileTree: Record<str
         });
 
     return (
-        <SidebarMenuItem>
-            <Collapsible
-                open={isOpen}
-                onOpenChange={async () => {
-                    setIsOpen(!isOpen);
-                    if (node.type === "directory" && !node.isLoaded) {
-                        await dispatch(
-                            editorActions.getFolderContent({
-                                projectId: projectId!,
-                                folderPath: node.path,
-                            })
-                        );
-                    }
-                }}
-                className="group/collapsible [&[data-state=open]>button>svg.chevron]:rotate-90"
-            >
-                <CollapsibleTrigger asChild>
-                    <SidebarMenuButton>
-                        <ChevronRight className="chevron shrink-0 size-4 transition-transform" />
-                        <Icon
-                            icon={isOpen ? openIcon : closedIcon}
-                            width={16}
-                            height={16}
-                            className="shrink-0"
-                        />
-                        <span className="truncate">{node.name}</span>
-                    </SidebarMenuButton>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                    <SidebarMenuSub>
-                        {childNodes.length > 0 ? (
-                            childNodes.map((child) => (
-                                <FileTreeNode key={child.path} node={child} fileTree={fileTree} />
-                            ))
-                        ) : node.isLoaded ? (
-                            <p className="px-2 py-1 text-xs text-muted-foreground">Empty</p>
-                        ) : (
-                            <p className="px-2 py-1 text-xs text-muted-foreground">Loading…</p>
-                        )}
-                    </SidebarMenuSub>
-                </CollapsibleContent>
-            </Collapsible>
-        </SidebarMenuItem>
+        <>
+            <SidebarMenuItem>
+                <Collapsible
+                    open={isOpen}
+                    onOpenChange={async () => {
+                        setIsOpen(!isOpen);
+                        if (node.type === "directory" && !node.isLoaded) {
+                            await dispatch(
+                                editorActions.getFolderContent({
+                                    projectId: projectId!,
+                                    folderPath: node.path,
+                                })
+                            );
+                        }
+                    }}
+                    className="group/collapsible [&[data-state=open]>button>svg.chevron]:rotate-90"
+                >
+                    <FileNodeContextMenu
+                        node={node}
+                        onNewFile={() => openDialog("create", "file")}
+                        onNewFolder={() => openDialog("create", "folder")}
+                        onRename={() => openDialog("rename", "folder")}
+                        onDelete={() => openDialog("delete", "folder")}
+                    >
+                        <CollapsibleTrigger asChild>
+                            <SidebarMenuButton>
+                                <ChevronRight className="chevron shrink-0 size-4 transition-transform" />
+                                <Icon
+                                    icon={isOpen ? openIcon : closedIcon}
+                                    width={16}
+                                    height={16}
+                                    className="shrink-0"
+                                />
+                                <span className="truncate">{node.name}</span>
+                            </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                    </FileNodeContextMenu>
+                    <CollapsibleContent>
+                        <SidebarMenuSub>
+                            {childNodes.length > 0 ? (
+                                childNodes.map((child) => (
+                                    <FileTreeNode
+                                        key={child.path}
+                                        node={child}
+                                        fileTree={fileTree}
+                                    />
+                                ))
+                            ) : node.isLoaded ? (
+                                <p className="px-2 py-1 text-xs text-muted-foreground">Empty</p>
+                            ) : (
+                                <p className="px-2 py-1 text-xs text-muted-foreground">Loading…</p>
+                            )}
+                        </SidebarMenuSub>
+                    </CollapsibleContent>
+                </Collapsible>
+            </SidebarMenuItem>
+            {dialog}
+        </>
     );
 }

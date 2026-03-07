@@ -19,4 +19,10 @@ router.post(
     controllers.getFileContent
 );
 
+router.post("/create-node", validationMiddleware(validators.createNode), controllers.createNode);
+
+router.post("/delete-node", validationMiddleware(validators.deleteNode), controllers.deleteNode);
+
+router.post("/rename-node", validationMiddleware(validators.renameNode), controllers.renameNode);
+
 export default router;

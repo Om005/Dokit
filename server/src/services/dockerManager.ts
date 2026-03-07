@@ -8,7 +8,6 @@ import { PassThrough } from "stream";
 import { FileNode } from "types/express";
 import { syncDockerToYjs } from "sockets/yjsServer";
 import { io } from "index";
-import e from "express";
 
 const docker = new Docker();
 
@@ -477,7 +476,6 @@ async function startFileSystemWatcher(projectId: string): Promise<void> {
                 const relativePath = filePath.replace("/workspace", "");
                 const isDir = action.includes("ISDIR");
 
-                // console.log(action);
                 if (action.includes("CLOSE_WRITE") || action.includes("MODIFY")) {
                     if (!isDir) {
                         syncDockerToYjs(containerProjectId, relativePath).catch((err) => {
@@ -564,6 +562,150 @@ async function startFileSystemWatcher(projectId: string): Promise<void> {
     }
 }
 
+async function createNode(projectId: string, nodePath: string, isDir: boolean): Promise<void> {
+    const containerProjectId = projectId.replaceAll("-", "");
+    try {
+        const containerName = `dokit-${containerProjectId}`;
+        const container = docker.getContainer(containerName);
+
+        const cleanNodePath = nodePath.replace(/^\/+/, "");
+        const targetPath = `/workspace/${cleanNodePath}`;
+        if (targetPath.includes("..")) throw new Error("Invalid path: Path traversal detected");
+        const command = `
+            if [ -e "${targetPath}" ]; then
+                exit 1
+            fi
+            ${isDir ? `mkdir -p "${targetPath}"` : `touch "${targetPath}"`}
+        `;
+
+        const exec = await container.exec({
+            Cmd: ["bash", "-c", command],
+            AttachStdout: true,
+            AttachStderr: true,
+        });
+
+        const stream = await exec.start({ hijack: true, stdin: false });
+
+        stream.resume();
+
+        await new Promise((resolve, reject) => {
+            stream.on("end", resolve);
+            stream.on("error", reject);
+        });
+
+        const inspectData = await exec.inspect();
+
+        if (inspectData.ExitCode !== 0) {
+            throw new Error(`${isDir ? "Folder" : "File"} already exists at path ${cleanNodePath}`);
+        }
+    } catch (error) {
+        logger.error(`Failed to create node in container for project ${containerProjectId}:`);
+        logger.error(error);
+        throw error;
+    }
+}
+
+async function deleteNode(projectId: string, nodePath: string): Promise<void> {
+    const containerProjectId = projectId.replaceAll("-", "");
+    try {
+        const containerName = `dokit-${containerProjectId}`;
+        const container = docker.getContainer(containerName);
+
+        const cleanNodePath = nodePath.replace(/^\/+/, "");
+        const targetPath = `/workspace/${cleanNodePath}`;
+
+        if (targetPath.includes("..")) throw new Error("Invalid path: Path traversal detected");
+
+        if (targetPath === "/workspace" || targetPath === "/workspace/") {
+            throw new Error("Invalid operation: Cannot delete the root workspace directory");
+        }
+        const command = `rm -rf "${targetPath}"`;
+
+        const exec = await container.exec({
+            Cmd: ["bash", "-c", command],
+            AttachStdout: true,
+            AttachStderr: true,
+        });
+
+        const stream = await exec.start({ hijack: true, stdin: false });
+        stream.resume();
+        await new Promise((resolve, reject) => {
+            stream.on("end", resolve);
+            stream.on("error", reject);
+        });
+
+        const inspectData = await exec.inspect();
+        if (inspectData.ExitCode !== 0) {
+            throw new Error(
+                `Failed to delete node: ${cleanNodePath} (Exit Code: ${inspectData.ExitCode})`
+            );
+        }
+    } catch (error) {
+        logger.error(`Failed to delete node in container for project ${containerProjectId}:`);
+        logger.error(error);
+        throw error;
+    }
+}
+
+async function renameNode(projectId: string, oldPath: string, newPath: string): Promise<void> {
+    const containerProjectId = projectId.replaceAll("-", "");
+    try {
+        const containerName = `dokit-${containerProjectId}`;
+        const container = docker.getContainer(containerName);
+
+        const cleanOldPath = oldPath.replace(/^\/+/, "");
+        const cleanNewPath = newPath.replace(/^\/+/, "");
+        const targetOldPath = `/workspace/${cleanOldPath}`;
+        const targetNewPath = `/workspace/${cleanNewPath}`;
+
+        if (targetOldPath.includes("..") || targetNewPath.includes("..")) {
+            throw new Error("Invalid path: Path traversal detected");
+        }
+
+        if (targetOldPath === "/workspace" || targetOldPath === "/workspace/") {
+            throw new Error("Invalid operation: Cannot rename the root workspace");
+        }
+
+        const command = `
+            if [ ! -e "${targetOldPath}" ]; then
+                exit 1
+            fi
+            if [ -e "${targetNewPath}" ]; then
+                exit 2
+            fi
+            mv "${targetOldPath}" "${targetNewPath}"
+        `;
+
+        const exec = await container.exec({
+            Cmd: ["bash", "-c", command],
+            AttachStdout: true,
+            AttachStderr: true,
+        });
+
+        const stream = await exec.start({ hijack: true, stdin: false });
+
+        stream.resume();
+
+        await new Promise((resolve, reject) => {
+            stream.on("end", resolve);
+            stream.on("error", reject);
+        });
+
+        const inspectData = await exec.inspect();
+        if (inspectData.ExitCode === 1) {
+            throw new Error(`Source file or folder does not exist: ${cleanOldPath}`);
+        } else if (inspectData.ExitCode === 2) {
+            throw new Error(`Destination name already taken: ${cleanNewPath}`);
+        } else if (inspectData.ExitCode !== 0) {
+            throw new Error(`Failed to rename node (Exit Code: ${inspectData.ExitCode})`);
+        }
+    } catch (error) {
+        logger.error(`Failed to rename node in container for project ${containerProjectId}:`);
+        logger.error(error);
+        throw error;
+    }
+}
+
 const DockerManager = {
     createDokitContainer,
     deleteDokitContainer,
@@ -575,6 +717,9 @@ const DockerManager = {
     getFileContent,
     writeFileToContainer,
     startFileSystemWatcher,
+    createNode,
+    deleteNode,
+    renameNode,
 };
 
 export default DockerManager;
