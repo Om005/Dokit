@@ -51,12 +51,18 @@ export default function ProjectsDashboard() {
                 <div className="mb-8 space-y-4">
                     <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
+                            <h1 className="text-3xl font-bold tracking-tight lg:pt-0 pt-14">
+                                Projects
+                            </h1>
                             <p className="mt-2 text-sm text-muted-foreground">
                                 Manage and create your coding projects
                             </p>
                         </div>
-                        <Button onClick={() => setCreateDialogOpen(true)} size="lg">
+                        <Button
+                            className="w-full sm:w-fit"
+                            onClick={() => setCreateDialogOpen(true)}
+                            size="lg"
+                        >
                             <Plus className="size-4" />
                             New Project
                         </Button>

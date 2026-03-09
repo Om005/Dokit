@@ -62,11 +62,11 @@ function getFileIconId(name: string): string {
         licence: "vscode-icons:file-type-license",
         "changelog.md": "vscode-icons:file-type-changelog",
         ".editorconfig": "vscode-icons:file-type-editorconfig",
-        ".env": "vscode-icons:file-type-env",
-        ".env.local": "vscode-icons:file-type-env",
-        ".env.example": "vscode-icons:file-type-env",
-        ".env.development": "vscode-icons:file-type-env",
-        ".env.production": "vscode-icons:file-type-env",
+        ".env": "vscode-icons:file-type-dotenv",
+        ".env.local": "vscode-icons:file-type-dotenv",
+        ".env.example": "vscode-icons:file-type-dotenv",
+        ".env.development": "vscode-icons:file-type-dotenv",
+        ".env.production": "vscode-icons:file-type-dotenv",
         "vite.config.ts": "vscode-icons:file-type-vite",
         "vite.config.js": "vscode-icons:file-type-vite",
         "vitest.config.ts": "vscode-icons:file-type-vitest",
@@ -97,7 +97,7 @@ function getFileIconId(name: string): string {
     if (lower.startsWith(".eslintrc")) return "vscode-icons:file-type-eslint";
     if (lower.startsWith(".prettierrc")) return "vscode-icons:file-type-prettier";
     if (lower.startsWith("tsconfig.")) return "vscode-icons:file-type-tsconfig";
-    if (lower.startsWith(".env")) return "vscode-icons:file-type-env";
+    if (lower.startsWith(".env")) return "vscode-icons:file-type-dotenv";
     if (lower.startsWith("dockerfile")) return "vscode-icons:file-type-docker";
     if (lower.startsWith("license")) return "vscode-icons:file-type-license";
 
@@ -320,10 +320,7 @@ function getFolderIconIds(name: string): [string, string] {
         migrations: ["vscode-icons:folder-type-db", "vscode-icons:folder-type-db-opened"],
         seed: ["vscode-icons:folder-type-db", "vscode-icons:folder-type-db-opened"],
         graphql: ["vscode-icons:folder-type-graphql", "vscode-icons:folder-type-graphql-opened"],
-        generated: [
-            "vscode-icons:folder-type-generated",
-            "vscode-icons:folder-type-generated-opened",
-        ],
+        generated: ["vscode-icons:default-folder", "vscode-icons:default-folder-opened"],
         tmp: ["vscode-icons:folder-type-temp", "vscode-icons:folder-type-temp-opened"],
         temp: ["vscode-icons:folder-type-temp", "vscode-icons:folder-type-temp-opened"],
         cache: ["vscode-icons:folder-type-temp", "vscode-icons:folder-type-temp-opened"],

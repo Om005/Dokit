@@ -43,6 +43,8 @@ import { Button } from "@/components/ui/button";
 import useFileTreeSocket from "@/hooks/use-filetree-socket";
 import { useRouter } from "next/navigation";
 import { toggleTerminalPosition } from "@/store/editor";
+import { PreviewPane } from "@/components/preview-panel";
+import defaultPorts from "@/utils/defaultPorts";
 
 interface Props {
     params: Promise<{ projectId: string }>;
@@ -79,6 +81,9 @@ export default function ProjectPage({ params }: Props) {
     // const [terminalPosition, setTerminalPosition] = useState<"bottom" | "right">("bottom");
     const [terminalHeight, setTerminalHeight] = useState(250);
     const [terminalWidth, setTerminalWidth] = useState(380);
+    const [showPreview, setShowPreview] = useState(false);
+    const [previewWidth, setPreviewWidth] = useState(400);
+    const [previewHeight, setPreviewHeight] = useState(250);
     const isDragging = useRef(false);
     const startPos = useRef(0);
     const startSize = useRef(0);
@@ -164,6 +169,52 @@ export default function ProjectPage({ params }: Props) {
             window.addEventListener("mouseup", onMouseUp);
         },
         [terminalWidth]
+    );
+
+    const onPreviewHorizDragStart = useCallback(
+        (e: React.MouseEvent) => {
+            isDragging.current = true;
+            startPos.current = e.clientX;
+            startSize.current = previewWidth;
+
+            const onMouseMove = (ev: MouseEvent) => {
+                if (!isDragging.current) return;
+                const delta = startPos.current - ev.clientX;
+                const newWidth = Math.max(200, Math.min(800, startSize.current + delta));
+                setPreviewWidth(newWidth);
+            };
+            const onMouseUp = () => {
+                isDragging.current = false;
+                window.removeEventListener("mousemove", onMouseMove);
+                window.removeEventListener("mouseup", onMouseUp);
+            };
+            window.addEventListener("mousemove", onMouseMove);
+            window.addEventListener("mouseup", onMouseUp);
+        },
+        [previewWidth]
+    );
+
+    const onPreviewVertDragStart = useCallback(
+        (e: React.MouseEvent) => {
+            isDragging.current = true;
+            startPos.current = e.clientY;
+            startSize.current = previewHeight;
+
+            const onMouseMove = (ev: MouseEvent) => {
+                if (!isDragging.current) return;
+                const delta = ev.clientY - startPos.current;
+                const newHeight = Math.max(100, Math.min(600, startSize.current + delta));
+                setPreviewHeight(newHeight);
+            };
+            const onMouseUp = () => {
+                isDragging.current = false;
+                window.removeEventListener("mousemove", onMouseMove);
+                window.removeEventListener("mouseup", onMouseUp);
+            };
+            window.addEventListener("mousemove", onMouseMove);
+            window.addEventListener("mouseup", onMouseUp);
+        },
+        [previewHeight]
     );
 
     const runBoot = async () => {
@@ -255,6 +306,10 @@ export default function ProjectPage({ params }: Props) {
             setIsBooting(false);
         }
     };
+
+    const isPreviewSupported = !!(
+        currProject && Object.keys(defaultPorts).includes(currProject.stack.toLowerCase())
+    );
 
     const activeFile = activeTab && fileTree ? fileTree[activeTab] : null;
 
@@ -399,6 +454,7 @@ export default function ProjectPage({ params }: Props) {
     return (
         <SidebarProvider className="h-screen overflow-hidden">
             <AppSidebar />
+
             <SidebarInset className="flex flex-col overflow-hidden min-h-0">
                 <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
                     <SidebarTrigger className="-ml-1 shrink-0" />
@@ -416,6 +472,21 @@ export default function ProjectPage({ params }: Props) {
                         </Button>
                     </div>
                     <div className="flex items-center gap-2">
+                        {isPreviewSupported && (
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                className="gap-1.5"
+                                onClick={() => setShowPreview((v) => !v)}
+                                title={showPreview ? "Hide preview" : "Show preview"}
+                            >
+                                {showPreview ? (
+                                    <EyeOff className="size-3.5" />
+                                ) : (
+                                    <Eye className="size-3.5" />
+                                )}
+                            </Button>
+                        )}
                         <Button
                             size="sm"
                             variant="ghost"
@@ -573,9 +644,51 @@ export default function ProjectPage({ params }: Props) {
                                     ? { height: terminalHeight }
                                     : { width: terminalWidth }
                             }
-                            className="shrink-0 overflow-hidden bg-background"
+                            className={cn(
+                                "shrink-0 overflow-hidden bg-background flex",
+                                terminalPosition === "bottom" ? "flex-row" : "flex-col-reverse"
+                            )}
                         >
-                            <TerminalLoader wsUrl={wsUrl} />
+                            <div
+                                className={cn(
+                                    "overflow-hidden flex-1",
+                                    terminalPosition === "bottom" ? "min-w-0" : "min-h-0"
+                                )}
+                            >
+                                <TerminalLoader wsUrl={wsUrl} />
+                            </div>
+
+                            {/* Drag handle + preview — after terminal in DOM; flex-col-reverse flips visual order */}
+                            {showPreview && isPreviewSupported && (
+                                <>
+                                    <div
+                                        onMouseDown={
+                                            terminalPosition === "bottom"
+                                                ? onPreviewHorizDragStart
+                                                : onPreviewVertDragStart
+                                        }
+                                        className={cn(
+                                            "bg-border hover:bg-primary/50 transition-colors shrink-0 select-none",
+                                            terminalPosition === "bottom"
+                                                ? "w-1.5 cursor-col-resize"
+                                                : "h-1.5 cursor-row-resize"
+                                        )}
+                                    />
+                                    <div
+                                        style={
+                                            terminalPosition === "bottom"
+                                                ? { width: previewWidth }
+                                                : { height: previewHeight }
+                                        }
+                                        className="shrink-0 overflow-hidden"
+                                    >
+                                        <PreviewPane
+                                            projectId={projectId}
+                                            isRunning={!isBooting && !bootError}
+                                        />
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>

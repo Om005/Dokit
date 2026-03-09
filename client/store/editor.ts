@@ -277,6 +277,17 @@ const editorSlice = createSlice({
 
                 renameRecursively(fromPath, toPath);
             }
+            state.openTabs.forEach((openPath) => {
+                if (openPath === fromPath || openPath.startsWith(fromPath + "/")) {
+                    const newOpenPath = toPath + openPath.substring(fromPath.length);
+                    const idx = state.openTabs.indexOf(openPath);
+                    state.openTabs[idx] = newOpenPath;
+
+                    if (state.activeTab === openPath) {
+                        state.activeTab = newOpenPath;
+                    }
+                }
+            });
         },
         toggleTerminalPosition(state) {
             state.terminalPosition = state.terminalPosition === "bottom" ? "right" : "bottom";
