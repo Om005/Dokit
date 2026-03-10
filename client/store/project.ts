@@ -3,17 +3,7 @@ import createApiHandler from "@/utils/apiHandler";
 import { ApiResponse } from "@/types/types";
 import { persistReducer } from "redux-persist";
 import storage from "redux-persist/lib/storage";
-
-interface Project {
-    id: string;
-    name: string;
-    isPasswordProtected: boolean;
-    description?: string;
-    stack: string;
-    isArchived: boolean;
-    createdAt: string;
-    lastAccessedAt: string;
-}
+import { Project } from "@/types/types";
 
 interface intialProjectState {
     projects: Project[];
@@ -45,14 +35,23 @@ const projectActions = {
 
     createProject: createAsyncThunk<
         ApiResponse,
-        { name: string; description?: string; stack: string; password?: string },
+        {
+            name: string;
+            description?: string;
+            stack: string;
+            password?: string;
+            visibility: "PUBLIC" | "PRIVATE";
+        },
         { rejectValue: ApiResponse }
     >(
         "project/createProject",
-        createApiHandler<{ name: string; description?: string; stack: string; password?: string }>(
-            "/api/project/create-project",
-            "post"
-        )
+        createApiHandler<{
+            name: string;
+            description?: string;
+            stack: string;
+            password?: string;
+            visibility: "PUBLIC" | "PRIVATE";
+        }>("/api/project/create-project", "post")
     ),
 
     deleteProject: createAsyncThunk<
@@ -82,12 +81,11 @@ const projectActions = {
     changeProjectSettings: createAsyncThunk<
         ApiResponse,
         {
-            name: string;
+            projectId: string;
             newName: string;
             description: string;
             isPasswordProtected: boolean;
-            visibility: string;
-            isArchived: boolean;
+            visibility: "PUBLIC" | "PRIVATE";
             password?: string;
             accountPassword: string;
         },
@@ -95,12 +93,11 @@ const projectActions = {
     >(
         "project/changeProjectSettings",
         createApiHandler<{
-            name: string;
+            projectId: string;
             newName: string;
             description?: string;
             isPasswordProtected: boolean;
-            visibility: string;
-            isArchived: boolean;
+            visibility: "PUBLIC" | "PRIVATE";
             password?: string;
             accountPassword: string;
         }>("/api/project/change-settings", "post")

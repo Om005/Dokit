@@ -18,13 +18,6 @@ const controllers = {
     createProject: async (req: Request, res: Response) => {
         try {
             const { name, description, stack, password, visibility } = req.body;
-            let isPasswordProtected = false;
-            let passwordHash: string | null = null;
-            if (password !== undefined && typeof password === "string") {
-                isPasswordProtected = true;
-
-                passwordHash = await argon2.hash(password);
-            }
             const userId = req.meta.user?.id;
             if (!userId) {
                 return sendResponse(res, {
@@ -32,6 +25,13 @@ const controllers = {
                     message: "Unauthorized",
                     statusCode: StatusCodes.UNAUTHORIZED,
                 });
+            }
+            let isPasswordProtected = false;
+            let passwordHash: string | null = null;
+            if (password !== undefined && typeof password === "string") {
+                isPasswordProtected = true;
+
+                passwordHash = await argon2.hash(password);
             }
 
             const existingProject = await prisma.project.findFirst({
@@ -51,6 +51,18 @@ const controllers = {
             const projectId = crypto.randomUUID();
 
             try {
+                const user = await prisma.user.findUnique({
+                    where: { id: userId },
+                    select: { username: true },
+                });
+                if (!user) {
+                    return sendResponse(res, {
+                        success: false,
+                        message: "User not found.",
+                        statusCode: StatusCodes.NOT_FOUND,
+                    });
+                }
+
                 const filesCopied = await R2Manager.copyBaseToProject(
                     projectId,
                     stack as ProjectStack
@@ -63,20 +75,7 @@ const controllers = {
                         statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
                     });
                 }
-                // const containerInfo = await DockerManager.createDokitContainer(
-                //     projectId,
-                //     stack as ProjectStack
-                // );
-                // if (!containerInfo.containerId) {
-                //     logger.error("Failed to create dokit container for project.");
-                //     return sendResponse(res, {
-                //         success: false,
-                //         message: "Failed to create project. Please try again later.",
-                //         statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-                //     });
-                // }
-                // const FileTree: Record<string, FileNode> | null =
-                //     await DockerManager.getFolderContent(projectId, "/");
+
                 const project = await prisma.project.create({
                     data: {
                         id: projectId,
@@ -94,23 +93,25 @@ const controllers = {
                     success: true,
                     message: "Project created successfully.",
                     data: {
-                        project: { ...project, passwordHash: undefined, ownerId: undefined },
-                        // containerInfo,
-                        // FileTree,
+                        project: {
+                            ...project,
+                            passwordHash: undefined,
+                            isOwner: true,
+                            ownerUsername: user.username,
+                            currentUserAccess: "OWNER",
+                            ownerId: userId,
+                            members: [],
+                        },
                     },
                 });
             } catch (error) {
                 logger.error("Error creating project:");
                 logger.error(error);
 
-                await R2Manager.deleteProject(projectId).catch((err) => {
-                    logger.error("R2 Rollback failed:");
-                    logger.error(err);
-                });
-                await DockerManager.deleteDokitContainer(projectId).catch((err) => {
-                    logger.error("Docker Rollback failed:");
-                    logger.error(err);
-                });
+                await Promise.all([
+                    queueActions.addDeleteProjectJob(projectId),
+                    queueActions.addContainerCleanupJob(projectId),
+                ]);
 
                 return sendResponse(res, {
                     success: false,
@@ -153,6 +154,15 @@ const controllers = {
                     statusCode: StatusCodes.NOT_FOUND,
                 });
             }
+
+            if (project.ownerId !== userId) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "You do not have permission to delete this project.",
+                    statusCode: StatusCodes.FORBIDDEN,
+                });
+            }
+
             const user = await prisma.user.findUnique({
                 where: { id: userId },
             });
@@ -173,13 +183,6 @@ const controllers = {
                 });
             }
 
-            if (project.ownerId !== userId) {
-                return sendResponse(res, {
-                    success: false,
-                    message: "You do not have permission to delete this project.",
-                    statusCode: StatusCodes.FORBIDDEN,
-                });
-            }
             await Promise.all([
                 queueActions.addDeleteProjectJob(projectId),
                 queueActions.addContainerCleanupJob(projectId),
@@ -219,7 +222,14 @@ const controllers = {
 
             const projects = await prisma.project.findMany({
                 where: {
-                    ownerId: userId,
+                    OR: [
+                        { ownerId: userId },
+                        {
+                            collaborators: {
+                                some: { userId: userId },
+                            },
+                        },
+                    ],
                 },
                 select: {
                     id: true,
@@ -227,20 +237,67 @@ const controllers = {
                     description: true,
                     stack: true,
                     isPasswordProtected: true,
-                    isArchived: true,
+                    visibility: true,
                     createdAt: true,
                     updatedAt: true,
                     lastAccessedAt: true,
+                    ownerId: true,
+                    owner: {
+                        select: {
+                            username: true,
+                        },
+                    },
+                    collaborators: {
+                        select: {
+                            access: true,
+                            user: {
+                                select: {
+                                    id: true,
+                                    username: true,
+                                },
+                            },
+                        },
+                    },
                 },
                 orderBy: {
                     createdAt: "desc",
                 },
             });
 
+            const formattedProjects = projects.map((project) => {
+                const isOwner = project.ownerId === userId;
+
+                const memberRecord = project.collaborators.find((c) => c.user.id === userId);
+                const currentUserAccess = isOwner ? "OWNER" : memberRecord?.access || "READ";
+
+                return {
+                    id: project.id,
+                    name: project.name,
+                    description: project.description,
+                    stack: project.stack,
+                    isPasswordProtected: project.isPasswordProtected,
+                    visibility: project.visibility,
+                    createdAt: project.createdAt,
+                    updatedAt: project.updatedAt,
+                    lastAccessedAt: project.lastAccessedAt,
+
+                    isOwner: isOwner,
+                    ownerId: project.ownerId,
+                    ownerUsername: project.owner.username,
+                    members: project.collaborators.map((c) => ({
+                        userId: c.user.id,
+                        username: c.user.username,
+                        accessLevel: c.access,
+                    })),
+
+                    currentUserAccess: currentUserAccess,
+                };
+            });
+
             return sendResponse(res, {
                 success: true,
                 message: "Projects retrieved successfully.",
-                data: { projects },
+                data: { projects: formattedProjects },
             });
         } catch (error) {
             logger.error("Error in listProjects controller:");
@@ -257,6 +314,7 @@ const controllers = {
         try {
             const { projectId } = req.query;
             const result = validators.getProjectDetailsSchema.safeParse({ projectId });
+
             if (!result.success) {
                 return sendResponse(res, {
                     success: false,
@@ -264,6 +322,7 @@ const controllers = {
                     statusCode: StatusCodes.BAD_REQUEST,
                 });
             }
+
             const userId = req.meta.user?.id;
 
             if (!userId) {
@@ -274,10 +333,9 @@ const controllers = {
                 });
             }
 
-            const project = await prisma.project.findFirst({
+            const project = await prisma.project.findUnique({
                 where: {
                     id: projectId as string,
-                    ownerId: userId,
                 },
                 select: {
                     id: true,
@@ -286,10 +344,26 @@ const controllers = {
                     stack: true,
                     visibility: true,
                     isPasswordProtected: true,
-                    isArchived: true,
                     createdAt: true,
                     updatedAt: true,
                     lastAccessedAt: true,
+                    ownerId: true,
+                    owner: {
+                        select: {
+                            username: true,
+                        },
+                    },
+                    collaborators: {
+                        select: {
+                            access: true,
+                            user: {
+                                select: {
+                                    id: true,
+                                    username: true,
+                                },
+                            },
+                        },
+                    },
                 },
             });
 
@@ -301,10 +375,55 @@ const controllers = {
                 });
             }
 
+            const isOwner = project.ownerId === userId;
+            const collaboratorRecord = project.collaborators.find((c) => c.user.id === userId);
+            const isMember = !!collaboratorRecord;
+
+            if (project.visibility === "PRIVATE" && !isOwner && !isMember) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Permission Denied. This project is private",
+                    statusCode: StatusCodes.FORBIDDEN,
+                });
+            }
+
+            let currentUserAccess = "NONE";
+            if (isOwner) {
+                currentUserAccess = "OWNER";
+            } else if (isMember) {
+                currentUserAccess = collaboratorRecord.access;
+            } else if (project.visibility === "PUBLIC") {
+                currentUserAccess = "READ";
+            }
+
+            const formattedProject = {
+                id: project.id,
+                name: project.name,
+                description: project.description,
+                stack: project.stack,
+                visibility: project.visibility,
+                isPasswordProtected: project.isPasswordProtected,
+                createdAt: project.createdAt,
+                updatedAt: project.updatedAt,
+                lastAccessedAt: project.lastAccessedAt,
+
+                isOwner: isOwner,
+                ownerId: project.ownerId,
+                ownerUsername: project.owner.username,
+
+                members: project.collaborators.map((c) => ({
+                    userId: c.user.id,
+                    username: c.user.username,
+                    accessLevel: c.access,
+                })),
+
+                currentUserAccess: currentUserAccess,
+            };
+
             return sendResponse(res, {
                 success: true,
                 message: "Project retrieved successfully.",
-                data: { project },
+                data: { project: formattedProject },
             });
         } catch (error) {
             logger.error("Error in getProjectDetails controller:");
@@ -319,8 +438,7 @@ const controllers = {
 
     startProject: async (req: Request, res: Response) => {
         const { projectId, password } = req.body;
-        console.log("Starting project with ID:", projectId);
-        console.log("Received password:", password);
+
         try {
             const userId = req.meta.user?.id;
             if (!userId) {
@@ -331,10 +449,15 @@ const controllers = {
                 });
             }
 
-            const project = await prisma.project.findFirst({
+            const project = await prisma.project.findUnique({
                 where: {
                     id: projectId,
-                    ownerId: userId,
+                },
+                include: {
+                    collaborators: {
+                        where: { userId: userId },
+                        select: { userId: true },
+                    },
                 },
             });
 
@@ -343,6 +466,17 @@ const controllers = {
                     success: false,
                     message: "Project not found.",
                     statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+
+            const isOwner = project.ownerId === userId;
+            const isMember = project.collaborators.length > 0;
+
+            if (project.visibility === "PRIVATE" && !isOwner && !isMember) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Permission Denied. This project is private.",
+                    statusCode: StatusCodes.FORBIDDEN,
                 });
             }
 
@@ -397,7 +531,7 @@ const controllers = {
                     success: true,
                     message: "Project started successfully.",
                     data: {
-                        project: { ...project, passwordHash: undefined, ownerId: undefined },
+                        project: { ...project, passwordHash: undefined },
                         containerInfo,
                         FileTree,
                     },
@@ -425,11 +559,10 @@ const controllers = {
     changeProjectSettings: async (req: Request, res: Response) => {
         try {
             const {
-                name,
+                projectId,
                 newName,
                 description,
                 visibility,
-                isArchived,
                 isPasswordProtected,
                 password,
                 accountPassword,
@@ -465,11 +598,8 @@ const controllers = {
                 });
             }
 
-            const project = await prisma.project.findFirst({
-                where: {
-                    name: name,
-                    ownerId: userId,
-                },
+            const project = await prisma.project.findUnique({
+                where: { id: projectId },
             });
 
             if (!project) {
@@ -477,6 +607,14 @@ const controllers = {
                     success: false,
                     message: "Project not found.",
                     statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+
+            if (project.ownerId !== userId) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Permission Denied. Only the project owner can change settings.",
+                    statusCode: StatusCodes.FORBIDDEN,
                 });
             }
 
@@ -495,6 +633,7 @@ const controllers = {
                     });
                 }
             }
+
             const updatedProject = await prisma.project.update({
                 where: { id: project.id },
                 data: {
@@ -508,15 +647,51 @@ const controllers = {
                               ? project.passwordHash
                               : null,
                     isPasswordProtected: isPasswordProtected,
-                    isArchived: isArchived,
+                },
+                include: {
+                    owner: {
+                        select: { username: true },
+                    },
+                    collaborators: {
+                        select: {
+                            access: true,
+                            user: {
+                                select: { id: true, username: true },
+                            },
+                        },
+                    },
                 },
             });
+
+            const formattedProject = {
+                id: updatedProject.id,
+                name: updatedProject.name,
+                description: updatedProject.description,
+                stack: updatedProject.stack,
+                visibility: updatedProject.visibility,
+                isPasswordProtected: updatedProject.isPasswordProtected,
+                createdAt: updatedProject.createdAt,
+                updatedAt: updatedProject.updatedAt,
+                lastAccessedAt: updatedProject.lastAccessedAt,
+
+                isOwner: true,
+                ownerId: updatedProject.ownerId,
+                ownerUsername: updatedProject.owner.username,
+
+                members: updatedProject.collaborators.map((c) => ({
+                    userId: c.user.id,
+                    username: c.user.username,
+                    accessLevel: c.access,
+                })),
+
+                currentUserAccess: "OWNER",
+            };
 
             return sendResponse(res, {
                 success: true,
                 message: "Project settings updated successfully.",
                 data: {
-                    project: { ...updatedProject, passwordHash: undefined, ownerId: undefined },
+                    project: formattedProject,
                 },
             });
         } catch (error) {
@@ -529,6 +704,7 @@ const controllers = {
             });
         }
     },
+
     closeProject: async (req: Request, res: Response) => {
         try {
             const { projectId } = req.body;
@@ -542,10 +718,15 @@ const controllers = {
                 });
             }
 
-            const project = await prisma.project.findFirst({
+            const project = await prisma.project.findUnique({
                 where: {
                     id: projectId,
-                    ownerId: userId,
+                },
+                include: {
+                    collaborators: {
+                        where: { userId: userId },
+                        select: { userId: true },
+                    },
                 },
             });
 
@@ -554,6 +735,18 @@ const controllers = {
                     success: false,
                     message: "Project not found.",
                     statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+
+            const isOwner = project.ownerId === userId;
+            const isMember = project.collaborators.length > 0;
+
+            if (!isOwner && !isMember) {
+                return sendResponse(res, {
+                    success: false,
+                    message:
+                        "Permission Denied. Only the project owner or members can close this project.",
+                    statusCode: StatusCodes.FORBIDDEN,
                 });
             }
 

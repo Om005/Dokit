@@ -33,6 +33,8 @@ import {
     PanelRight,
     WrapText,
     AlignLeft,
+    Monitor,
+    MonitorOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -481,9 +483,9 @@ export default function ProjectPage({ params }: Props) {
                                 title={showPreview ? "Hide preview" : "Show preview"}
                             >
                                 {showPreview ? (
-                                    <EyeOff className="size-3.5" />
+                                    <MonitorOff className="size-3.5" />
                                 ) : (
-                                    <Eye className="size-3.5" />
+                                    <Monitor className="size-3.5" />
                                 )}
                             </Button>
                         )}

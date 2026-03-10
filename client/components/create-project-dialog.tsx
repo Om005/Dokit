@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store/store";
 import { projectActions } from "@/store/project";
 import { toast } from "sonner";
-import { Eye, EyeOff, Loader2, Lock } from "lucide-react";
+import { Eye, EyeOff, Globe, Loader2, Lock } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -43,6 +43,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
     const [projectName, setProjectName] = useState("");
     const [description, setDescription] = useState("");
     const [selectedStack, setSelectedStack] = useState("REACT_VITE");
+    const [visibility, setVisibility] = useState<"PUBLIC" | "PRIVATE">("PUBLIC");
     const [isPasswordProtected, setIsPasswordProtected] = useState(false);
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -81,6 +82,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                     name: projectName.trim(),
                     description: description.trim() || undefined,
                     stack: selectedStack,
+                    visibility,
                     password: isPasswordProtected ? password : undefined,
                 })
             );
@@ -101,6 +103,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                 setProjectName("");
                 setDescription("");
                 setSelectedStack("REACT_VITE");
+                setVisibility("PUBLIC");
                 setIsPasswordProtected(false);
                 setPassword("");
                 onOpenChange(false);
@@ -166,6 +169,32 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                                         </SelectItem>
                                     );
                                 })}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="visibility">Visibility</Label>
+                        <Select
+                            value={visibility}
+                            onValueChange={(v) => setVisibility(v as "PUBLIC" | "PRIVATE")}
+                        >
+                            <SelectTrigger id="visibility" disabled={creatingProject}>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="PUBLIC">
+                                    <div className="flex items-center gap-2">
+                                        <Globe className="size-4" />
+                                        Public
+                                    </div>
+                                </SelectItem>
+                                <SelectItem value="PRIVATE">
+                                    <div className="flex items-center gap-2">
+                                        <Lock className="size-4" />
+                                        Private
+                                    </div>
+                                </SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

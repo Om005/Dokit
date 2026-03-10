@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams, useRouter } from "next/navigation";
 import { AppDispatch, RootState } from "@/store/store";
 import { projectActions } from "@/store/project";
-import { Plus, Search, Archive } from "lucide-react";
+import { Plus, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,7 +20,7 @@ export default function ProjectsDashboard() {
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [activeTab, setActiveTab] = useState(
-        searchParams.get("archived") === "true" ? "archived" : "active"
+        searchParams.get("shared") === "true" ? "shared" : "mine"
     );
 
     useEffect(() => {
@@ -29,20 +29,20 @@ export default function ProjectsDashboard() {
 
     const handleTabChange = (newTab: string) => {
         setActiveTab(newTab);
-        if (newTab === "archived") {
-            router.push("/dashboard/projects?archived=true");
+        if (newTab === "shared") {
+            router.push("/dashboard/projects?shared=true");
         } else {
             router.push("/dashboard/projects");
         }
     };
 
-    const activeProjects = projects.filter(
+    const myProjects = projects.filter(
         (project) =>
-            !project.isArchived && project.name.toLowerCase().includes(searchQuery.toLowerCase())
+            project.isOwner && project.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
-    const archivedProjects = projects.filter(
+    const sharedProjects = projects.filter(
         (project) =>
-            project.isArchived && project.name.toLowerCase().includes(searchQuery.toLowerCase())
+            !project.isOwner && project.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     return (
@@ -89,23 +89,20 @@ export default function ProjectsDashboard() {
                 ) : (
                     <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
                         <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="active">
-                                Active Projects{" "}
-                                {activeProjects.length > 0 && `(${activeProjects.length})`}
+                            <TabsTrigger value="mine">
+                                My Projects {myProjects.length > 0 && `(${myProjects.length})`}
                             </TabsTrigger>
-                            <TabsTrigger value="archived">
-                                <Archive className="size-4 mr-2" />
-                                Archived{" "}
-                                {archivedProjects.length > 0 && `(${archivedProjects.length})`}
+                            <TabsTrigger value="shared">
+                                <Users className="size-4 mr-2" />
+                                Shared with Me{" "}
+                                {sharedProjects.length > 0 && `(${sharedProjects.length})`}
                             </TabsTrigger>
                         </TabsList>
 
-                        <TabsContent value="active" className="mt-6">
-                            {activeProjects.length === 0 ? (
+                        <TabsContent value="mine" className="mt-6">
+                            {myProjects.length === 0 ? (
                                 <div className="rounded-lg border border-dashed p-12 text-center">
-                                    <h3 className="mb-2 text-lg font-semibold">
-                                        No active projects
-                                    </h3>
+                                    <h3 className="mb-2 text-lg font-semibold">No projects yet</h3>
                                     <p className="mb-4 text-sm text-muted-foreground">
                                         {searchQuery
                                             ? "No projects match your search"
@@ -120,29 +117,29 @@ export default function ProjectsDashboard() {
                                 </div>
                             ) : (
                                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                    {activeProjects.map((project) => (
+                                    {myProjects.map((project) => (
                                         <ProjectCard key={project.id} {...project} />
                                     ))}
                                 </div>
                             )}
                         </TabsContent>
 
-                        <TabsContent value="archived" className="mt-6">
-                            {archivedProjects.length === 0 ? (
+                        <TabsContent value="shared" className="mt-6">
+                            {sharedProjects.length === 0 ? (
                                 <div className="rounded-lg border border-dashed p-12 text-center">
-                                    <Archive className="mx-auto mb-4 size-12 text-muted-foreground" />
+                                    <Users className="mx-auto mb-4 size-12 text-muted-foreground" />
                                     <h3 className="mb-2 text-lg font-semibold">
-                                        No archived projects
+                                        No shared projects
                                     </h3>
                                     <p className="text-sm text-muted-foreground">
                                         {searchQuery
-                                            ? "No archived projects match your search"
-                                            : "Archive a project to see it here"}
+                                            ? "No shared projects match your search"
+                                            : "Projects shared with you will appear here"}
                                     </p>
                                 </div>
                             ) : (
                                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                    {archivedProjects.map((project) => (
+                                    {sharedProjects.map((project) => (
                                         <ProjectCard key={project.id} {...project} />
                                     ))}
                                 </div>

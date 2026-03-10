@@ -8,6 +8,7 @@ const validators = {
             .max(100, "Project name must be at most 100 characters"),
         description: z.string().max(500, "Description must be at most 500 characters").optional(),
         stack: z.enum(["NODE", "REACT_VITE", "EXPRESS"]),
+        visibility: z.enum(["PUBLIC", "PRIVATE"]),
         password: z
             .string()
             .min(6, "Password must be at least 6 characters")
@@ -29,11 +30,10 @@ const validators = {
     getProjectDetailsSchema: z.object({
         projectId: z.string().uuid("Invalid project ID format"),
     }),
+
     changeSettings: z.object({
-        name: z
-            .string()
-            .min(1, "Project name is required")
-            .max(100, "Project name must be at most 100 characters"),
+        projectId: z.string().uuid("Invalid project ID format"),
+
         newName: z
             .string()
             .min(1, "New project name is required")
@@ -45,7 +45,6 @@ const validators = {
             .min(6, "Password must be at least 6 characters")
             .max(50, "Password must be at most 50 characters")
             .optional(),
-        isArchived: z.boolean(),
         accountPassword: z.string().min(1, "Account password is required to change settings"),
         isPasswordProtected: z.boolean(),
     }),

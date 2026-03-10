@@ -14,15 +14,24 @@ export interface Payload<T> {
 
 export interface Project {
     id: string;
-    isPasswordProtected: boolean;
-    isArchived: boolean;
-    visibility: "PUBLIC" | "PRIVATE";
     name: string;
-    description: string;
+    description?: string;
+    stack: string;
+    visibility: "PUBLIC" | "PRIVATE";
+    isPasswordProtected: boolean;
     createdAt: string;
+    updatedAt: string;
     lastAccessedAt: string;
+    isOwner: boolean;
+    ownerId: string;
+    ownerUsername: string;
+    members: {
+        userId: string;
+        username: string;
+        accessLevel: string;
+    }[];
+    currentUserAccess: string;
 }
-
 export interface FileNode {
     path: string;
     name: string;

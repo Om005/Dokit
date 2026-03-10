@@ -3,22 +3,11 @@ import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { persistReducer } from "redux-persist";
 import storage from "redux-persist/lib/storage";
 import createApiHandler from "@/utils/apiHandler";
-import { current } from "@reduxjs/toolkit";
-
-interface currProject {
-    id: string;
-    name: string;
-    isPasswordProtected: boolean;
-    description?: string;
-    stack: string;
-    isArchived: boolean;
-    createdAt: string;
-    lastAccessedAt: string;
-}
+import { Project } from "@/types/types";
 
 interface initialEditorState {
     fileTree: Record<string, FileNode>;
-    currProject: currProject | null;
+    currProject: Project | null;
     gettingFolderContent: boolean;
     gettingRootContent: boolean;
     gettingFileContent: boolean;
