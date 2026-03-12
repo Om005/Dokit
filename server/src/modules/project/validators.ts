@@ -52,6 +52,36 @@ const validators = {
     closeProjectSchema: z.object({
         projectId: z.string().uuid("Invalid project ID format"),
     }),
+
+    requestAccessSchema: z.object({
+        projectId: z.string().uuid("Invalid project ID format"),
+    }),
+
+    reviewAccessRequestSchema: z.object({
+        requestId: z.string().uuid("Invalid access request ID format"),
+        status: z.enum(["APPROVED", "REJECTED"]),
+    }),
+
+    getPendingAccessRequestsSchema: z.object({
+        projectId: z.string().uuid("Invalid project ID format"),
+    }),
+
+    inviteMemberSchema: z.object({
+        projectId: z.string().uuid("Invalid project ID format"),
+        email: z.string().email("Invalid email address"),
+        accessLevel: z.enum(["READ", "WRITE"]),
+    }),
+
+    changeMemberAccessLevelSchema: z.object({
+        projectId: z.string().uuid("Invalid project ID format"),
+        userId: z.string().uuid("Invalid user ID format"),
+        newAccessLevel: z.enum(["READ", "WRITE"]),
+    }),
+
+    removeMemberSchema: z.object({
+        projectId: z.string().uuid("Invalid project ID format"),
+        userId: z.string().uuid("Invalid user ID format"),
+    }),
 };
 
 export default validators;

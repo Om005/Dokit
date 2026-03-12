@@ -76,6 +76,19 @@ const workers = {
             throw error;
         }
     },
+    removeRequest: async (job: Job) => {
+        const { requestId } = job.data;
+        try {
+            await prisma.accessRequest.delete({
+                where: { id: requestId },
+            });
+            logger.info(`Request ${requestId} removed successfully by job id: ${job.id}`);
+        } catch (error) {
+            logger.error(`Failed to remove request ${requestId} by job id: ${job.id}`);
+            logger.error(error);
+            throw error;
+        }
+    },
 };
 
 export default workers;

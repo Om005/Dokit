@@ -1,3 +1,5 @@
+import env from "@config/env";
+
 const emailTemplates = {
     getAccountCreationEmail: (otp: string): string => {
         return `
@@ -147,6 +149,177 @@ const emailTemplates = {
     </div>
     <div class="footer">
       <p>&copy; ${new Date().getFullYear()} Dokit. Secure Password Reset.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+    },
+
+    gotAccessRequestEmail: (
+        requesterName: string,
+        projectName: string,
+        projectId: string
+    ): string => {
+        return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Access Request for ${projectName}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f6f9fc; margin: 0; }
+    .container { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden; }
+    .header { padding: 30px 40px; border-bottom: 1px solid #edf2f7; text-align: center; }
+    .logo { font-size: 24px; font-weight: 700; color: #1a1a1a; text-decoration: none; }
+    .content { padding: 40px; color: #4a5568; line-height: 1.6; }
+    .button-container { text-align: center; margin: 30px 0; }
+    .btn { background-color: #1a1a1a; color: #ffffff !important; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; display: inline-block; }
+    .footer { background: #f7fafc; padding: 20px 40px; text-align: center; font-size: 12px; color: #a0aec0; border-top: 1px solid #edf2f7; }
+    h1 { color: #1a202c; font-size: 22px; margin: 0 0 16px; }
+    p { margin: 0 0 16px; }
+    .highlight { color: #1a1a1a; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a href="#" class="logo">Dokit</a>
+    </div>
+    <div class="content">
+      <h1>New Access Request for <span class="highlight">${projectName}</span></h1>
+      <p>Hello,</p>
+      <p><strong>${requesterName}</strong> has requested access to your project <strong>${projectName}</strong>.</p>
+      
+      <p>To review and manage this access request, please visit your project dashboard:</p>
+      
+      <div class="button-container">
+        <a href="${env.FRONTEND_URL}/project/${projectId}" class="btn">Review Access Request</a>
+      </div>
+
+      <p style="font-size: 14px; color: #718096; margin-top: 30px;">
+        If you have any questions or need assistance, simply reply to this email. Our team is always here to help.
+      </p>
+      <p>Best regards,<br>The Dokit Team</p>
+    </div>
+    <div class="footer">
+      <p>&copy; ${new Date().getFullYear()} Dokit. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+    },
+    reviewedAccessRequestEmail: (
+        requesterName: string,
+        projectName: string,
+        status: "APPROVED" | "REJECTED",
+        projectId: string
+    ): string => {
+        const isApproved = status === "APPROVED";
+        return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Access Request for ${projectName} has been ${status}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f6f9fc; margin: 0; }
+    .container { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden; }
+    .header { padding: 30px 40px; border-bottom: 1px solid #edf2f7; text-align: center; }
+    .logo { font-size: 24px; font-weight: 700; color: #1a1a1a; text-decoration: none; }
+    .content { padding: 40px; color: #4a5568; line-height: 1.6; }
+    .button-container { text-align: center; margin: 30px 0; }
+    .btn { background-color: #1a1a1a; color: #ffffff !important; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; display: inline-block; }
+    .footer { background: #f7fafc; padding: 20px 40px; text-align: center; font-size: 12px; color: #a0aec0; border-top: 1px solid #edf2f7; }
+    h1 { color: #1a202c; font-size: 22px; margin: 0 0 16px; }
+    p { margin: 0 0 16px; }
+    .highlight { color: #1a1a1a; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a href="#" class="logo">Dokit</a>
+    </div>
+    <div class="content">
+      <h1>Your Access Request for <span class="highlight">${projectName}</span> has been ${status}</h1>
+      <p>Hello ${requesterName},</p>
+      <p>Your request to access the project <strong>${projectName}</strong> has been <strong>${status.toLowerCase()}</strong>.</p>
+      
+      ${
+          isApproved
+              ? `<p>You can now access the project in your dashboard:</p>
+      <div class="button-container">
+        <a href="${env.FRONTEND_URL}/project/${projectId.replaceAll(" ", "-")}" class="btn">Go to Project</a>
+      </div>`
+              : `<p>If you have any questions about this decision, please contact the project owner.</p>`
+      }
+
+      <p style="font-size: 14px; color: #718096; margin-top: 30px;">
+        If you have any questions or need assistance, simply reply to this email. Our team is always here to help.
+      </p>
+      <p>Best regards,<br>The Dokit Team</p>
+    </div>
+    <div class="footer">
+      <p>&copy; ${new Date().getFullYear()} Dokit. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+    },
+    projectInvitationEmail: (
+        inviterName: string,
+        projectName: string,
+        projectId: string
+    ): string => {
+        return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You've been invited to collaborate on ${projectName}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f6f9fc; margin: 0; }
+    .container { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden; }
+    .header { padding: 30px 40px; border-bottom: 1px solid #edf2f7; text-align: center; }
+    .logo { font-size: 24px; font-weight: 700; color: #1a1a1a; text-decoration: none; }
+    .content { padding: 40px; color: #4a5568; line-height: 1.6; }
+    .button-container { text-align: center; margin: 30px 0; }
+    .btn { background-color: #1a1a1a; color: #ffffff !important; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; display: inline-block; }
+    .footer { background: #f7fafc; padding: 20px 40px; text-align: center; font-size: 12px; color: #a0aec0; border-top: 1px solid #edf2f7; }
+    h1 { color: #1a202c; font-size: 22px; margin: 0 0 16px; }
+    p { margin: 0 0 16px; }
+    .highlight { color: #1a1a1a; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a href="#" class="logo">Dokit</a>
+    </div>
+    <div class="content">
+      <h1>You've been invited to collaborate on <span class="highlight">${projectName}</span></h1>
+      <p>Hello,</p>
+      <p><strong>${inviterName}</strong> has invited you to collaborate on the project <strong>${projectName}</strong>.</p>
+      
+      <p>To view the project and start collaborating, please click the button below:</p>
+      
+      <div class="button-container">
+        <a href="${env.FRONTEND_URL}/project/${projectId.replaceAll(" ", "-")}" class="btn">View Project</a>
+      </div>
+
+      <p style="font-size: 14px; color: #718096; margin-top: 30px;">
+        If you have any questions or need assistance, simply reply to this email. Our team is always here to help.
+      </p>
+      <p>Best regards,<br>The Dokit Team</p>
+    </div>
+    <div class="footer">
+      <p>&copy; ${new Date().getFullYear()} Dokit. All rights reserved.</p>
     </div>
   </div>
 </body>

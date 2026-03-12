@@ -39,6 +39,11 @@ const initiatWorkers = () => {
         connection: redisConfig,
         concurrency: 5,
     });
+
+    const removeRequestWorker = new Worker(queues.REMOVE_REQUEST_QUEUE, workers.removeRequest, {
+        connection: redisConfig,
+        concurrency: 5,
+    });
 };
 
 export default initiatWorkers;

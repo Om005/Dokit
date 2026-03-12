@@ -4,6 +4,7 @@ import {
     cleanContainersQueue,
     deleteProjectQueue,
     emailQueue,
+    removeRequestQueue,
     syncToR2Queue,
     updateProjectLastAccessedQueue,
 } from "./queues";
@@ -11,7 +12,7 @@ import {
 const queueActions = {
     addEmailToQueue: async ({ from, to, subject, htmlContent }: MailerOptions) => {
         try {
-            emailQueue.add(
+            await emailQueue.add(
                 "send-email",
                 {
                     from,
@@ -34,7 +35,7 @@ const queueActions = {
 
     addContainerCleanupJob: async (projectId: string) => {
         try {
-            cleanContainersQueue.add(
+            await cleanContainersQueue.add(
                 "cleanup-containers",
                 { projectId },
                 {
@@ -52,7 +53,7 @@ const queueActions = {
 
     addDeleteProjectJob: async (projectId: string) => {
         try {
-            deleteProjectQueue.add(
+            await deleteProjectQueue.add(
                 "delete-project",
                 { projectId },
                 {
@@ -70,7 +71,7 @@ const queueActions = {
 
     addUpdateProjectLastAccessedJob: async (projectId: string) => {
         try {
-            updateProjectLastAccessedQueue.add(
+            await updateProjectLastAccessedQueue.add(
                 "update-project-last-accessed",
                 { projectId },
                 {
@@ -90,7 +91,7 @@ const queueActions = {
 
     addSyncToR2Job: async (projectId: string) => {
         try {
-            syncToR2Queue.add(
+            await syncToR2Queue.add(
                 "sync-to-r2",
                 { projectId },
                 {
@@ -101,6 +102,26 @@ const queueActions = {
             logger.info(`Sync to R2 job added to the queue for project ${projectId}`);
         } catch (error) {
             logger.error("Error adding sync to R2 job to queue:");
+            logger.error(error);
+            throw error;
+        }
+    },
+
+    addRemoveRequestJob: async (requestId: string) => {
+        try {
+            const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+            await removeRequestQueue.add(
+                "remove-request",
+                { requestId },
+                {
+                    delay: ONE_DAY_MS,
+                    removeOnComplete: true,
+                    removeOnFail: { count: 5 },
+                }
+            );
+            logger.info(`Remove request job added to the queue for request ${requestId}`);
+        } catch (error) {
+            logger.error("Error adding remove request job to queue:");
             logger.error(error);
             throw error;
         }

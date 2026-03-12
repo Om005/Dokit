@@ -58,10 +58,22 @@ const syncToR2Queue = new Queue(queues.SYNC_TO_R2_QUEUE, {
     },
 });
 
+const removeRequestQueue = new Queue(queues.REMOVE_REQUEST_QUEUE, {
+    connection: redisConfig,
+    defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+            type: "exponential",
+            delay: 3000,
+        },
+    },
+});
+
 export {
     emailQueue,
     cleanContainersQueue,
     deleteProjectQueue,
     updateProjectLastAccessedQueue,
     syncToR2Queue,
+    removeRequestQueue,
 };
