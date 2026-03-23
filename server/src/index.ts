@@ -6,6 +6,7 @@ import cors from "cors";
 import authRoutes from "@modules/auth/routes";
 import projectRoutes from "@modules/project/routes";
 import editorRoutes from "@modules/editor/routes";
+import projectAccessRoutes from "@modules/project/access.routes";
 import httpLogger from "@middlewares/httpLogger";
 import extractIpMiddleware from "@middlewares/IP";
 import { verifyTransporter } from "@config/mailer";
@@ -46,6 +47,7 @@ app.use(extractIpMiddleware);
 app.use(globalErrorHandler);
 app.use("/api/auth", authRoutes);
 app.use("/api/project", projectRoutes);
+app.use("/api/project/access", projectAccessRoutes);
 app.use("/api/editor", editorRoutes);
 
 const httpServer = createServer(app);

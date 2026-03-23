@@ -454,9 +454,13 @@ const controllers = {
                     id: projectId,
                 },
                 include: {
+                    owner: {
+                        select: { username: true },
+                    },
                     collaborators: {
-                        where: { userId: userId },
-                        select: { userId: true },
+                        include: {
+                            user: { select: { id: true, username: true } },
+                        },
                     },
                 },
             });
@@ -470,15 +474,18 @@ const controllers = {
             }
 
             const isOwner = project.ownerId === userId;
-            const isMember = project.collaborators.length > 0;
+            const currentMemberRecord = project.collaborators.find((c) => c.userId === userId);
+            const isMember = !!currentMemberRecord;
 
-            if (project.visibility === "PRIVATE" && !isOwner && !isMember) {
+            if (!isOwner && !isMember) {
                 return sendResponse(res, {
                     success: false,
-                    message: "Permission Denied. This project is private.",
+                    message: "Permission Denied. You do not have access to start this project.",
                     statusCode: StatusCodes.FORBIDDEN,
                 });
             }
+
+            const currentUserAccess = isOwner ? "OWNER" : currentMemberRecord?.access;
 
             if (project.isPasswordProtected) {
                 if (!password) {
@@ -527,11 +534,34 @@ const controllers = {
                     logger.error(error);
                 });
 
+                const formattedProjectInfo = {
+                    id: project.id,
+                    name: project.name,
+                    description: project.description,
+                    stack: project.stack,
+                    isPasswordProtected: project.isPasswordProtected,
+                    visibility: project.visibility,
+                    createdAt: project.createdAt,
+                    updatedAt: project.updatedAt,
+                    lastAccessedAt: project.lastAccessedAt,
+
+                    isOwner: isOwner,
+                    ownerId: project.ownerId,
+                    ownerUsername: project.owner.username,
+                    members: project.collaborators.map((c) => ({
+                        userId: c.user.id,
+                        username: c.user.username,
+                        accessLevel: c.access,
+                    })),
+
+                    currentUserAccess: currentUserAccess,
+                };
+
                 return sendResponse(res, {
                     success: true,
                     message: "Project started successfully.",
                     data: {
-                        project: { ...project, passwordHash: undefined },
+                        project: formattedProjectInfo,
                         containerInfo,
                         FileTree,
                     },

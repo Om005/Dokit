@@ -21,14 +21,15 @@ const controllers = {
             const project = await prisma.project.findFirst({
                 where: {
                     id: projectId,
-                    ownerId: userId,
+                    OR: [{ ownerId: userId }, { collaborators: { some: { userId: userId } } }],
                 },
+                select: { id: true },
             });
             if (!project) {
                 return sendResponse(res, {
                     success: false,
-                    message: "Project not found",
-                    statusCode: StatusCodes.NOT_FOUND,
+                    message: "Project not found or you don't have permission to view it.",
+                    statusCode: StatusCodes.FORBIDDEN,
                 });
             }
 
@@ -76,13 +77,14 @@ const controllers = {
             const project = await prisma.project.findFirst({
                 where: {
                     id: projectId,
-                    ownerId: userId,
+                    OR: [{ ownerId: userId }, { collaborators: { some: { userId: userId } } }],
                 },
+                select: { id: true },
             });
             if (!project) {
                 return sendResponse(res, {
                     success: false,
-                    message: "Project not found",
+                    message: "Project not found or you don't have permission to view it.",
                     statusCode: StatusCodes.NOT_FOUND,
                 });
             }
@@ -113,6 +115,7 @@ const controllers = {
             });
         }
     },
+
     createNode: async (req: Request, res: Response) => {
         try {
             const { projectId, nodePath, isDir } = req.body;
@@ -127,13 +130,17 @@ const controllers = {
             const project = await prisma.project.findFirst({
                 where: {
                     id: projectId,
-                    ownerId: userId,
+                    OR: [
+                        { ownerId: userId },
+                        { collaborators: { some: { userId: userId, access: "WRITE" } } },
+                    ],
                 },
+                select: { id: true },
             });
             if (!project) {
                 return sendResponse(res, {
                     success: false,
-                    message: "Project not found",
+                    message: "Project not found or you don't have permission to modify it.",
                     statusCode: StatusCodes.NOT_FOUND,
                 });
             }
@@ -154,13 +161,14 @@ const controllers = {
         } catch (error) {
             logger.error("Error in createNode controller:");
             logger.error(error);
-            sendResponse(res, {
+            return sendResponse(res, {
                 success: false,
                 message: "Error creating node",
                 statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
             });
         }
     },
+
     deleteNode: async (req: Request, res: Response) => {
         try {
             const { projectId, nodePath } = req.body;
@@ -175,13 +183,17 @@ const controllers = {
             const project = await prisma.project.findFirst({
                 where: {
                     id: projectId,
-                    ownerId: userId,
+                    OR: [
+                        { ownerId: userId },
+                        { collaborators: { some: { userId: userId, access: "WRITE" } } },
+                    ],
                 },
+                select: { id: true },
             });
             if (!project) {
                 return sendResponse(res, {
                     success: false,
-                    message: "Project not found",
+                    message: "Project not found or you don't have permission to modify it.",
                     statusCode: StatusCodes.NOT_FOUND,
                 });
             }
@@ -210,6 +222,7 @@ const controllers = {
             });
         }
     },
+
     renameNode: async (req: Request, res: Response) => {
         try {
             const { projectId, oldPath, newPath } = req.body;
@@ -224,13 +237,17 @@ const controllers = {
             const project = await prisma.project.findFirst({
                 where: {
                     id: projectId,
-                    ownerId: userId,
+                    OR: [
+                        { ownerId: userId },
+                        { collaborators: { some: { userId: userId, access: "WRITE" } } },
+                    ],
                 },
+                select: { id: true },
             });
             if (!project) {
                 return sendResponse(res, {
                     success: false,
-                    message: "Project not found",
+                    message: "Project not found or you don't have permission to modify it.",
                     statusCode: StatusCodes.NOT_FOUND,
                 });
             }

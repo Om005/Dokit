@@ -47,13 +47,13 @@ export default function ProjectSettings() {
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [visibility, setVisibility] = useState<"PRIVATE" | "PUBLIC">("PRIVATE");
-    const [isArchived, setIsArchived] = useState(false);
     const [isPasswordProtected, setIsPasswordProtected] = useState(false);
     const [newPassword, setNewPassword] = useState("");
     const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [pendingAction, setPendingAction] = useState<"save" | "delete" | null>(null);
     const [showPassword, setShowPassword] = useState(false);
+    const [isOwner, setIsOwner] = useState(false);
 
     useEffect(() => {
         const fetchProject = async () => {
@@ -67,8 +67,8 @@ export default function ProjectSettings() {
                 setName(fetchedProject.name);
                 setDescription(fetchedProject.description || "");
                 setVisibility(fetchedProject.visibility || "PRIVATE");
-                setIsArchived(fetchedProject.isArchived || false);
                 setIsPasswordProtected(fetchedProject.isPasswordProtected || false);
+                setIsOwner(fetchedProject.isOwner || false);
             }
         };
         fetchProject();
@@ -79,9 +79,9 @@ export default function ProjectSettings() {
             setName(project.name);
             setDescription(project.description || "");
             setVisibility(project.visibility || "PRIVATE");
-            setIsArchived(project.isArchived || false);
             setIsPasswordProtected(project.isPasswordProtected || false);
             setNewPassword("");
+            setIsOwner(project.isOwner || false);
         }
     }, [project, isEditing]);
 
@@ -122,11 +122,10 @@ export default function ProjectSettings() {
         try {
             const result = await dispatch(
                 projectActions.changeProjectSettings({
-                    name: project.name,
+                    projectId: project.id,
                     newName: name,
-                    isArchived,
-                    isPasswordProtected,
                     description: description,
+                    isPasswordProtected,
                     visibility,
                     password: isPasswordProtected ? newPassword || undefined : undefined,
                     accountPassword,
@@ -178,7 +177,6 @@ export default function ProjectSettings() {
             setName(project.name);
             setDescription(project.description || "");
             setVisibility(project.visibility || "PRIVATE");
-            setIsArchived(project.isArchived || false);
             setIsPasswordProtected(project.isPasswordProtected || false);
             setNewPassword("");
         }
@@ -209,7 +207,7 @@ export default function ProjectSettings() {
                     <Card className="p-6 sm:p-8">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-2xl font-semibold">Project Information</h2>
-                            {!isEditing && (
+                            {!isEditing && isOwner && (
                                 <Button
                                     variant="outline"
                                     size="sm"
@@ -267,24 +265,6 @@ export default function ProjectSettings() {
                                         </div>
                                     </div>
                                 )}
-                            </div>
-
-                            <div className="flex items-center justify-between p-4 bg-muted rounded-md border">
-                                <div>
-                                    <Label className="text-base font-medium">
-                                        {isArchived ? "Unarchive" : "Archive"} Project
-                                    </Label>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        {isArchived
-                                            ? "This project is archived. Unarchive to show in active projects."
-                                            : "Archive this project to hide from active projects."}
-                                    </p>
-                                </div>
-                                <Switch
-                                    checked={isArchived}
-                                    onCheckedChange={setIsArchived}
-                                    disabled={changingSettings || !isEditing}
-                                />
                             </div>
 
                             <div className="space-y-6">
@@ -431,80 +411,89 @@ export default function ProjectSettings() {
                         </div>
                     </Card>
 
-                    <Card className="border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-950/10 p-6 sm:p-8">
-                        <div className="flex items-center gap-3 mb-6">
-                            <AlertCircle className="size-6 text-red-600 dark:text-red-500" />
-                            <h2 className="text-2xl font-semibold text-red-600 dark:text-red-500">
-                                Danger Zone
-                            </h2>
-                        </div>
+                    {isOwner && (
+                        <Card className="border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-950/10 p-6 sm:p-8">
+                            <div className="flex items-center gap-3 mb-6">
+                                <AlertCircle className="size-6 text-red-600 dark:text-red-500" />
+                                <h2 className="text-2xl font-semibold text-red-600 dark:text-red-500">
+                                    Danger Zone
+                                </h2>
+                            </div>
 
-                        <div className="space-y-4">
-                            <p className="text-sm text-red-700 dark:text-red-400">
-                                Delete your project permanently. This action cannot be undone.
-                            </p>
-                            <Button
-                                variant="destructive"
-                                size="lg"
-                                className="w-full"
-                                onClick={() => setShowDeleteConfirm(true)}
-                                disabled={changingSettings}
-                            >
-                                Delete Project
-                            </Button>
-                        </div>
-                    </Card>
+                            <div className="space-y-4">
+                                <p className="text-sm text-red-700 dark:text-red-400">
+                                    Delete your project permanently. This action cannot be undone.
+                                </p>
+                                <Button
+                                    variant="destructive"
+                                    size="lg"
+                                    className="w-full"
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    disabled={changingSettings}
+                                >
+                                    Delete Project
+                                </Button>
+                            </div>
+                        </Card>
+                    )}
                 </div>
             </div>
 
-            <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="text-red-600 dark:text-red-500">
-                            Delete Project
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Are you sure you want to permanently delete &ldquo;{project.name}
-                            &rdquo;? This action cannot be undone and all project data will be lost.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <div className="flex gap-3">
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            variant={"destructive"}
-                            onClick={() => {
-                                setShowDeleteConfirm(false);
-                                setPendingAction("delete");
-                                setPasswordDialogOpen(true);
-                            }}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                            Delete
-                        </AlertDialogAction>
-                    </div>
-                </AlertDialogContent>
-            </AlertDialog>
+            {isOwner && (
+                <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle className="text-red-600 dark:text-red-500">
+                                Delete Project
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Are you sure you want to permanently delete &ldquo;{project.name}
+                                &rdquo;? This action cannot be undone and all project data will be
+                                lost.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className="flex gap-3">
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                                variant={"destructive"}
+                                onClick={() => {
+                                    setShowDeleteConfirm(false);
+                                    setPendingAction("delete");
+                                    setPasswordDialogOpen(true);
+                                }}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                                Delete
+                            </AlertDialogAction>
+                        </div>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
 
-            <AccountPasswordDialog
-                open={passwordDialogOpen}
-                onOpenChange={setPasswordDialogOpen}
-                onSubmit={async (password) => {
-                    if (pendingAction === "save") {
-                        await handleSaveSettings(password);
-                    } else if (pendingAction === "delete") {
-                        await handleDeleteProject(password);
+            {isOwner && (
+                <AccountPasswordDialog
+                    open={passwordDialogOpen}
+                    onOpenChange={setPasswordDialogOpen}
+                    onSubmit={async (password) => {
+                        if (pendingAction === "save") {
+                            await handleSaveSettings(password);
+                        } else if (pendingAction === "delete") {
+                            await handleDeleteProject(password);
+                        }
+                    }}
+                    isLoading={changingSettings}
+                    title={
+                        pendingAction === "delete"
+                            ? "Confirm Project Deletion"
+                            : "Verify Your Password"
                     }
-                }}
-                isLoading={changingSettings}
-                title={
-                    pendingAction === "delete" ? "Confirm Project Deletion" : "Verify Your Password"
-                }
-                description={
-                    pendingAction === "delete"
-                        ? "Enter your account password to confirm deletion. This cannot be undone."
-                        : "Enter your account password to save changes."
-                }
-            />
+                    description={
+                        pendingAction === "delete"
+                            ? "Enter your account password to confirm deletion. This cannot be undone."
+                            : "Enter your account password to save changes."
+                    }
+                />
+            )}
         </div>
     );
 }

@@ -142,14 +142,22 @@ const controllers = {
                     userId: true,
                     status: true,
                     project: { select: { ownerId: true, name: true } },
-                    user: { select: { email: true } },
+                    user: { select: { email: true, username: true } },
                 },
             });
+
             if (!accessRequest) {
                 return sendResponse(res, {
                     success: false,
                     message: "Access request not found",
                     statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+            if (userId !== accessRequest.project.ownerId) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "You don't have permission to review this request",
+                    statusCode: StatusCodes.FORBIDDEN,
                 });
             }
 
@@ -194,7 +202,7 @@ const controllers = {
                 to: accessRequest.user.email,
                 subject: `Your Access Request for Project "${accessRequest.project.name}" has been ${status}`,
                 htmlContent: emailTemplates.reviewedAccessRequestEmail(
-                    req.meta.user?.email || "user",
+                    accessRequest.user.username,
                     accessRequest.project.name,
                     status,
                     accessRequest.projectId
@@ -218,7 +226,8 @@ const controllers = {
     },
 
     getPendingAccessRequests: async (req: Request, res: Response) => {
-        const { projectId } = req.query;
+        const { projectId } = req.body;
+        console.log(projectId);
         try {
             const userId = req.meta.user?.id;
             if (!userId) {

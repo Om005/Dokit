@@ -30,7 +30,7 @@ export interface Project {
         username: string;
         accessLevel: string;
     }[];
-    currentUserAccess: string;
+    currentUserAccess: "READ" | "WRITE" | "OWNER";
 }
 export interface FileNode {
     path: string;

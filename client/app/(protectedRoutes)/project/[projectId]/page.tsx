@@ -35,6 +35,11 @@ import {
     AlignLeft,
     Monitor,
     MonitorOff,
+    RefreshCw,
+    GitPullRequestCreate,
+    GitPullRequestDraft,
+    UserCheck,
+    UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -57,6 +62,9 @@ export default function ProjectPage({ params }: Props) {
     const dispatch = useDispatch<AppDispatch>();
     const router = useRouter();
     const { lastProject, closingProject } = useSelector((state: RootState) => state.project);
+    const { pendingRequests, gettingPendingRequests } = useSelector(
+        (state: RootState) => state.project
+    );
 
     const currProject = useSelector((state: RootState) => state.editor.currProject);
     const fileTree = useSelector((state: RootState) => state.editor.fileTree);
@@ -66,9 +74,7 @@ export default function ProjectPage({ params }: Props) {
     const pendingPassword = useSelector((state: RootState) => state.project.pendingPassword);
     const terminalPosition = useSelector((state: RootState) => state.editor.terminalPosition);
     const lineWrapping = useSelector((state: RootState) => state.editor.lineWrapping);
-    const apiProjectId =
-        currProject?.id ??
-        `${projectId.slice(0, 8)}-${projectId.slice(8, 12)}-${projectId.slice(12, 16)}-${projectId.slice(16, 20)}-${projectId.slice(20)}`;
+    const apiProjectId = `${projectId.slice(0, 8)}-${projectId.slice(8, 12)}-${projectId.slice(12, 16)}-${projectId.slice(16, 20)}-${projectId.slice(20)}`;
 
     const [isBooting, setIsBooting] = useState(true);
     const [bootError, setBootError] = useState<string | null>(null);
@@ -86,6 +92,9 @@ export default function ProjectPage({ params }: Props) {
     const [showPreview, setShowPreview] = useState(false);
     const [previewWidth, setPreviewWidth] = useState(400);
     const [previewHeight, setPreviewHeight] = useState(250);
+    const [showPendingRequests, setShowPendingRequests] = useState(false);
+    const [pendingRequestQuery, setPendingRequestQuery] = useState("");
+    const hasFetchedPendingRequests = useRef(false);
     const isDragging = useRef(false);
     const startPos = useRef(0);
     const startSize = useRef(0);
@@ -247,8 +256,12 @@ export default function ProjectPage({ params }: Props) {
                 await dispatch(setLastProject(apiProjectId));
                 setIsBooting(false);
             } else {
-                setBootError(payload?.message ?? "Failed to start project.");
-                setIsBooting(false);
+                if (payload.message === "Password is required to start this project.") {
+                    setShowPasswordForm(true);
+                } else {
+                    setBootError(payload?.message ?? "Failed to start project.");
+                    setIsBooting(false);
+                }
             }
         } catch (err) {
             console.error("Boot error:", err);
@@ -261,11 +274,11 @@ export default function ProjectPage({ params }: Props) {
         if (hasBoot.current) return;
         hasBoot.current = true;
 
-        if (currProject?.isPasswordProtected && !pendingPassword) {
-            setIsBooting(false);
-            setShowPasswordForm(true);
-            return;
-        }
+        // if (currProject?.isPasswordProtected && !pendingPassword) {
+        //     setIsBooting(false);
+        //     setShowPasswordForm(true);
+        //     return;
+        // }
 
         runBoot();
     }, []);
@@ -289,11 +302,14 @@ export default function ProjectPage({ params }: Props) {
                 if (payload.data?.project) {
                     dispatch(setCurrProject(payload.data.project));
                 }
-                await dispatch(
-                    editorActions.getRootContent({ projectId: apiProjectId, folderPath: "/" })
-                );
-                dispatch(setOpenTabs([]));
-                dispatch(setActiveTab(null));
+                if (lastProject !== apiProjectId) {
+                    await dispatch(
+                        editorActions.getRootContent({ projectId: apiProjectId, folderPath: "/" })
+                    );
+                    dispatch(setOpenTabs([]));
+                    dispatch(setActiveTab(null));
+                }
+                dispatch(setLastProject(apiProjectId));
                 setShowPasswordForm(false);
             } else {
                 setIsBooting(false);
@@ -314,6 +330,7 @@ export default function ProjectPage({ params }: Props) {
     );
 
     const activeFile = activeTab && fileTree ? fileTree[activeTab] : null;
+    const isOwner = currProject?.currentUserAccess === "OWNER" || currProject?.isOwner === true;
 
     const wsUrl = `ws://${process.env.NEXT_PUBLIC_NGINX_HOST}/terminal/${projectId}/ws`;
 
@@ -453,11 +470,33 @@ export default function ProjectPage({ params }: Props) {
 
     const getFileName = (filePath: string) => filePath.split("/").pop() ?? filePath;
 
+    const handleTogglePendingRequests = () => {
+        const nextValue = !showPendingRequests;
+        setShowPendingRequests(nextValue);
+
+        if (nextValue && !hasFetchedPendingRequests.current) {
+            hasFetchedPendingRequests.current = true;
+            dispatch(projectActions.getPendingAccessRequests({ projectId: apiProjectId }));
+        }
+    };
+
+    const handleRefreshPendingRequests = () => {
+        dispatch(projectActions.getPendingAccessRequests({ projectId: apiProjectId }));
+    };
+
+    const handleReviewRequest = (requestId: string, status: "APPROVED" | "REJECTED") => {
+        dispatch(projectActions.reviewRequest({ requestId, status }));
+    };
+
+    const filteredPendingRequests = (pendingRequests ?? []).filter((request) =>
+        request.username.toLowerCase().includes(pendingRequestQuery.trim().toLowerCase())
+    );
+
     return (
         <SidebarProvider className="h-screen overflow-hidden">
             <AppSidebar />
 
-            <SidebarInset className="flex flex-col overflow-hidden min-h-0">
+            <SidebarInset className="flex flex-col overflow-hidden min-h-0 relative">
                 <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
                     <SidebarTrigger className="-ml-1 shrink-0" />
                     <Separator
@@ -474,6 +513,17 @@ export default function ProjectPage({ params }: Props) {
                         </Button>
                     </div>
                     <div className="flex items-center gap-2">
+                        {isOwner && (
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                className="gap-1.5"
+                                onClick={handleTogglePendingRequests}
+                                title={"pending requests"}
+                            >
+                                <UserCog className="w-4 h-4" />
+                            </Button>
+                        )}
                         {isPreviewSupported && (
                             <Button
                                 size="sm"
@@ -536,6 +586,90 @@ export default function ProjectPage({ params }: Props) {
                         </Button>
                     </div>
                 </header>
+
+                {isOwner && showPendingRequests && (
+                    <div className="absolute right-4 top-14 z-50 w-[360px] max-w-[90vw] rounded-xl border border-border/50 bg-background/95 backdrop-blur-sm shadow-xl shadow-black/10 dark:shadow-black/30">
+                        <div className="flex items-center justify-between border-b border-border/50 px-4 py-3">
+                            <span className="text-sm font-semibold text-foreground">
+                                Pending Requests
+                            </span>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    type="button"
+                                    onClick={handleRefreshPendingRequests}
+                                    className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-all duration-200"
+                                    title="Refresh"
+                                >
+                                    <RefreshCw className="size-4" />
+                                </button>
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-muted-foreground hover:text-foreground"
+                                    onClick={() => setShowPendingRequests(false)}
+                                >
+                                    Close
+                                </Button>
+                            </div>
+                        </div>
+                        <div className="px-4 py-3 border-b border-border/50">
+                            <Input
+                                value={pendingRequestQuery}
+                                onChange={(e) => setPendingRequestQuery(e.target.value)}
+                                placeholder="Search by username..."
+                                className="h-9 bg-muted/50 border-border/50 focus-visible:ring-primary/30"
+                            />
+                        </div>
+                        <div className="max-h-80 overflow-y-auto px-4 py-3 space-y-2">
+                            {gettingPendingRequests ? (
+                                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                                    <Loader2 className="size-4 animate-spin" />
+                                    <span>Loading requests...</span>
+                                </div>
+                            ) : filteredPendingRequests.length > 0 ? (
+                                <div className="space-y-2">
+                                    {filteredPendingRequests.map((request) => (
+                                        <div
+                                            key={request.id}
+                                            className="rounded-lg border border-border/50 bg-muted/30 p-3 transition-all duration-200 hover:bg-muted/50 hover:border-border"
+                                        >
+                                            <p className="text-sm font-medium text-foreground">
+                                                {request.username}
+                                            </p>
+                                            <div className="mt-3 flex items-center gap-2">
+                                                <Button
+                                                    size="sm"
+                                                    className="h-8 px-3 bg-primary hover:bg-primary/90 text-primary-foreground"
+                                                    onClick={() =>
+                                                        handleReviewRequest(request.id, "APPROVED")
+                                                    }
+                                                >
+                                                    Accept
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-8 px-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                                    onClick={() =>
+                                                        handleReviewRequest(request.id, "REJECTED")
+                                                    }
+                                                >
+                                                    Reject
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-8 text-center">
+                                    <p className="text-sm text-muted-foreground">
+                                        No pending requests
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 {openTabs.length > 0 && (
                     <div className="flex shrink-0 items-end overflow-x-auto border-b bg-muted/30 scrollbar-none">
@@ -619,6 +753,7 @@ export default function ProjectPage({ params }: Props) {
                                         className="h-full"
                                         filePath={activeFile.path}
                                         projectId={projectId}
+                                        readOnly={currProject?.currentUserAccess === "READ"}
                                     />
                                 )
                             ) : (
@@ -660,7 +795,6 @@ export default function ProjectPage({ params }: Props) {
                                 <TerminalLoader wsUrl={wsUrl} />
                             </div>
 
-                            {/* Drag handle + preview — after terminal in DOM; flex-col-reverse flips visual order */}
                             {showPreview && isPreviewSupported && (
                                 <>
                                     <div
@@ -684,10 +818,18 @@ export default function ProjectPage({ params }: Props) {
                                         }
                                         className="shrink-0 overflow-hidden"
                                     >
-                                        <PreviewPane
-                                            projectId={projectId}
-                                            isRunning={!isBooting && !bootError}
-                                        />
+                                        <div className="flex h-full w-full">
+                                            {/* {!isOwner && (
+                                                
+                                            )} */}
+
+                                            <div className="flex-1 overflow-hidden">
+                                                <PreviewPane
+                                                    projectId={projectId}
+                                                    isRunning={!isBooting && !bootError}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                 </>
                             )}

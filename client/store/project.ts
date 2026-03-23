@@ -16,6 +16,10 @@ interface intialProjectState {
     pendingPassword: string | null;
     lastProject: string | null;
     closingProject: boolean;
+    requestingAccess: boolean;
+    reviewingRequest: boolean;
+    gettingPendingRequests: boolean;
+    pendingRequests: { id: string; userId: string; username: string }[] | null;
 }
 
 const projectActions = {
@@ -110,6 +114,33 @@ const projectActions = {
         "project/closeProject",
         createApiHandler<{ projectId: string }>("/api/project/close-project", "post")
     ),
+    requestProjectAccess: createAsyncThunk<
+        ApiResponse,
+        { projectId: string },
+        { rejectValue: ApiResponse }
+    >(
+        "project/requestProjectAccess",
+        createApiHandler<{ projectId: string }>("/api/project/access/request-access", "post")
+    ),
+    reviewRequest: createAsyncThunk<
+        ApiResponse,
+        { requestId: string; status: "APPROVED" | "REJECTED" },
+        { rejectValue: ApiResponse }
+    >(
+        "project/reviewRequest",
+        createApiHandler<{ requestId: string; status: "APPROVED" | "REJECTED" }>(
+            "/api/project/access/review-request",
+            "post"
+        )
+    ),
+    getPendingAccessRequests: createAsyncThunk<
+        ApiResponse,
+        { projectId: string },
+        { rejectValue: ApiResponse }
+    >(
+        "project/getPendingAccessRequests",
+        createApiHandler<{ projectId: string }>("/api/project/access/get-pending-requests", "post")
+    ),
 };
 
 const initialState: intialProjectState = {
@@ -123,6 +154,10 @@ const initialState: intialProjectState = {
     pendingPassword: null,
     lastProject: null,
     closingProject: false,
+    requestingAccess: false,
+    reviewingRequest: false,
+    gettingPendingRequests: false,
+    pendingRequests: null,
 };
 
 const projectSlice = createSlice({
@@ -245,6 +280,43 @@ const projectSlice = createSlice({
             })
             .addCase(projectActions.closeProject.rejected, (state) => {
                 state.closingProject = false;
+            })
+            .addCase(projectActions.requestProjectAccess.pending, (state) => {
+                state.requestingAccess = true;
+            })
+            .addCase(projectActions.requestProjectAccess.fulfilled, (state) => {
+                state.requestingAccess = false;
+            })
+            .addCase(projectActions.requestProjectAccess.rejected, (state) => {
+                state.requestingAccess = false;
+            })
+            .addCase(projectActions.reviewRequest.pending, (state) => {
+                state.reviewingRequest = true;
+            })
+            .addCase(projectActions.reviewRequest.fulfilled, (state, action) => {
+                state.reviewingRequest = false;
+                state.pendingRequests =
+                    state.pendingRequests?.filter(
+                        (request) => request.id !== action.meta.arg.requestId
+                    ) || null;
+            })
+            .addCase(projectActions.reviewRequest.rejected, (state) => {
+                state.reviewingRequest = false;
+            })
+            .addCase(projectActions.getPendingAccessRequests.pending, (state) => {
+                state.gettingPendingRequests = true;
+            })
+            .addCase(projectActions.getPendingAccessRequests.fulfilled, (state, action) => {
+                state.gettingPendingRequests = false;
+                const payload = action.payload as ApiResponse & {
+                    data?: { requests: { id: string; userId: string; username: string }[] };
+                };
+                if (payload.success && payload.data && payload.data.requests) {
+                    state.pendingRequests = payload.data.requests;
+                }
+            })
+            .addCase(projectActions.getPendingAccessRequests.rejected, (state) => {
+                state.gettingPendingRequests = false;
             });
     },
 });
