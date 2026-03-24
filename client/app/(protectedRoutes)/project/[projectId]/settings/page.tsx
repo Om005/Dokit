@@ -1,17 +1,30 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store/store";
 import { projectActions } from "@/store/project";
 import { toast } from "sonner";
-import { AlertCircle, ChevronLeft, Loader2, Edit2, ChevronDown, EyeOff, Eye } from "lucide-react";
+import {
+    AlertCircle,
+    ChevronLeft,
+    Loader2,
+    Edit2,
+    ChevronDown,
+    EyeOff,
+    Eye,
+    RefreshCw,
+    Inbox,
+    Users,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -36,9 +49,15 @@ export default function ProjectSettings() {
     const router = useRouter();
     const params = useParams();
     const dispatch = useDispatch<AppDispatch>();
-    const { changingSettings, gettingProjectDetails } = useSelector(
-        (state: RootState) => state.project
-    );
+    const {
+        changingSettings,
+        gettingProjectDetails,
+        pendingRequests,
+        gettingPendingRequests,
+        invitingMember,
+        changingMemberAccess,
+        removingMember,
+    } = useSelector((state: RootState) => state.project);
 
     const projectId = params.projectId as string;
 
@@ -54,6 +73,11 @@ export default function ProjectSettings() {
     const [pendingAction, setPendingAction] = useState<"save" | "delete" | null>(null);
     const [showPassword, setShowPassword] = useState(false);
     const [isOwner, setIsOwner] = useState(false);
+    const [accessTab, setAccessTab] = useState<"members" | "invite" | "requests">("members");
+    const [pendingRequestQuery, setPendingRequestQuery] = useState("");
+    const [inviteEmail, setInviteEmail] = useState("");
+    const [inviteAccessLevel, setInviteAccessLevel] = useState<"READ" | "WRITE">("READ");
+    const hasFetchedRequests = useRef(false);
 
     useEffect(() => {
         const fetchProject = async () => {
@@ -84,6 +108,21 @@ export default function ProjectSettings() {
             setIsOwner(project.isOwner || false);
         }
     }, [project, isEditing]);
+
+    const isProjectPublic = project?.visibility === "PUBLIC";
+
+    useEffect(() => {
+        if (!isProjectPublic && accessTab === "requests") {
+            setAccessTab("members");
+        }
+    }, [accessTab, isProjectPublic]);
+
+    useEffect(() => {
+        if (!isProjectPublic || accessTab !== "requests") return;
+        if (hasFetchedRequests.current) return;
+        hasFetchedRequests.current = true;
+        dispatch(projectActions.getPendingAccessRequests({ projectId }));
+    }, [accessTab, dispatch, isProjectPublic, projectId]);
 
     if (!project || gettingProjectDetails) {
         return (
@@ -182,6 +221,92 @@ export default function ProjectSettings() {
         }
         setIsEditing(false);
     };
+
+    const updateMemberList = (member: {
+        userId: string;
+        username: string;
+        accessLevel: string;
+    }) => {
+        setProject((prev) => {
+            if (!prev) return prev;
+            const members = prev.members ?? [];
+            const existingIndex = members.findIndex((item) => item.userId === member.userId);
+            if (existingIndex >= 0) {
+                const nextMembers = [...members];
+                nextMembers[existingIndex] = { ...nextMembers[existingIndex], ...member };
+                return { ...prev, members: nextMembers };
+            }
+            return { ...prev, members: [...members, member] };
+        });
+    };
+
+    const handleChangeMemberAccess = async (userId: string, accessLevel: "READ" | "WRITE") => {
+        await dispatch(
+            projectActions.changeMemberAccess({
+                projectId,
+                userId,
+                newAccessLevel: accessLevel,
+            })
+        );
+        setProject((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                members: prev.members.map((member) =>
+                    member.userId === userId ? { ...member, accessLevel } : member
+                ),
+            };
+        });
+    };
+
+    const handleRemoveMember = async (userId: string) => {
+        await dispatch(projectActions.removeMember({ projectId, userId }));
+        setProject((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                members: prev.members.filter((member) => member.userId !== userId),
+            };
+        });
+    };
+
+    const handleRefreshRequests = () => {
+        if (!isProjectPublic) return;
+        dispatch(projectActions.getPendingAccessRequests({ projectId }));
+    };
+
+    const handleReviewRequest = async (requestId: string, status: "APPROVED" | "REJECTED") => {
+        const response = await dispatch(projectActions.reviewRequest({ requestId, status }));
+        if (status !== "APPROVED") return;
+        const payload = response.payload as Payload<{
+            user?: { userId: string; username: string; accessLevel: string };
+        }>;
+        if (payload?.success && payload.data?.user) {
+            updateMemberList(payload.data.user);
+        }
+    };
+
+    const handleInviteMember = async () => {
+        if (!inviteEmail.trim()) return;
+        const response = await dispatch(
+            projectActions.inviteMemeber({
+                projectId,
+                email: inviteEmail.trim(),
+                accessLevel: inviteAccessLevel,
+            })
+        );
+        const payload = response.payload as Payload<{
+            user?: { userId: string; username: string; accessLevel: string };
+        }>;
+        if (payload?.success && payload.data?.user) {
+            updateMemberList(payload.data.user);
+            setInviteEmail("");
+        }
+    };
+
+    const filteredPendingRequests = (pendingRequests ?? []).filter((request) =>
+        request.username.toLowerCase().includes(pendingRequestQuery.trim().toLowerCase())
+    );
 
     return (
         <div className="min-h-screen bg-background pt-14">
@@ -409,6 +534,403 @@ export default function ProjectSettings() {
                                 </div>
                             )}
                         </div>
+                    </Card>
+
+                    <Card className="p-6 sm:p-8 border-border/40 bg-gradient-to-b from-background to-background/95 shadow-lg">
+                        <div className="mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                                    <Users className="h-5 w-5 text-primary" />
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-semibold text-foreground">
+                                        Members & Access
+                                    </h2>
+                                    <p className="text-sm text-muted-foreground mt-0.5">
+                                        {isOwner
+                                            ? "Manage project members, invites, and access requests."
+                                            : "View project members and access levels."}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {isOwner ? (
+                            <Tabs
+                                value={accessTab}
+                                onValueChange={(value) =>
+                                    setAccessTab(value as "members" | "invite" | "requests")
+                                }
+                                className="flex flex-col"
+                            >
+                                <TabsList
+                                    variant="line"
+                                    className="w-full justify-start bg-muted/20 rounded-lg p-1"
+                                >
+                                    <TabsTrigger
+                                        value="members"
+                                        className="data-[state=active]:text-primary data-[state=active]:bg-background rounded-md"
+                                    >
+                                        Members
+                                    </TabsTrigger>
+                                    <TabsTrigger
+                                        value="invite"
+                                        className="data-[state=active]:text-primary data-[state=active]:bg-background rounded-md"
+                                    >
+                                        Invite User
+                                    </TabsTrigger>
+                                    {isProjectPublic && (
+                                        <TabsTrigger
+                                            value="requests"
+                                            className="data-[state=active]:text-primary data-[state=active]:bg-background rounded-md"
+                                        >
+                                            Requests
+                                        </TabsTrigger>
+                                    )}
+                                </TabsList>
+                                <TabsContent value="members" className="pt-5">
+                                    <div className="space-y-3 max-h-80 overflow-y-auto">
+                                        {(project.members ?? []).length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                                <div className="h-14 w-14 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                                                    <Users className="h-7 w-7 text-muted-foreground" />
+                                                </div>
+                                                <p className="text-sm text-muted-foreground">
+                                                    No members yet
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            (project.members ?? []).map((member) => {
+                                                const isMemberOwner =
+                                                    member.userId === project.ownerId ||
+                                                    member.accessLevel === "OWNER";
+                                                return (
+                                                    <div
+                                                        key={member.userId}
+                                                        className="rounded-xl border border-border/40 bg-gradient-to-r from-muted/40 to-muted/20 p-4 transition-all duration-200 hover:from-muted/60 hover:to-muted/40 hover:border-border/60 hover:shadow-sm"
+                                                    >
+                                                        <div className="flex items-center justify-between gap-3">
+                                                            <div className="min-w-0 flex items-center gap-3">
+                                                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0">
+                                                                    <span className="text-sm font-semibold text-primary">
+                                                                        {member.username
+                                                                            ?.charAt(0)
+                                                                            .toUpperCase()}
+                                                                    </span>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-sm font-medium text-foreground truncate">
+                                                                        {member.username}
+                                                                    </p>
+                                                                    <Badge
+                                                                        variant={
+                                                                            member.accessLevel ===
+                                                                            "OWNER"
+                                                                                ? "default"
+                                                                                : "secondary"
+                                                                        }
+                                                                        className={`mt-1 text-xs ${
+                                                                            member.accessLevel ===
+                                                                            "OWNER"
+                                                                                ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                                                                                : member.accessLevel ===
+                                                                                    "WRITE"
+                                                                                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                                                                                  : "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30"
+                                                                        }`}
+                                                                    >
+                                                                        {member.accessLevel}
+                                                                    </Badge>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                {isMemberOwner ? (
+                                                                    <span className="text-xs text-amber-600 dark:text-amber-400 font-medium px-3 py-1.5 rounded-lg bg-amber-500/10">
+                                                                        Owner
+                                                                    </span>
+                                                                ) : (
+                                                                    <DropdownMenu modal={false}>
+                                                                        <DropdownMenuTrigger
+                                                                            asChild
+                                                                        >
+                                                                            <Button
+                                                                                size="sm"
+                                                                                variant="outline"
+                                                                                className="min-w-[110px] bg-background/50 border-border/50 rounded-lg justify-between gap-2"
+                                                                                disabled={
+                                                                                    changingMemberAccess
+                                                                                }
+                                                                            >
+                                                                                {member.accessLevel ===
+                                                                                "WRITE"
+                                                                                    ? "Read & Write"
+                                                                                    : "Read"}
+                                                                                <ChevronDown className="h-4 w-4 opacity-50" />
+                                                                            </Button>
+                                                                        </DropdownMenuTrigger>
+                                                                        <DropdownMenuContent
+                                                                            align="end"
+                                                                            className="w-40"
+                                                                        >
+                                                                            <DropdownMenuItem
+                                                                                onClick={() =>
+                                                                                    handleChangeMemberAccess(
+                                                                                        member.userId,
+                                                                                        "READ"
+                                                                                    )
+                                                                                }
+                                                                                className="cursor-pointer"
+                                                                            >
+                                                                                Read
+                                                                            </DropdownMenuItem>
+                                                                            <DropdownMenuItem
+                                                                                onClick={() =>
+                                                                                    handleChangeMemberAccess(
+                                                                                        member.userId,
+                                                                                        "WRITE"
+                                                                                    )
+                                                                                }
+                                                                                className="cursor-pointer"
+                                                                            >
+                                                                                Read & Write
+                                                                            </DropdownMenuItem>
+                                                                        </DropdownMenuContent>
+                                                                    </DropdownMenu>
+                                                                )}
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    className="text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg"
+                                                                    onClick={() =>
+                                                                        handleRemoveMember(
+                                                                            member.userId
+                                                                        )
+                                                                    }
+                                                                    disabled={
+                                                                        isMemberOwner ||
+                                                                        removingMember
+                                                                    }
+                                                                >
+                                                                    Remove
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                </TabsContent>
+                                <TabsContent value="invite" className="pt-5">
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label
+                                                htmlFor="invite-email"
+                                                className="text-sm font-medium"
+                                            >
+                                                Email Address
+                                            </Label>
+                                            <Input
+                                                id="invite-email"
+                                                value={inviteEmail}
+                                                onChange={(e) => setInviteEmail(e.target.value)}
+                                                placeholder="member@example.com"
+                                                className="h-11 bg-muted/30 border-border/40 focus-visible:ring-primary/40 focus-visible:border-primary/40 rounded-lg"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-medium">
+                                                Access Level
+                                            </Label>
+                                            <DropdownMenu modal={false}>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        className="w-full h-11 bg-muted/30 border-border/40 rounded-lg justify-between gap-2"
+                                                    >
+                                                        {inviteAccessLevel === "WRITE"
+                                                            ? "Read & Write"
+                                                            : "Read Only"}
+                                                        <ChevronDown className="h-4 w-4 opacity-50" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="start" className="w-52">
+                                                    <DropdownMenuItem
+                                                        onClick={() => setInviteAccessLevel("READ")}
+                                                        className="cursor-pointer"
+                                                    >
+                                                        Read Only
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() =>
+                                                            setInviteAccessLevel("WRITE")
+                                                        }
+                                                        className="cursor-pointer"
+                                                    >
+                                                        Read & Write
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                        <Button
+                                            className="w-full h-11 bg-primary hover:bg-primary/90 rounded-lg font-medium mt-2"
+                                            onClick={handleInviteMember}
+                                            disabled={invitingMember || !inviteEmail.trim()}
+                                        >
+                                            {invitingMember && (
+                                                <Loader2 className="size-4 animate-spin mr-2" />
+                                            )}
+                                            Send Invitation
+                                        </Button>
+                                    </div>
+                                </TabsContent>
+                                {isProjectPublic && (
+                                    <TabsContent value="requests" className="pt-5">
+                                        <div className="flex items-center gap-2">
+                                            <Input
+                                                value={pendingRequestQuery}
+                                                onChange={(e) =>
+                                                    setPendingRequestQuery(e.target.value)
+                                                }
+                                                placeholder="Search by username..."
+                                                className="h-10 bg-muted/30 border-border/40 focus-visible:ring-primary/40 focus-visible:border-primary/40 flex-1 rounded-lg"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={handleRefreshRequests}
+                                                className="p-2.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all duration-200"
+                                                title="Refresh"
+                                            >
+                                                <RefreshCw className="size-4" />
+                                            </button>
+                                        </div>
+                                        <div className="max-h-72 overflow-y-auto pt-4 space-y-3">
+                                            {gettingPendingRequests ? (
+                                                <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+                                                    <Loader2 className="size-5 animate-spin text-primary" />
+                                                    <span>Loading requests...</span>
+                                                </div>
+                                            ) : filteredPendingRequests.length > 0 ? (
+                                                <div className="space-y-3">
+                                                    {filteredPendingRequests.map((request) => (
+                                                        <div
+                                                            key={request.id}
+                                                            className="rounded-xl border border-border/40 bg-gradient-to-r from-muted/40 to-muted/20 p-4 transition-all duration-200 hover:from-muted/60 hover:to-muted/40 hover:border-border/60 hover:shadow-sm"
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-orange-500/20 to-orange-500/5 flex items-center justify-center flex-shrink-0">
+                                                                    <span className="text-sm font-semibold text-orange-500">
+                                                                        {request.username
+                                                                            ?.charAt(0)
+                                                                            .toUpperCase()}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-sm font-medium text-foreground">
+                                                                    {request.username}
+                                                                </p>
+                                                            </div>
+                                                            <div className="mt-4 flex items-center gap-2 pl-[52px]">
+                                                                <Button
+                                                                    size="sm"
+                                                                    className="h-8 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg"
+                                                                    onClick={() =>
+                                                                        handleReviewRequest(
+                                                                            request.id,
+                                                                            "APPROVED"
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    Accept
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    className="h-8 px-4 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg"
+                                                                    onClick={() =>
+                                                                        handleReviewRequest(
+                                                                            request.id,
+                                                                            "REJECTED"
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    Reject
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center py-12 text-center">
+                                                    <div className="h-14 w-14 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                                                        <Inbox className="h-7 w-7 text-muted-foreground" />
+                                                    </div>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        No pending requests
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </TabsContent>
+                                )}
+                            </Tabs>
+                        ) : (
+                            <div className="space-y-3 max-h-80 overflow-y-auto">
+                                {(project.members ?? []).length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                                        <div className="h-14 w-14 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                                            <Users className="h-7 w-7 text-muted-foreground" />
+                                        </div>
+                                        <p className="text-sm text-muted-foreground">
+                                            No members yet
+                                        </p>
+                                    </div>
+                                ) : (
+                                    (project.members ?? []).map((member) => (
+                                        <div
+                                            key={member.userId}
+                                            className="rounded-xl border border-border/40 bg-gradient-to-r from-muted/40 to-muted/20 p-4 transition-all duration-200 hover:from-muted/60 hover:to-muted/40 hover:border-border/60 hover:shadow-sm"
+                                        >
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div className="min-w-0 flex items-center gap-3">
+                                                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0">
+                                                        <span className="text-sm font-semibold text-primary">
+                                                            {member.username
+                                                                ?.charAt(0)
+                                                                .toUpperCase()}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-medium text-foreground truncate">
+                                                            {member.username}
+                                                        </p>
+                                                        <Badge
+                                                            variant={
+                                                                member.accessLevel === "OWNER"
+                                                                    ? "default"
+                                                                    : "secondary"
+                                                            }
+                                                            className={`mt-1 text-xs ${
+                                                                member.accessLevel === "OWNER"
+                                                                    ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                                                                    : member.accessLevel === "WRITE"
+                                                                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                                                                      : "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30"
+                                                            }`}
+                                                        >
+                                                            {member.accessLevel}
+                                                        </Badge>
+                                                    </div>
+                                                </div>
+                                                {member.accessLevel === "OWNER" && (
+                                                    <span className="text-xs text-amber-600 dark:text-amber-400 font-medium px-3 py-1.5 rounded-lg bg-amber-500/10">
+                                                        Owner
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
                     </Card>
 
                     {isOwner && (

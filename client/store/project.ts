@@ -20,6 +20,9 @@ interface intialProjectState {
     reviewingRequest: boolean;
     gettingPendingRequests: boolean;
     pendingRequests: { id: string; userId: string; username: string }[] | null;
+    invitingMember: boolean;
+    changingMemberAccess: boolean;
+    removingMember: boolean;
 }
 
 const projectActions = {
@@ -141,6 +144,39 @@ const projectActions = {
         "project/getPendingAccessRequests",
         createApiHandler<{ projectId: string }>("/api/project/access/get-pending-requests", "post")
     ),
+    inviteMemeber: createAsyncThunk<
+        ApiResponse,
+        { projectId: string; email: string; accessLevel: "READ" | "WRITE" },
+        { rejectValue: ApiResponse }
+    >(
+        "project/inviteMemeber",
+        createApiHandler<{ projectId: string; email: string; accessLevel: "READ" | "WRITE" }>(
+            "/api/project/access/invite-member",
+            "post"
+        )
+    ),
+    changeMemberAccess: createAsyncThunk<
+        ApiResponse,
+        { projectId: string; userId: string; newAccessLevel: "READ" | "WRITE" },
+        { rejectValue: ApiResponse }
+    >(
+        "project/changeMemberAccess",
+        createApiHandler<{ projectId: string; userId: string; newAccessLevel: "READ" | "WRITE" }>(
+            "/api/project/access/change-member-access",
+            "post"
+        )
+    ),
+    removeMember: createAsyncThunk<
+        ApiResponse,
+        { projectId: string; userId: string },
+        { rejectValue: ApiResponse }
+    >(
+        "project/removeMember",
+        createApiHandler<{ projectId: string; userId: string }>(
+            "/api/project/access/remove-member",
+            "post"
+        )
+    ),
 };
 
 const initialState: intialProjectState = {
@@ -158,6 +194,9 @@ const initialState: intialProjectState = {
     reviewingRequest: false,
     gettingPendingRequests: false,
     pendingRequests: null,
+    invitingMember: false,
+    changingMemberAccess: false,
+    removingMember: false,
 };
 
 const projectSlice = createSlice({
@@ -317,6 +356,33 @@ const projectSlice = createSlice({
             })
             .addCase(projectActions.getPendingAccessRequests.rejected, (state) => {
                 state.gettingPendingRequests = false;
+            })
+            .addCase(projectActions.inviteMemeber.pending, (state) => {
+                state.invitingMember = true;
+            })
+            .addCase(projectActions.inviteMemeber.fulfilled, (state) => {
+                state.invitingMember = false;
+            })
+            .addCase(projectActions.inviteMemeber.rejected, (state) => {
+                state.invitingMember = false;
+            })
+            .addCase(projectActions.changeMemberAccess.pending, (state) => {
+                state.changingMemberAccess = true;
+            })
+            .addCase(projectActions.changeMemberAccess.fulfilled, (state) => {
+                state.changingMemberAccess = false;
+            })
+            .addCase(projectActions.changeMemberAccess.rejected, (state) => {
+                state.changingMemberAccess = false;
+            })
+            .addCase(projectActions.removeMember.pending, (state) => {
+                state.removingMember = true;
+            })
+            .addCase(projectActions.removeMember.fulfilled, (state) => {
+                state.removingMember = false;
+            })
+            .addCase(projectActions.removeMember.rejected, (state) => {
+                state.removingMember = false;
             });
     },
 });

@@ -4,6 +4,28 @@ import { persistReducer } from "redux-persist";
 import storage from "redux-persist/lib/storage";
 import createApiHandler from "@/utils/apiHandler";
 import { Project } from "@/types/types";
+import { projectActions } from "@/store/project";
+
+type ProjectMember = {
+    userId: string;
+    username: string;
+    accessLevel: string;
+};
+
+const getMemberFromPayload = (payload: ApiResponse): ProjectMember | null => {
+    const data = payload?.data as
+        | (ProjectMember & { user?: ProjectMember; member?: ProjectMember })
+        | { user?: ProjectMember; member?: ProjectMember }
+        | undefined;
+
+    if (!data) return null;
+    if ("userId" in data && "username" in data && "accessLevel" in data) {
+        return data as ProjectMember;
+    }
+    if (data.user && data.user.userId) return data.user;
+    if (data.member && data.member.userId) return data.member;
+    return null;
+};
 
 interface initialEditorState {
     fileTree: Record<string, FileNode>;
@@ -387,6 +409,64 @@ const editorSlice = createSlice({
             })
             .addCase(editorActions.renameNode.rejected, (state) => {
                 state.renamingNode = false;
+            })
+            .addCase(projectActions.inviteMemeber.fulfilled, (state, action) => {
+                const payload = action.payload as ApiResponse;
+                if (!payload.success || !state.currProject) return;
+
+                const invitedMember = getMemberFromPayload(payload);
+                if (!invitedMember) return;
+
+                const members = state.currProject.members ?? [];
+                const existingIndex = members.findIndex(
+                    (member) => member.userId === invitedMember.userId
+                );
+
+                if (existingIndex >= 0) {
+                    members[existingIndex] = {
+                        ...members[existingIndex],
+                        accessLevel: invitedMember.accessLevel,
+                    };
+                } else {
+                    members.push(invitedMember);
+                }
+            })
+            .addCase(projectActions.reviewRequest.fulfilled, (state, action) => {
+                const payload = action.payload as ApiResponse;
+                if (!payload.success || !state.currProject) return;
+
+                const acceptedMember = getMemberFromPayload(payload);
+                if (!acceptedMember) return;
+
+                const members = state.currProject.members ?? [];
+                const existingIndex = members.findIndex(
+                    (member) => member.userId === acceptedMember.userId
+                );
+
+                if (existingIndex >= 0) {
+                    members[existingIndex] = {
+                        ...members[existingIndex],
+                        accessLevel: acceptedMember.accessLevel,
+                    };
+                } else {
+                    members.push(acceptedMember);
+                }
+            })
+            .addCase(projectActions.changeMemberAccess.fulfilled, (state, action) => {
+                if (!state.currProject) return;
+                const { userId, newAccessLevel } = action.meta.arg;
+
+                state.currProject.members = state.currProject.members.map((member) =>
+                    member.userId === userId ? { ...member, accessLevel: newAccessLevel } : member
+                );
+            })
+            .addCase(projectActions.removeMember.fulfilled, (state, action) => {
+                if (!state.currProject) return;
+                const { userId } = action.meta.arg;
+
+                state.currProject.members = state.currProject.members.filter(
+                    (member) => member.userId !== userId
+                );
             });
     },
 });

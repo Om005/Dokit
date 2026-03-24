@@ -212,6 +212,16 @@ const controllers = {
             return sendResponse(res, {
                 success: true,
                 message: "Access request reviewed successfully",
+                data: {
+                    user:
+                        status === "APPROVED"
+                            ? {
+                                  userId: accessRequest.userId,
+                                  username: accessRequest.user.username,
+                                  accessLevel: "WRITE",
+                              }
+                            : undefined,
+                },
                 statusCode: StatusCodes.OK,
             });
         } catch (error) {
