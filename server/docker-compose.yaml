@@ -41,7 +41,7 @@ services:
     image: dokit-nginx:latest
     container_name: dokit-nginx
     ports:
-      - '8080:80'
+      - '80:80'
     networks: 
       - dokit-network
     restart: unless-stopped

@@ -247,7 +247,7 @@ const controllers = {
             if (!project) {
                 return sendResponse(res, {
                     success: false,
-                    message: "Project not found or you don't have permission to modify it.",
+                    message: "You don't have permission to modify it.",
                     statusCode: StatusCodes.NOT_FOUND,
                 });
             }

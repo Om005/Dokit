@@ -344,10 +344,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const dispatch = useDispatch<AppDispatch>();
     const fileTree = useSelector((state: RootState) => state.editor.fileTree);
     const projectId = useSelector((state: RootState) => state.editor.currProject?.id);
+    const currProject = useSelector((state: RootState) => state.editor.currProject);
     const creatingNode = useSelector((state: RootState) => state.editor.creatingNode);
     const [rootDialogOpen, setRootDialogOpen] = React.useState(false);
     const [rootDialogNodeType, setRootDialogNodeType] = React.useState<"file" | "folder">("file");
     const { resolvedTheme, setTheme } = useTheme();
+    const canUseContextMenu =
+        currProject?.isOwner === true || currProject?.currentUserAccess === "WRITE";
 
     const handleRootCreate = async (value?: string) => {
         if (!projectId || !value) return;
@@ -386,28 +389,30 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <SidebarGroup>
                     <SidebarGroupLabel className="flex items-center justify-between pr-1">
                         <span>Files</span>
-                        <div className="flex items-center gap-0.5">
-                            <button
-                                title="New File"
-                                className="cursor-pointer rounded p-0.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-                                onClick={() => {
-                                    setRootDialogNodeType("file");
-                                    setRootDialogOpen(true);
-                                }}
-                            >
-                                <FilePlus className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                                title="New Folder"
-                                className="cursor-pointer rounded p-0.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-                                onClick={() => {
-                                    setRootDialogNodeType("folder");
-                                    setRootDialogOpen(true);
-                                }}
-                            >
-                                <FolderPlus className="h-3.5 w-3.5" />
-                            </button>
-                        </div>
+                        {(currProject?.isOwner || currProject?.currentUserAccess === "WRITE") && (
+                            <div className="flex items-center gap-0.5">
+                                <button
+                                    title="New File"
+                                    className="cursor-pointer rounded p-0.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                                    onClick={() => {
+                                        setRootDialogNodeType("file");
+                                        setRootDialogOpen(true);
+                                    }}
+                                >
+                                    <FilePlus className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                    title="New Folder"
+                                    className="cursor-pointer rounded p-0.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                                    onClick={() => {
+                                        setRootDialogNodeType("folder");
+                                        setRootDialogOpen(true);
+                                    }}
+                                >
+                                    <FolderPlus className="h-3.5 w-3.5" />
+                                </button>
+                            </div>
+                        )}
                     </SidebarGroupLabel>
 
                     <SidebarGroupContent>
@@ -419,6 +424,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                                             key={node.path}
                                             node={node}
                                             fileTree={fileTree}
+                                            canUseContextMenu={canUseContextMenu}
                                         />
                                     ))
                                 ) : (
@@ -463,7 +469,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     );
 }
 
-function FileTreeNode({ node, fileTree }: { node: FileNode; fileTree: Record<string, FileNode> }) {
+function FileTreeNode({
+    node,
+    fileTree,
+    canUseContextMenu,
+}: {
+    node: FileNode;
+    fileTree: Record<string, FileNode>;
+    canUseContextMenu: boolean;
+}) {
     const dispatch = useDispatch<AppDispatch>();
     const projectId = useSelector((state: RootState) => state.editor.currProject?.id);
     const creatingNode = useSelector((state: RootState) => state.editor.creatingNode);
@@ -552,11 +566,33 @@ function FileTreeNode({ node, fileTree }: { node: FileNode; fileTree: Record<str
         return (
             <>
                 <SidebarMenuItem>
-                    <FileNodeContextMenu
-                        node={node}
-                        onRename={() => openDialog("rename", "file")}
-                        onDelete={() => openDialog("delete", "file")}
-                    >
+                    {canUseContextMenu ? (
+                        <FileNodeContextMenu
+                            node={node}
+                            onRename={() => openDialog("rename", "file")}
+                            onDelete={() => openDialog("delete", "file")}
+                        >
+                            <SidebarMenuButton
+                                onClick={async () => {
+                                    try {
+                                        await dispatch(openTab(node.path));
+                                        await dispatch(setActiveTab(node.path));
+                                    } catch (error) {
+                                        console.error("Failed to load file content:", error);
+                                    }
+                                }}
+                                className="data-[active=true]:bg-transparent"
+                            >
+                                <Icon
+                                    icon={getFileIconId(node.name)}
+                                    width={16}
+                                    height={16}
+                                    className="shrink-0"
+                                />
+                                <span className="truncate">{node.name}</span>
+                            </SidebarMenuButton>
+                        </FileNodeContextMenu>
+                    ) : (
                         <SidebarMenuButton
                             onClick={async () => {
                                 try {
@@ -576,7 +612,7 @@ function FileTreeNode({ node, fileTree }: { node: FileNode; fileTree: Record<str
                             />
                             <span className="truncate">{node.name}</span>
                         </SidebarMenuButton>
-                    </FileNodeContextMenu>
+                    )}
                 </SidebarMenuItem>
                 {dialog}
             </>
@@ -609,13 +645,28 @@ function FileTreeNode({ node, fileTree }: { node: FileNode; fileTree: Record<str
                     }}
                     className="group/collapsible [&[data-state=open]>button>svg.chevron]:rotate-90"
                 >
-                    <FileNodeContextMenu
-                        node={node}
-                        onNewFile={() => openDialog("create", "file")}
-                        onNewFolder={() => openDialog("create", "folder")}
-                        onRename={() => openDialog("rename", "folder")}
-                        onDelete={() => openDialog("delete", "folder")}
-                    >
+                    {canUseContextMenu ? (
+                        <FileNodeContextMenu
+                            node={node}
+                            onNewFile={() => openDialog("create", "file")}
+                            onNewFolder={() => openDialog("create", "folder")}
+                            onRename={() => openDialog("rename", "folder")}
+                            onDelete={() => openDialog("delete", "folder")}
+                        >
+                            <CollapsibleTrigger asChild>
+                                <SidebarMenuButton>
+                                    <ChevronRight className="chevron shrink-0 size-4 transition-transform" />
+                                    <Icon
+                                        icon={isOpen ? openIcon : closedIcon}
+                                        width={16}
+                                        height={16}
+                                        className="shrink-0"
+                                    />
+                                    <span className="truncate">{node.name}</span>
+                                </SidebarMenuButton>
+                            </CollapsibleTrigger>
+                        </FileNodeContextMenu>
+                    ) : (
                         <CollapsibleTrigger asChild>
                             <SidebarMenuButton>
                                 <ChevronRight className="chevron shrink-0 size-4 transition-transform" />
@@ -628,7 +679,7 @@ function FileTreeNode({ node, fileTree }: { node: FileNode; fileTree: Record<str
                                 <span className="truncate">{node.name}</span>
                             </SidebarMenuButton>
                         </CollapsibleTrigger>
-                    </FileNodeContextMenu>
+                    )}
                     <CollapsibleContent>
                         <SidebarMenuSub>
                             {childNodes.length > 0 ? (
@@ -637,6 +688,7 @@ function FileTreeNode({ node, fileTree }: { node: FileNode; fileTree: Record<str
                                         key={child.path}
                                         node={child}
                                         fileTree={fileTree}
+                                        canUseContextMenu={canUseContextMenu}
                                     />
                                 ))
                             ) : node.isLoaded ? (

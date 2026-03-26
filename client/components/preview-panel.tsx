@@ -7,9 +7,10 @@ import { RootState } from "@/store/store";
 interface PreviewPaneProps {
     projectId: string;
     isRunning: boolean;
+    token: string;
 }
 
-export function PreviewPane({ projectId, isRunning }: PreviewPaneProps) {
+export function PreviewPane({ projectId, isRunning, token }: PreviewPaneProps) {
     const { currProject } = useSelector((state: RootState) => state.editor);
     const [addressBar, setAddressBar] = useState("");
 
@@ -19,11 +20,14 @@ export function PreviewPane({ projectId, isRunning }: PreviewPaneProps) {
     useEffect(() => {
         const currentHost = window.location.hostname;
         const ip = currentHost === "localhost" ? "127.0.0.1" : currentHost;
+        const protocol = window.location.protocol === "https:" ? "https" : "http";
 
-        const initialUrl = `http://${defaultPorts[currProject!.stack.toLowerCase()]}-${projectId}.${ip}.nip.io:8080`;
+        const initialUrl = `${protocol}://${defaultPorts[currProject!.stack.toLowerCase()]}-${projectId}.${ip}.nip.io/preview-auth?token=${encodeURIComponent(
+            token
+        )}`;
         setAddressBar(initialUrl);
         setIframeSrc(initialUrl);
-    }, [projectId]);
+    }, [projectId, token]);
 
     const handleNavigation = (e: FormEvent) => {
         e.preventDefault();

@@ -1,5 +1,6 @@
 import env from "@config/env";
 import { MailerOptions } from "@config/mailer";
+import { redisClient } from "@config/redisClient";
 import { prisma } from "@db/prisma";
 import queueActions from "@modules/queue/queueActions";
 import emailTemplates from "@utils/emailTemplates";
@@ -7,7 +8,8 @@ import logger from "@utils/logger";
 import sendResponse from "@utils/sendResponse";
 import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-
+import { io } from "index";
+import jwt from "jsonwebtoken";
 const controllers = {
     requestAccess: async (req: Request, res: Response) => {
         const { projectId } = req.body;
@@ -237,7 +239,6 @@ const controllers = {
 
     getPendingAccessRequests: async (req: Request, res: Response) => {
         const { projectId } = req.body;
-        console.log(projectId);
         try {
             const userId = req.meta.user?.id;
             if (!userId) {
@@ -501,6 +502,13 @@ const controllers = {
                 data: { access: newAccessLevel },
             });
 
+            io.to(projectId).emit("MEMBER_ACCESS_CHANGED", {
+                userId,
+                newAccessLevel,
+            });
+            if (newAccessLevel === "READ") {
+                await redisClient.del(`terminal_access_${userId}_${projectId}`);
+            }
             return sendResponse(res, {
                 success: true,
                 message: `Member access updated to ${newAccessLevel} successfully.`,
@@ -580,6 +588,12 @@ const controllers = {
                 },
             });
 
+            io.to(projectId).emit("MEMBER_REMOVED", { userId });
+
+            Promise.all([
+                redisClient.del(`terminal_access_${userId}_${projectId}`),
+                redisClient.del(`preview_access_${userId}_${projectId}`),
+            ]);
             return sendResponse(res, {
                 success: true,
                 message: "Member removed from the project successfully.",
@@ -593,6 +607,149 @@ const controllers = {
                 message: "An error occurred while removing the member.",
                 statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
             });
+        }
+    },
+
+    verifyTeminalAccess: async (req: Request, res: Response) => {
+        try {
+            const originalUri = req.headers["x-original-uri"] as string;
+            if (!originalUri) return res.sendStatus(StatusCodes.BAD_REQUEST);
+            const url = new URL(originalUri, `http://${req.headers.host}`);
+            const pathParts = url.pathname.split("/");
+            const projectId = pathParts[2];
+            const userId = req.meta.user?.id;
+            if (!userId) return res.sendStatus(StatusCodes.UNAUTHORIZED);
+
+            const correctProjectId = projectId.replace(
+                /(.{8})(.{4})(.{4})(.{4})(.{12})/,
+                "$1-$2-$3-$4-$5"
+            );
+            const status = await redisClient.get(`terminal_access_${userId}_${correctProjectId}`);
+            if (status === "true") {
+                return res.sendStatus(StatusCodes.OK);
+            }
+
+            const project = await prisma.project.findUnique({
+                where: { id: correctProjectId },
+                include: { collaborators: { where: { userId } } },
+            });
+            if (!project) return res.sendStatus(StatusCodes.NOT_FOUND);
+
+            const isOwner = project.ownerId === userId;
+            const isCollaborator = project.collaborators.length > 0;
+
+            if (!isOwner && !isCollaborator) {
+                return res.sendStatus(StatusCodes.FORBIDDEN);
+            }
+            if (!isOwner && project.collaborators[0].access !== "WRITE") {
+                return res.sendStatus(StatusCodes.FORBIDDEN);
+            }
+            await redisClient.set(`terminal_access_${userId}_${correctProjectId}`, "true", {
+                EX: 60 * 60,
+            });
+            return res.sendStatus(StatusCodes.OK);
+        } catch (error) {
+            logger.error("Error in verifyTerminalAccess controller:");
+            logger.error(error);
+            return res.sendStatus(StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+        // return res.sendStatus(StatusCodes.OK);
+    },
+
+    previewAuth: async (req: Request, res: Response) => {
+        try {
+            const token = req.query.token as string;
+            if (!token) return res.sendStatus(StatusCodes.UNAUTHORIZED);
+
+            const originalHost = req.headers["x-original-host"] as string;
+            if (!originalHost) return res.sendStatus(StatusCodes.BAD_REQUEST);
+
+            const match = originalHost.match(/^\d+-([a-zA-Z0-9-]+)\./);
+            if (!match) return res.sendStatus(StatusCodes.BAD_REQUEST);
+
+            const decoded = jwt.verify(token, env.JWT_SECRET) as { userId: string };
+            const userId = decoded.userId;
+
+            const projectId = match[1].replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, "$1-$2-$3-$4-$5");
+
+            const cacheKey = `preview_access_${userId}_${projectId}`;
+            const cached = await redisClient.get(cacheKey);
+
+            if (cached !== "true") {
+                const project = await prisma.project.findUnique({
+                    where: { id: projectId },
+                    include: { collaborators: { where: { userId } } },
+                });
+                if (!project) return res.sendStatus(StatusCodes.NOT_FOUND);
+
+                const hasAccess = project.ownerId === userId || project.collaborators.length > 0;
+                if (!hasAccess) return res.sendStatus(StatusCodes.FORBIDDEN);
+
+                await redisClient.set(cacheKey, "true", { EX: 60 * 60 });
+            }
+
+            const forwardedProto = (req.headers["x-forwarded-proto"] ?? "").toString();
+            const isSecure = req.secure || forwardedProto.includes("https");
+            const sameSite = env.IS_PRODUCTION === 1 || isSecure ? "None" : "Lax";
+            const cookieParts = [
+                `preview_token=${token}`,
+                "Path=/",
+                "Max-Age=3600",
+                "HttpOnly",
+                `SameSite=${sameSite}`,
+            ];
+            if (sameSite === "None") {
+                cookieParts.push("Secure");
+            }
+            res.setHeader("Set-Cookie", cookieParts.join("; "));
+            return res.redirect("/");
+        } catch (error) {
+            logger.error("previewAuth error:");
+            logger.error(error);
+            return res.sendStatus(StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+    },
+
+    verifyPreviewAccess: async (req: Request, res: Response) => {
+        try {
+            const rawCookie = req.headers["cookie"] ?? "";
+            const token = rawCookie.match(/(?:^|;\s*)preview_token=([^;]+)/)?.[1];
+
+            if (!token) return res.sendStatus(StatusCodes.UNAUTHORIZED);
+
+            const decoded = jwt.verify(token, env.JWT_SECRET) as { userId: string };
+            const userId = decoded.userId;
+            if (!userId) return res.sendStatus(StatusCodes.UNAUTHORIZED);
+
+            const originalHost = req.headers["x-original-host"] as string;
+            if (!originalHost) return res.sendStatus(StatusCodes.BAD_REQUEST);
+
+            const match = originalHost.match(/^\d+-([a-zA-Z0-9-]+)\./);
+            if (!match) return res.sendStatus(StatusCodes.BAD_REQUEST);
+
+            const projectId = match[1].replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, "$1-$2-$3-$4-$5");
+
+            const cacheKey = `preview_access_${userId}_${projectId}`;
+            const cached = await redisClient.get(cacheKey);
+
+            if (cached !== "true") {
+                const project = await prisma.project.findUnique({
+                    where: { id: projectId },
+                    include: { collaborators: { where: { userId } } },
+                });
+                if (!project) return res.sendStatus(StatusCodes.NOT_FOUND);
+
+                const hasAccess = project.ownerId === userId || project.collaborators.length > 0;
+                if (!hasAccess) return res.sendStatus(StatusCodes.FORBIDDEN);
+
+                await redisClient.set(cacheKey, "true", { EX: 60 * 60 });
+            }
+
+            return res.sendStatus(StatusCodes.OK);
+        } catch (error) {
+            logger.error("verifyPreviewAccess error:");
+            logger.error(error);
+            return res.sendStatus(StatusCodes.UNAUTHORIZED);
         }
     },
 };

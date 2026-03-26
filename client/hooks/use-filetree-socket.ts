@@ -2,6 +2,11 @@ import env from "@/config/env";
 import { FileSystemEvent, TreeNode } from "@/types/types";
 import { useEffect, useRef } from "react";
 import { io } from "socket.io-client";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState } from "@/store/store";
+import { setCurrProject } from "@/store/editor";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 function useFileTreeSocket(
     projectId: string,
@@ -9,7 +14,11 @@ function useFileTreeSocket(
     onNodeDeletion: (path: string, isDir: boolean) => void,
     onRenameNode: (fromPath: string, toPath: string, isDir: boolean) => void
 ) {
+    const dispatch = useDispatch();
+    const router = useRouter();
     const socketRef = useRef<ReturnType<typeof io>>(null);
+    const id = useSelector((state: RootState) => state.auth.id);
+    const currProject = useSelector((state: RootState) => state.editor.currProject);
     const syncLocks = new Set<string>();
     useEffect(() => {
         if (!projectId) return;
@@ -47,6 +56,23 @@ function useFileTreeSocket(
                         resolve(null);
                     }, 1000)
                 );
+            }
+        });
+        socket.on(
+            "MEMBER_ACCESS_CHANGED",
+            async (data: { userId: string; newAccessLevel: string }) => {
+                if (data.userId === id) {
+                    await dispatch(
+                        setCurrProject({ ...currProject, currentUserAccess: data.newAccessLevel })
+                    );
+                }
+            }
+        );
+        socket.on("MEMBER_REMOVED", async (data: { userId: string }) => {
+            if (data.userId === id) {
+                await dispatch(setCurrProject(null));
+                router.push("/dashboard/projects");
+                toast.info("You have been removed from the project by the owner.");
             }
         });
         return () => {

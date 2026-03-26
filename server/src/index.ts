@@ -46,8 +46,8 @@ app.use(httpLogger);
 app.use(extractIpMiddleware);
 app.use(globalErrorHandler);
 app.use("/api/auth", authRoutes);
-app.use("/api/project", projectRoutes);
 app.use("/api/project/access", projectAccessRoutes);
+app.use("/api/project", projectRoutes);
 app.use("/api/editor", editorRoutes);
 
 const httpServer = createServer(app);

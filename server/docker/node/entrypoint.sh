@@ -22,4 +22,10 @@ BASHRC
 
 echo "CONTAINER_READY"
 
+unset PROJECT_ID
+unset R2_ACCESS_KEY_ID
+unset R2_SECRET_ACCESS_KEY
+unset R2_ACCOUNT_ID
+unset R2_BUCKET_NAME
+
 exec ttyd -W -t fontSize=14 -p 7681 bash --rcfile /root/.bashrc

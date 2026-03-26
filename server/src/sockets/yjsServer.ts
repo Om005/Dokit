@@ -63,7 +63,6 @@ export async function syncDockerToYjs(projectId: string, filePath: string) {
     const roomName = `${projectId}-${filePath}`;
 
     if (syncLocks.has(roomName)) {
-        // console.log(`Heyyyy this is: ${filePath}`);
         return;
     }
     syncLocks.add(roomName);
@@ -81,7 +80,6 @@ export async function syncDockerToYjs(projectId: string, filePath: string) {
         const newContent = containerFileContent.replace(/\r/g, "");
 
         if (oldContent == newContent) {
-            // console.log(`Content changed for ${filePath} in project ${projectId}`);
             return;
         }
 

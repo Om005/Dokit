@@ -12,8 +12,27 @@ interface AccessTokenPayload extends jwt.JwtPayload {
 
 export const authenticate = (req: Request, res: Response, next: NextFunction) => {
     try {
-        const token = req.cookies?.accessToken || req.headers.authorization?.split(" ")[1];
+        let token = req.cookies?.accessToken || req.headers.authorization?.split(" ")[1];
 
+        if (!token) {
+            token = req.query.token as string;
+        }
+        if (!token) {
+            token = req.cookies?.preview_token;
+        }
+        if (!token && req.headers["x-original-uri"]) {
+            const originalUri = req.headers["x-original-uri"] as string;
+            const url = new URL(originalUri, `http://localhost`);
+            token = url.searchParams.get("token") || undefined;
+        }
+        if (!token) {
+            const rawCookie = req.headers["cookie"] ?? "";
+            const match = rawCookie.match(/(?:^|;\s*)preview_token=([^;]+)/);
+            if (match) token = match[1];
+        }
+        if (!token && req.headers["x-preview-token"]) {
+            token = req.headers["x-preview-token"] as string;
+        }
         if (!token) {
             return res.status(StatusCodes.UNAUTHORIZED).json({
                 success: false,
