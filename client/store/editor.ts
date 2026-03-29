@@ -40,6 +40,7 @@ interface initialEditorState {
     renamingNode: boolean;
     terminalPosition: "bottom" | "right";
     lineWrapping: boolean;
+    cursorColor: string | null;
 }
 
 const editorActions = {
@@ -121,6 +122,7 @@ const initialState: initialEditorState = {
     renamingNode: false,
     terminalPosition: "bottom",
     lineWrapping: false,
+    cursorColor: null,
 };
 
 const editorSlice = createSlice({
@@ -306,6 +308,9 @@ const editorSlice = createSlice({
         toggleLineWrapping(state) {
             state.lineWrapping = !state.lineWrapping;
         },
+        setCursorColor(state, action: PayloadAction<string>) {
+            state.cursorColor = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -481,6 +486,7 @@ const editorPersistConfig = {
         "activeTab",
         "terminalPosition",
         "lineWrapping",
+        "cursorColor",
     ],
 };
 
@@ -496,6 +502,7 @@ export const {
     renameNode,
     toggleTerminalPosition,
     toggleLineWrapping,
+    setCursorColor,
 } = editorSlice.actions;
 
 const persistedEditorReducer = persistReducer(editorPersistConfig, editorSlice.reducer);

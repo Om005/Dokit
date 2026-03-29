@@ -63,6 +63,7 @@ import { useRouter } from "next/navigation";
 import { toggleTerminalPosition } from "@/store/editor";
 import { PreviewPane } from "@/components/preview-panel";
 import defaultPorts from "@/utils/defaultPorts";
+import { useOnlineMembers } from "@/hooks/use-online-members";
 
 interface Props {
     projectId: string;
@@ -90,7 +91,8 @@ export default function ProjectPage({ projectId, token }: Props) {
     const terminalPosition = useSelector((state: RootState) => state.editor.terminalPosition);
     const lineWrapping = useSelector((state: RootState) => state.editor.lineWrapping);
     const apiProjectId = `${projectId.slice(0, 8)}-${projectId.slice(8, 12)}-${projectId.slice(12, 16)}-${projectId.slice(16, 20)}-${projectId.slice(20)}`;
-
+    const username = useSelector((state: RootState) => state.auth.username) || "Anonymous";
+    const cursorColor = useSelector((state: RootState) => state.editor.cursorColor) || "#000000";
     const [isBooting, setIsBooting] = useState(true);
     const [bootError, setBootError] = useState<string | null>(null);
     const hasBoot = useRef(false);
@@ -361,6 +363,7 @@ export default function ProjectPage({ projectId, token }: Props) {
     const canUseTerminal = isOwner || currProject?.currentUserAccess === "WRITE";
     const canTogglePreview = isPreviewSupported && canUseTerminal;
     const shouldShowPreview = isPreviewSupported && (canUseTerminal ? showPreview : true);
+    const onlineUsers = useOnlineMembers(apiProjectId, username, cursorColor);
 
     const wsUrl = `ws://${process.env.NEXT_PUBLIC_NGINX_HOST}/terminal/${projectId}/ws`;
 
@@ -557,6 +560,15 @@ export default function ProjectPage({ projectId, token }: Props) {
         }
     };
 
+    const getInitials = (name: string) => {
+        return name
+            .split(" ")
+            .map((n) => n[0])
+            .join("")
+            .substring(0, 2)
+            .toUpperCase();
+    };
+
     return (
         <SidebarProvider className="h-screen overflow-hidden">
             <AppSidebar />
@@ -578,6 +590,76 @@ export default function ProjectPage({ projectId, token }: Props) {
                         </Button>
                     </div>
                     <div className="flex items-center gap-2">
+                        {onlineUsers.length > 0 && (
+                            <div className="flex items-center">
+                                <div className="flex items-center -space-x-2.5">
+                                    {onlineUsers.slice(0, 5).map((user, idx) => (
+                                        <div key={idx} className="group relative z-10 hover:z-30">
+                                            <div
+                                                className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-background text-[10px] font-bold text-white shadow-md transition-all duration-300 ease-out cursor-default group-hover:scale-125 group-hover:-translate-y-1 group-hover:shadow-lg group-hover:border-background/80"
+                                                style={{ backgroundColor: user.color }}
+                                            >
+                                                {getInitials(user.name).toUpperCase()}
+                                            </div>
+                                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 px-3 py-2 bg-popover text-popover-foreground text-xs font-medium rounded-lg shadow-xl border border-border/50 whitespace-nowrap opacity-0 scale-90 pointer-events-none transition-all duration-200 group-hover:opacity-100 group-hover:scale-100 group-hover:mt-2">
+                                                <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 h-3 w-3 rotate-45 bg-popover border-l border-t border-border/50" />
+                                                <span className="relative z-10 flex items-center gap-2">
+                                                    <span
+                                                        className="h-2.5 w-2.5 rounded-full flex-shrink-0 ring-2 ring-white/20"
+                                                        style={{ backgroundColor: user.color }}
+                                                    />
+                                                    <span>{user.name}</span>
+                                                    <span className="text-[10px] text-muted-foreground">
+                                                        (online)
+                                                    </span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {onlineUsers.length > 5 && (
+                                        <div className="group relative z-10 hover:z-30">
+                                            <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-muted text-[10px] font-bold text-muted-foreground shadow-md transition-all duration-300 ease-out cursor-default group-hover:scale-125 group-hover:-translate-y-1 group-hover:shadow-lg group-hover:bg-muted/80">
+                                                +{onlineUsers.length - 5}
+                                            </div>
+                                            <div className="absolute top-full right-0 mt-3 px-3 py-2 bg-popover text-popover-foreground text-xs rounded-lg shadow-xl border border-border/50 whitespace-nowrap opacity-0 scale-90 pointer-events-none transition-all duration-200 group-hover:opacity-100 group-hover:scale-100 group-hover:mt-2 min-w-[140px]">
+                                                <div className="absolute -top-1.5 right-4 h-3 w-3 rotate-45 bg-popover border-l border-t border-border/50" />
+                                                <p className="relative z-10 text-muted-foreground mb-2 font-medium">
+                                                    More users:
+                                                </p>
+                                                <div className="relative z-10 space-y-1.5">
+                                                    {onlineUsers.slice(5).map((user, idx) => (
+                                                        <div
+                                                            key={idx}
+                                                            className="flex items-center gap-2"
+                                                        >
+                                                            <span
+                                                                className="h-2 w-2 rounded-full flex-shrink-0"
+                                                                style={{
+                                                                    backgroundColor: user.color,
+                                                                }}
+                                                            />
+                                                            <span className="truncate">
+                                                                {user.name}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="ml-2 px-2 py-0.5 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold rounded-full">
+                                    {onlineUsers.length} online
+                                </div>
+                            </div>
+                        )}
+
+                        {onlineUsers.length > 0 && (
+                            <Separator
+                                orientation="vertical"
+                                className="data-[orientation=vertical]:h-5"
+                            />
+                        )}
                         {isOwner && (
                             <Button
                                 size="sm"

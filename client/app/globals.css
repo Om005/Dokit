@@ -4,6 +4,49 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Custom styles for Yjs collaborative cursors */
+
+/* The vertical blinking cursor line */
+.cm-ySelectionCaret {
+    position: relative;
+    border-left: 2px solid black; /* This color gets overridden dynamically by Yjs */
+    margin-left: -1px;
+    margin-right: -1px;
+    box-sizing: border-box;
+    display: inline-block;
+    z-index: 10;
+}
+
+/* The actual floating name tag */
+.cm-ySelectionInfo {
+    position: absolute;
+    top: -1.5em;
+    left: -1px;
+    font-size: 11px;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-weight: 600;
+    padding: 2px 6px;
+    color: white;
+    border-radius: 4px;
+    border-bottom-left-radius: 0;
+    user-select: none;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 11;
+    transition: opacity 0.2s ease-in-out;
+    opacity: 1;
+}
+
+/* Optional: Hide the name tag when the user is typing so it doesn't block code above it */
+.cm-ySelectionCaret:hover .cm-ySelectionInfo {
+    opacity: 1;
+}
+
+/* The transparent highlighted background for remote selections */
+.cm-ySelection {
+    background-color: transparent; /* Yjs handles the background color inline */
+}
+
 :root {
     /* Light Mode - Warm & Colorful Palette */
     --background: oklch(0.98 0.008 85); /* Soft warm off-white */
