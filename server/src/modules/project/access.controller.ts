@@ -653,7 +653,6 @@ const controllers = {
             logger.error(error);
             return res.sendStatus(StatusCodes.INTERNAL_SERVER_ERROR);
         }
-        // return res.sendStatus(StatusCodes.OK);
     },
 
     previewAuth: async (req: Request, res: Response) => {

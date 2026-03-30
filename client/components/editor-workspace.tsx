@@ -103,7 +103,6 @@ export default function ProjectPage({ projectId, token }: Props) {
     const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
     const [passwordFormError, setPasswordFormError] = useState<string | null>(null);
 
-    // const [terminalPosition, setTerminalPosition] = useState<"bottom" | "right">("bottom");
     const [terminalHeight, setTerminalHeight] = useState(250);
     const [terminalWidth, setTerminalWidth] = useState(380);
     const [showPreview, setShowPreview] = useState(false);
@@ -152,10 +151,6 @@ export default function ProjectPage({ projectId, token }: Props) {
         [dispatch]
     );
     useFileTreeSocket(apiProjectId, onNodeCreation, onNodeDeletion, onRenameNode);
-
-    // const toggleTerminalPosition = useCallback(() => {
-    //     dispatch(toggleTerminalPosition());
-    // }, [dispatch]);
 
     const onBottomDragStart = useCallback(
         (e: React.MouseEvent) => {
@@ -294,12 +289,6 @@ export default function ProjectPage({ projectId, token }: Props) {
     useEffect(() => {
         if (hasBoot.current) return;
         hasBoot.current = true;
-
-        // if (currProject?.isPasswordProtected && !pendingPassword) {
-        //     setIsBooting(false);
-        //     setShowPasswordForm(true);
-        //     return;
-        // }
 
         runBoot();
     }, []);
@@ -1149,74 +1138,76 @@ export default function ProjectPage({ projectId, token }: Props) {
                             />
                         )}
 
-                        <div
-                            style={
-                                terminalPosition === "bottom"
-                                    ? { height: terminalHeight }
-                                    : { width: terminalWidth }
-                            }
-                            className={cn(
-                                "shrink-0 overflow-hidden bg-background flex",
-                                terminalPosition === "bottom" ? "flex-row" : "flex-col-reverse"
-                            )}
-                        >
-                            {canUseTerminal && (
-                                <div
-                                    className={cn(
-                                        "overflow-hidden flex-1",
-                                        terminalPosition === "bottom" ? "min-w-0" : "min-h-0"
-                                    )}
-                                >
-                                    <TerminalLoader wsUrl={wsUrl} />
-                                </div>
-                            )}
-
-                            {canUseTerminal && shouldShowPreview && (
-                                <>
+                        {(canUseTerminal || shouldShowPreview) && (
+                            <div
+                                style={
+                                    terminalPosition === "bottom"
+                                        ? { height: terminalHeight }
+                                        : { width: terminalWidth }
+                                }
+                                className={cn(
+                                    "shrink-0 overflow-hidden bg-background flex",
+                                    terminalPosition === "bottom" ? "flex-row" : "flex-col-reverse"
+                                )}
+                            >
+                                {canUseTerminal && (
                                     <div
-                                        onMouseDown={
-                                            terminalPosition === "bottom"
-                                                ? onPreviewHorizDragStart
-                                                : onPreviewVertDragStart
-                                        }
                                         className={cn(
-                                            "bg-border hover:bg-primary/50 transition-colors shrink-0 select-none",
-                                            terminalPosition === "bottom"
-                                                ? "w-1.5 cursor-col-resize"
-                                                : "h-1.5 cursor-row-resize"
+                                            "overflow-hidden flex-1",
+                                            terminalPosition === "bottom" ? "min-w-0" : "min-h-0"
                                         )}
-                                    />
-                                    <div
-                                        style={
-                                            terminalPosition === "bottom"
-                                                ? { width: previewWidth }
-                                                : { height: previewHeight }
-                                        }
-                                        className="shrink-0 overflow-hidden"
                                     >
-                                        <div className="flex h-full w-full">
-                                            <div className="flex-1 overflow-hidden">
-                                                <PreviewPane
-                                                    projectId={projectId}
-                                                    token={token}
-                                                    isRunning={!isBooting && !bootError}
-                                                />
+                                        <TerminalLoader wsUrl={wsUrl} />
+                                    </div>
+                                )}
+
+                                {canUseTerminal && shouldShowPreview && (
+                                    <>
+                                        <div
+                                            onMouseDown={
+                                                terminalPosition === "bottom"
+                                                    ? onPreviewHorizDragStart
+                                                    : onPreviewVertDragStart
+                                            }
+                                            className={cn(
+                                                "bg-border hover:bg-primary/50 transition-colors shrink-0 select-none",
+                                                terminalPosition === "bottom"
+                                                    ? "w-1.5 cursor-col-resize"
+                                                    : "h-1.5 cursor-row-resize"
+                                            )}
+                                        />
+                                        <div
+                                            style={
+                                                terminalPosition === "bottom"
+                                                    ? { width: previewWidth }
+                                                    : { height: previewHeight }
+                                            }
+                                            className="shrink-0 overflow-hidden"
+                                        >
+                                            <div className="flex h-full w-full">
+                                                <div className="flex-1 overflow-hidden">
+                                                    <PreviewPane
+                                                        projectId={projectId}
+                                                        token={token}
+                                                        isRunning={!isBooting && !bootError}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </>
-                            )}
+                                    </>
+                                )}
 
-                            {!canUseTerminal && shouldShowPreview && (
-                                <div className="flex-1 overflow-hidden">
-                                    <PreviewPane
-                                        projectId={projectId}
-                                        token={token}
-                                        isRunning={!isBooting && !bootError}
-                                    />
-                                </div>
-                            )}
-                        </div>
+                                {!canUseTerminal && shouldShowPreview && (
+                                    <div className="flex-1 overflow-hidden">
+                                        <PreviewPane
+                                            projectId={projectId}
+                                            token={token}
+                                            isRunning={!isBooting && !bootError}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </SidebarInset>

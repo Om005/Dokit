@@ -519,10 +519,6 @@ const controllers = {
                         statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
                     });
                 }
-                DockerManager.startFileSystemWatcher(project.id).catch((err) => {
-                    logger.error("Failed to start filesystem watcher:");
-                    logger.error(err);
-                });
 
                 const FileTree: Record<string, FileNode> | null =
                     await DockerManager.getFolderContent(project.id, "/");

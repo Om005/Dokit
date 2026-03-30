@@ -48,7 +48,6 @@ const emailTemplates = {
 </html>
   `;
     },
-    // src/utils/emailTemplates.ts
 
     getWelcomeEmail: (firstName: string, lastName: string): string => {
         return `
@@ -101,7 +100,6 @@ const emailTemplates = {
 </html>
   `;
     },
-    // src/utils/emailTemplates.ts
 
     getPasswordResetEmail: (otp: string): string => {
         return `

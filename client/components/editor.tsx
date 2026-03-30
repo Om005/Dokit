@@ -80,7 +80,6 @@ export function Editor({ filePath, projectId, readOnly = false, className = "" }
             const states = Array.from(provider.awareness.getStates().values());
             const users = states.map((state: any) => state.user).filter(Boolean);
 
-            // Deduplicate in case a user has multiple browser tabs open
             const uniqueUsers = Array.from(new Map(users.map((u) => [u.name, u])).values());
 
             setActiveUsers(uniqueUsers);

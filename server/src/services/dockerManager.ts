@@ -65,7 +65,6 @@ async function createDokitContainer(
     projectId: string,
     stack: ProjectStack
 ): Promise<{ containerId: string | null; containerName: string }> {
-    // const containerProjectId = projectId.replace(/-/g, "").slice(0, 12);
     const containerProjectId = projectId.replaceAll("-", "");
     const containerName = `dokit-${containerProjectId}`;
     const imageName = `dokit-${stack.toLowerCase()}:latest`;
@@ -106,13 +105,22 @@ async function createDokitContainer(
                 HostConfig: {
                     NetworkMode: NETWORK,
                     AutoRemove: false,
+                    Memory: 512 * 1024 * 1024,
+                    MemorySwap: 512 * 1024 * 1024,
+                    CpuQuota: 50000,
+                    CpuPeriod: 100000,
+                    SecurityOpt: ["no-new-privileges"],
+                    Tmpfs: { "/tmp": "rw,noexec,nosuid,size=64m" },
                 },
             });
 
             await container.start();
             await waitForContainerReady(container.id);
 
-            // const containerInfo = await container.inspect();
+            await startFileSystemWatcher(projectId).catch((err) => {
+                logger.error("Failed to start filesystem watcher:");
+                logger.error(err);
+            });
 
             return { containerId: container.id, containerName };
         } catch (createError) {
@@ -242,6 +250,7 @@ async function syncWorkspaceToR2(projectId: string): Promise<void> {
             Cmd: ["bash", "-c", rcloneCmd],
             AttachStdout: true,
             AttachStderr: true,
+            User: "dokituser",
         });
         const stream = await exec.start({ hijack: true, stdin: false });
         await new Promise((resolve, reject) => {
@@ -298,6 +307,7 @@ async function getFolderContent(
             Cmd: ["bash", "-c", command],
             AttachStdout: true,
             AttachStderr: true,
+            User: "dokituser",
         });
 
         const stream = await exec.start({ hijack: true, stdin: false });
@@ -359,6 +369,7 @@ async function getFileContent(projectId: string, filePath: string): Promise<stri
             Cmd: ["bash", "-c", command],
             AttachStdout: true,
             AttachStderr: true,
+            User: "dokituser",
         });
 
         const stream = await exec.start({ hijack: true, stdin: false });
@@ -406,6 +417,7 @@ async function writeFileToContainer(
             Cmd: ["bash", "-c", command],
             AttachStdout: true,
             AttachStderr: true,
+            User: "dokituser",
         });
 
         const stream = await exec.start({ hijack: true, stdin: false });
@@ -455,6 +467,7 @@ async function startFileSystemWatcher(projectId: string): Promise<void> {
             Cmd: ["bash", "-c", command],
             AttachStdout: true,
             AttachStderr: true,
+            User: "dokituser",
         });
 
         const stream = await exec.start({ hijack: true, stdin: false });
@@ -582,6 +595,7 @@ async function createNode(projectId: string, nodePath: string, isDir: boolean): 
             Cmd: ["bash", "-c", command],
             AttachStdout: true,
             AttachStderr: true,
+            User: "dokituser",
         });
 
         const stream = await exec.start({ hijack: true, stdin: false });
@@ -625,6 +639,7 @@ async function deleteNode(projectId: string, nodePath: string): Promise<void> {
             Cmd: ["bash", "-c", command],
             AttachStdout: true,
             AttachStderr: true,
+            User: "dokituser",
         });
 
         const stream = await exec.start({ hijack: true, stdin: false });
@@ -680,6 +695,7 @@ async function renameNode(projectId: string, oldPath: string, newPath: string): 
             Cmd: ["bash", "-c", command],
             AttachStdout: true,
             AttachStderr: true,
+            User: "dokituser",
         });
 
         const stream = await exec.start({ hijack: true, stdin: false });
