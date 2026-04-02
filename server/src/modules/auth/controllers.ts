@@ -224,7 +224,7 @@ const controllers = {
                 },
             });
 
-            const accessToken = authUtils.signAccess(newUser.id, email, newSessionId);
+            const accessToken = authUtils.signAccess(newUser.id, newSessionId);
 
             Promise.all([
                 redisClient.del(`verified:upcoming-emails:${email}`),
@@ -245,6 +245,10 @@ const controllers = {
             res.cookie("accessToken", accessToken, {
                 ...cookieOptions,
                 maxAge: ACCESS_COOKIE_EXPIRY_MS,
+            });
+
+            await redisClient.set(`session:${newSessionId}`, "true", {
+                EX: 15 * 60,
             });
 
             return sendResponse(res, {
@@ -340,7 +344,7 @@ const controllers = {
                 },
             });
 
-            const accessToken = authUtils.signAccess(user.id, user.email, newSessionId);
+            const accessToken = authUtils.signAccess(user.id, newSessionId);
 
             res.cookie("refreshToken", plainToken, {
                 ...cookieOptions,
@@ -350,6 +354,10 @@ const controllers = {
             res.cookie("accessToken", accessToken, {
                 ...cookieOptions,
                 maxAge: ACCESS_COOKIE_EXPIRY_MS,
+            });
+
+            await redisClient.set(`session:${newSessionId}`, "true", {
+                EX: 15 * 60,
             });
 
             return sendResponse(res, {
@@ -382,9 +390,12 @@ const controllers = {
 
         try {
             if (sessionId) {
-                await prisma.session.deleteMany({
-                    where: { id: sessionId },
-                });
+                await Promise.all([
+                    prisma.session.deleteMany({
+                        where: { id: sessionId },
+                    }),
+                    redisClient.del(`session:${sessionId}`),
+                ]);
             }
 
             res.clearCookie("accessToken", cookieOptions);
@@ -415,6 +426,8 @@ const controllers = {
             const ip = req.meta?.clientIp || "unknown";
 
             if (!oldRefreshToken) {
+                res.clearCookie("accessToken", cookieOptions);
+                res.clearCookie("refreshToken", cookieOptions);
                 return sendResponse(res, {
                     success: false,
                     message: "Session does not exist. Please sign in again.",
@@ -450,8 +463,9 @@ const controllers = {
                     expiresAt: true,
                 },
             });
-
             if (!session) {
+                res.clearCookie("accessToken", cookieOptions);
+                res.clearCookie("refreshToken", cookieOptions);
                 return sendResponse(res, {
                     success: false,
                     message: "Invalid session. Please sign in again.",
@@ -460,6 +474,8 @@ const controllers = {
             }
 
             if (session.expiresAt < new Date(Date.now())) {
+                res.clearCookie("accessToken", cookieOptions);
+                res.clearCookie("refreshToken", cookieOptions);
                 return sendResponse(res, {
                     success: false,
                     message: "Session has expired. Please sign in again.",
@@ -475,6 +491,8 @@ const controllers = {
                 argon2.hash(newPlainToken),
             ]);
             if (!isTokenValid) {
+                res.clearCookie("accessToken", cookieOptions);
+                res.clearCookie("refreshToken", cookieOptions);
                 return sendResponse(res, {
                     success: false,
                     message: "Invalid session. Please sign in again.",
@@ -502,14 +520,11 @@ const controllers = {
                     city: geo?.city || "unknown",
                     region: geo?.region || "unknown",
                     country: geo?.country || "unknown",
+                    lastSeen: new Date(),
                 },
             });
 
-            const newAccessToken = authUtils.signAccess(
-                session.userId,
-                session.user.email,
-                session.id
-            );
+            const newAccessToken = authUtils.signAccess(session.userId, session.id);
 
             res.cookie("refreshToken", newPlainToken, {
                 ...cookieOptions,
@@ -519,6 +534,10 @@ const controllers = {
             res.cookie("accessToken", newAccessToken, {
                 ...cookieOptions,
                 maxAge: ACCESS_COOKIE_EXPIRY_MS,
+            });
+
+            await redisClient.set(`session:${sessionId}`, "true", {
+                EX: 15 * 60,
             });
 
             return sendResponse(res, {

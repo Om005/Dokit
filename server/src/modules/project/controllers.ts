@@ -379,7 +379,7 @@ const controllers = {
             const collaboratorRecord = project.collaborators.find((c) => c.user.id === userId);
             const isMember = !!collaboratorRecord;
 
-            if (project.visibility === "PRIVATE" && !isOwner && !isMember) {
+            if (!isOwner && !isMember) {
                 return sendResponse(res, {
                     success: false,
                     message: "Permission Denied. This project is private",

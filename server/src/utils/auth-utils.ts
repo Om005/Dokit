@@ -10,10 +10,9 @@ const authUtils = {
         return otp;
     },
 
-    signAccess: (userId: string, email: string, sessionId: string): string => {
+    signAccess: (userId: string, sessionId: string): string => {
         const payload = {
             userId,
-            email,
             sessionId,
         };
         const options: SignOptions = {

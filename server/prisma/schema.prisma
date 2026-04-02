@@ -22,6 +22,8 @@ model User {
   lastName       String
   username       String   @unique
   passwordHash   String
+  twoFactorEnabled Boolean  @default(false)
+  signInEmailEnabled Boolean @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt @default(now())
   sessions       Session[]
@@ -63,6 +65,7 @@ model Project {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt @default(now())
   lastAccessedAt DateTime      @default(now())
+  pinned         Boolean       @default(false)
 
   @@index([ownerId])
 }
