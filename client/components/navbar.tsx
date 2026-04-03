@@ -5,7 +5,6 @@ import { Moon, Sun, User, LogOut } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useRouter } from "next/navigation";
 import { AppDispatch, RootState } from "@/store/store";
 import { authActions } from "@/store/authentication";
 import { toast } from "sonner";
@@ -24,8 +23,9 @@ export function Navbar() {
     const { theme, setTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
     const dispatch = useDispatch<AppDispatch>();
-    const router = useRouter();
-    const { isAuthenticated, firstName, lastName } = useSelector((state: RootState) => state.auth);
+    const { isAuthenticated, firstName, lastName, username } = useSelector(
+        (state: RootState) => state.auth
+    );
 
     useEffect(() => {
         setMounted(true);
@@ -42,7 +42,6 @@ export function Navbar() {
 
             if (payload.success) {
                 toast.success("Logged out successfully");
-                router.push("/");
             } else {
                 toast.error(payload.message || "Failed to log out");
             }
@@ -55,7 +54,6 @@ export function Navbar() {
     return (
         <header className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl">
             <nav className="flex items-center justify-between px-2 py-2 bg-navbar-bg backdrop-blur-xl border border-border/50 rounded-full shadow-lg shadow-black/5 dark:shadow-black/20">
-                {/* Logo */}
                 <Link
                     href="/"
                     className="text-lg font-bold text-foreground pl-4 hover:opacity-80 transition-opacity"
@@ -63,7 +61,6 @@ export function Navbar() {
                     Dokit.
                 </Link>
 
-                {/* Center Nav Links */}
                 <div className="hidden md:flex items-center gap-1">
                     <Link
                         href="#features"
@@ -85,7 +82,6 @@ export function Navbar() {
                     </Link>
                 </div>
 
-                {/* Right Side Actions */}
                 <div className="flex items-center gap-2">
                     <Button
                         variant="ghost"
@@ -116,7 +112,7 @@ export function Navbar() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
                                 <DropdownMenuItem asChild>
-                                    <Link href="/account" className="cursor-pointer">
+                                    <Link href={`/u/${username}`} className="cursor-pointer">
                                         <User className="mr-2 h-4 w-4" />
                                         My Account
                                     </Link>

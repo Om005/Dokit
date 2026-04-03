@@ -196,6 +196,23 @@ const editorSlice = createSlice({
             } else {
                 delete state.fileTree[path];
             }
+            if (state.openTabs.some((p) => p === path || p.startsWith(path + "/"))) {
+                const removedTabs = state.openTabs.filter(
+                    (p) => p === path || p.startsWith(path + "/")
+                );
+
+                state.openTabs = state.openTabs.filter(
+                    (p) => !(p === path || p.startsWith(path + "/"))
+                );
+
+                if (state.activeTab && removedTabs.includes(state.activeTab)) {
+                    if (state.openTabs.length > 0) {
+                        state.activeTab = state.openTabs[state.openTabs.length - 1];
+                    } else {
+                        state.activeTab = null;
+                    }
+                }
+            }
         },
         renameNode(
             state,

@@ -26,7 +26,7 @@ import projectSocket from "@sockets/projectSocket";
 
 checkEnv();
 connectToDatabase();
-verifyTransporter();
+// verifyTransporter();
 initiatWorkers();
 initGeoIP();
 connectRedis();
@@ -79,5 +79,5 @@ const PORT = env.PORT;
 httpServer.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
 
-    initializeScheduler();
+    // initializeScheduler();
 });

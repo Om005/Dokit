@@ -26,6 +26,7 @@ import {
     Loader2,
     X,
     FileIcon,
+    AlertCircle,
     Lock,
     Play,
     ChevronRight,
@@ -343,6 +344,19 @@ export default function ProjectPage({ projectId, token }: Props) {
         }
     };
 
+    const handleBootRetry = () => {
+        const errorMessage = bootError;
+        hasBoot.current = false;
+        setBootError(null);
+        if (errorMessage === "Incorrect password.") {
+            setShowPasswordForm(true);
+            setIsBooting(false);
+        } else {
+            setIsBooting(true);
+            runBoot();
+        }
+    };
+
     const isPreviewSupported = !!(
         currProject && Object.keys(defaultPorts).includes(currProject.stack.toLowerCase())
     );
@@ -444,24 +458,29 @@ export default function ProjectPage({ projectId, token }: Props) {
 
     if (bootError) {
         return (
-            <div className="flex flex-col h-screen items-center justify-center bg-background gap-4 px-4">
-                <p className="text-sm font-medium text-destructive">{bootError}</p>
-                <button
-                    className="text-xs text-muted-foreground underline"
-                    onClick={() => {
-                        hasBoot.current = false;
-                        setBootError(null);
-                        if (bootError === "Incorrect password.") {
-                            setShowPasswordForm(true);
-                            setIsBooting(false);
-                        } else {
-                            setIsBooting(true);
-                            runBoot();
-                        }
-                    }}
-                >
-                    Retry
-                </button>
+            <div className="flex flex-col h-screen items-center justify-center bg-background px-4">
+                <div className="w-full max-w-lg rounded-2xl border border-border/60 bg-gradient-to-b from-background to-background/95 p-6 shadow-lg">
+                    <div className="flex items-start gap-4">
+                        <div className="h-12 w-12 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center">
+                            <AlertCircle className="h-6 w-6" />
+                        </div>
+                        <div className="space-y-2">
+                            <h2 className="text-lg font-semibold text-foreground">
+                                Unable to start project
+                            </h2>
+                            <p className="text-sm text-muted-foreground">{bootError}</p>
+                            <div className="flex flex-wrap gap-2 pt-2">
+                                <Button onClick={handleBootRetry}>Try again</Button>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => router.push("/dashboard/projects")}
+                                >
+                                    Back to projects
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }

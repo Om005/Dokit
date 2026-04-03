@@ -77,6 +77,7 @@ export default function ProjectSettings() {
     const [pendingRequestQuery, setPendingRequestQuery] = useState("");
     const [inviteEmail, setInviteEmail] = useState("");
     const [inviteAccessLevel, setInviteAccessLevel] = useState<"READ" | "WRITE">("READ");
+    const [projectLoadError, setProjectLoadError] = useState<string | null>(null);
     const hasFetchedRequests = useRef(false);
 
     useEffect(() => {
@@ -86,6 +87,7 @@ export default function ProjectSettings() {
                 project: Project;
             }>;
             if (payload.success && payload.data?.project) {
+                setProjectLoadError(null);
                 const fetchedProject = payload.data.project;
                 setProject(fetchedProject);
                 setName(fetchedProject.name);
@@ -93,6 +95,8 @@ export default function ProjectSettings() {
                 setVisibility(fetchedProject.visibility || "PRIVATE");
                 setIsPasswordProtected(fetchedProject.isPasswordProtected || false);
                 setIsOwner(fetchedProject.isOwner || false);
+            } else {
+                setProjectLoadError(payload?.message || "Unable to load project details.");
             }
         };
         fetchProject();
@@ -125,6 +129,30 @@ export default function ProjectSettings() {
     }, [accessTab, dispatch, isProjectPublic, projectId]);
 
     if (!project || gettingProjectDetails) {
+        if (projectLoadError && !gettingProjectDetails) {
+            return (
+                <div className="min-h-screen bg-background flex items-center justify-center px-4">
+                    <Card className="w-full max-w-lg p-6 sm:p-8">
+                        <div className="flex items-start gap-4">
+                            <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                                <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                            </div>
+                            <div className="space-y-2">
+                                <h2 className="text-xl font-semibold text-foreground">
+                                    Unable to load project
+                                </h2>
+                                <p className="text-sm text-muted-foreground">{projectLoadError}</p>
+                                <div className="flex flex-wrap gap-2 pt-2">
+                                    <Button variant="outline" onClick={() => router.back()}>
+                                        Go back
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+                </div>
+            );
+        }
         return (
             <div className="min-h-screen bg-background flex items-center justify-center">
                 <div className="text-center">
