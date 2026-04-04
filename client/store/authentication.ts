@@ -432,8 +432,27 @@ const authSlice = createSlice({
             .addCase(authActions.verify2FAForSignIn.pending, (state) => {
                 state.verify2FAForSignInLoading = true;
             })
-            .addCase(authActions.verify2FAForSignIn.fulfilled, (state) => {
+            .addCase(authActions.verify2FAForSignIn.fulfilled, (state, action) => {
                 state.verify2FAForSignInLoading = false;
+                const payload = action.payload as ApiResponse & {
+                    data?: {
+                        user?: {
+                            email?: string;
+                            firstName?: string;
+                            lastName?: string;
+                            username?: string;
+                            id?: string;
+                        };
+                    };
+                };
+                if (payload && payload.data && payload.data.user && payload.data.user.email) {
+                    state.isAuthenticated = true;
+                    state.email = payload.data.user.email || null;
+                    state.firstName = payload.data.user.firstName || null;
+                    state.lastName = payload.data.user.lastName || null;
+                    state.username = payload.data.user.username || null;
+                    state.id = payload.data.user.id || null;
+                }
             })
             .addCase(authActions.verify2FAForSignIn.rejected, (state) => {
                 state.verify2FAForSignInLoading = false;

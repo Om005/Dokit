@@ -962,13 +962,13 @@ const controllers = {
             if (!isValid.valid) {
                 return sendResponse(res, {
                     success: false,
-                    message: "Invalid 2FA token.",
+                    message: "Invalid 2FA OTP.",
                     statusCode: StatusCodes.BAD_REQUEST,
                 });
             }
 
             const backupCodes = Array.from({ length: 10 }).map(() =>
-                crypto.randomBytes(4).toString("hex")
+                crypto.randomBytes(4).toString("hex").toUpperCase()
             );
 
             const hashedBackupCodes = await Promise.all(
@@ -1039,7 +1039,7 @@ const controllers = {
             }
 
             const newBackupCodes = Array.from({ length: 10 }).map(() =>
-                crypto.randomBytes(4).toString("hex")
+                crypto.randomBytes(4).toString("hex").toUpperCase()
             );
 
             const hashednewBackupCodes = await Promise.all(
@@ -1170,7 +1170,7 @@ const controllers = {
             if (!isAuthenticated) {
                 return sendResponse(res, {
                     success: false,
-                    message: `Invalid 2FA ${token ? "token" : "backup"} code.`,
+                    message: `Invalid 2FA ${token ? "OTP" : "backup code"}`,
                     statusCode: StatusCodes.BAD_REQUEST,
                 });
             }

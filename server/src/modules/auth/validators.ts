@@ -87,24 +87,17 @@ const validators = {
         password: z.string().min(1, "Password is required"),
     }),
 
-    verify2FAForSignIn: z
-        .object({
-            preAuthToken: z
-                .string()
-                .min(
-                    1,
-                    "Login session expired or invalid, please enter your email and password again"
-                ),
-            token: z
-                .string()
-                .length(6, "Token must be 6 characters long")
-                .regex(/^\d+$/, "Token must be a number")
-                .optional(),
-            backupCode: z.string().length(10, "Backup code must be 10 characters long").optional(),
-        })
-        .refine((data) => data.token || data.backupCode, {
-            message: "Either token or backup code must be provided",
-        }),
+    verify2FAForSignIn: z.object({
+        preAuthToken: z
+            .string()
+            .min(1, "Login session expired or invalid, please enter your email and password again"),
+        token: z
+            .string()
+            .length(6, "Token must be 6 characters long")
+            .regex(/^\d+$/, "Token must be a number")
+            .optional(),
+        backupCode: z.string().length(8, "Backup code must be 8 characters long").optional(),
+    }),
 };
 
 export default validators;
