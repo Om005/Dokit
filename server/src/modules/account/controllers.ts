@@ -220,16 +220,14 @@ const controllers = {
                 });
             }
 
-            const { twoFactorEnabled, signInEmailEnabled } = req.body;
+            const { signInEmailEnabled } = req.body;
 
             const updatedUser = await prisma.user.update({
                 where: { id: userId },
                 data: {
-                    ...(twoFactorEnabled !== undefined ? { twoFactorEnabled } : {}),
                     ...(signInEmailEnabled !== undefined ? { signInEmailEnabled } : {}),
                 },
                 select: {
-                    twoFactorEnabled: true,
                     signInEmailEnabled: true,
                 },
             });

@@ -124,4 +124,11 @@ router.post(
     controllers.verify2FAForSignIn
 );
 
+router.post(
+    "/emergency-revoke-session",
+    rateLimit({ limit: 10, windowMs: 60 * 1000, prefix: "emergency-revoke-session" }),
+    validationMiddleware(validators.emergencyRevokeSession),
+    controllers.emergencyRevokeSession
+);
+
 export default router;

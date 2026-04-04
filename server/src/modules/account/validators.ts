@@ -14,17 +14,9 @@ const validators = {
 
     getMyProfile: z.object({}).optional(),
 
-    updateSettings: z
-        .object({
-            twoFactorEnabled: z.boolean().optional(),
-            signInEmailEnabled: z.boolean().optional(),
-        })
-        .refine(
-            (data) => data.twoFactorEnabled !== undefined || data.signInEmailEnabled !== undefined,
-            {
-                message: "At least one setting must be provided",
-            }
-        ),
+    updateSettings: z.object({
+        signInEmailEnabled: z.boolean().optional(),
+    }),
 
     changePassword: z.object({
         oldPassword: z.string().min(1, "Old password is required"),

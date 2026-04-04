@@ -293,6 +293,7 @@ const controllers = {
                     email: true,
                     passwordHash: true,
                     twoFactorEnabled: true,
+                    signInEmailEnabled: true,
                     firstName: true,
                     lastName: true,
                     username: true,
@@ -338,7 +339,7 @@ const controllers = {
                 });
             }
 
-            await prisma.session.create({
+            const newSession = await prisma.session.create({
                 data: {
                     id: newSessionId,
                     userId: user.id,
@@ -379,6 +380,28 @@ const controllers = {
             await redisClient.set(`session:${newSessionId}`, "true", {
                 EX: 15 * 60,
             });
+            if (user.signInEmailEnabled) {
+                const revokePayload = {
+                    sessionId: newSessionId,
+                    purpose: "revoke-session",
+                };
+                const revokeToken = jwt.sign(revokePayload, env.JWT_SECRET as string, {
+                    expiresIn: "24h",
+                });
+                const frontEndUrl = `${env.FRONTEND_URL}/secure-revoke?token=${revokeToken}`;
+                const session = {
+                    ...newSession,
+                    device: newSession.device as { type: string; model: string },
+                    browser: newSession.browser as { name: string; version: string },
+                    os: newSession.os as { name: string; version: string },
+                };
+                queueActions.addEmailToQueue({
+                    from: env.SENDER_EMAIL,
+                    to: user.email,
+                    subject: "New Sign-In Detected",
+                    htmlContent: emailTemplates.signinEmail(session, frontEndUrl),
+                });
+            }
 
             return sendResponse(res, {
                 success: true,
@@ -1245,6 +1268,60 @@ const controllers = {
             return sendResponse(res, {
                 success: false,
                 message: "Failed to verify 2FA for sign-in.",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    },
+    emergencyRevokeSession: async (req: Request, res: Response) => {
+        try {
+            const { token } = req.body;
+
+            let decoded: { sessionId: string; purpose: string };
+            try {
+                decoded = jwt.verify(token, env.JWT_SECRET) as {
+                    sessionId: string;
+                    purpose: string;
+                };
+            } catch (error) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "This link is invalid or has expired.",
+                    statusCode: StatusCodes.BAD_REQUEST,
+                });
+            }
+
+            if (!decoded || decoded.purpose !== "revoke-session" || !decoded.sessionId) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "This link is invalid.",
+                    statusCode: StatusCodes.BAD_REQUEST,
+                });
+            }
+
+            try {
+                await Promise.all([
+                    prisma.session.delete({ where: { id: decoded.sessionId } }),
+                    redisClient.del(`session:${decoded.sessionId}`),
+                ]);
+            } catch (error) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Session already revoked or does not exist.",
+                    statusCode: StatusCodes.BAD_REQUEST,
+                });
+            }
+
+            return sendResponse(res, {
+                success: true,
+                message: "Session revoked successfully.",
+                statusCode: StatusCodes.OK,
+            });
+        } catch (error) {
+            logger.error("Error in emergencyRevokeSession:");
+            logger.error(error);
+            return sendResponse(res, {
+                success: false,
+                message: "Failed to revoke session.",
                 statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
             });
         }

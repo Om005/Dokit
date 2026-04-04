@@ -25,6 +25,7 @@ interface AuthState {
     verify2FASetupLoading: boolean;
     regenerateBackupCodesLoading: boolean;
     verify2FAForSignInLoading: boolean;
+    emergencyRevokeSessionLoading: boolean;
 }
 
 const authActions = {
@@ -147,6 +148,15 @@ const authActions = {
             "/api/auth/verify-2fa-for-sign-in"
         )
     ),
+
+    emergencyRevokeSession: createAsyncThunk<
+        ApiResponse,
+        { token: string },
+        { rejectValue: ApiResponse }
+    >(
+        "auth/emergencyRevokeSession",
+        createApiHandler<{ token: string }>("/api/auth/emergency-revoke-session")
+    ),
 };
 
 const initialState: AuthState = {
@@ -170,6 +180,7 @@ const initialState: AuthState = {
     verify2FASetupLoading: false,
     regenerateBackupCodesLoading: false,
     verify2FAForSignInLoading: false,
+    emergencyRevokeSessionLoading: false,
 };
 
 const authSlice = createSlice({
@@ -456,6 +467,15 @@ const authSlice = createSlice({
             })
             .addCase(authActions.verify2FAForSignIn.rejected, (state) => {
                 state.verify2FAForSignInLoading = false;
+            })
+            .addCase(authActions.emergencyRevokeSession.pending, (state) => {
+                state.emergencyRevokeSessionLoading = true;
+            })
+            .addCase(authActions.emergencyRevokeSession.fulfilled, (state) => {
+                state.emergencyRevokeSessionLoading = false;
+            })
+            .addCase(authActions.emergencyRevokeSession.rejected, (state) => {
+                state.emergencyRevokeSessionLoading = false;
             });
     },
 });

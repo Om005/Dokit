@@ -98,6 +98,9 @@ const validators = {
             .optional(),
         backupCode: z.string().length(8, "Backup code must be 8 characters long").optional(),
     }),
+    emergencyRevokeSession: z.object({
+        token: z.string().min(1, "Invalid link"),
+    }),
 };
 
 export default validators;

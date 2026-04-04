@@ -1,5 +1,29 @@
 import env from "@config/env";
 
+type SessionInfo = {
+    id: string;
+    userId: string;
+    refreshTokenHash: string;
+    userAgent: string;
+    ip: string;
+    device: {
+        type: string;
+        model: string;
+    };
+    browser: {
+        name: string;
+        version: string;
+    };
+    os: {
+        name: string;
+        version: string;
+    };
+    city: string;
+    region: string;
+    country: string;
+    expiresAt: Date;
+};
+
 const emailTemplates = {
     getAccountCreationEmail: (otp: string): string => {
         return `
@@ -323,6 +347,100 @@ const emailTemplates = {
 </body>
 </html>
   `;
+    },
+    signinEmail: (session: SessionInfo, frontEndUrl: string): string => {
+        return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Sign-in to Your Account</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f6f9fc; margin: 0; }
+    .container { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden; }
+    .header { padding: 30px 40px; border-bottom: 1px solid #edf2f7; text-align: center; }
+    .logo { font-size: 24px; font-weight: 700; color: #1a1a1a; text-decoration: none; }
+    .content { padding: 40px; color: #4a5568; line-height: 1.6; }
+    .footer { background: #f7fafc; padding: 20px 40px; text-align: center; font-size: 12px; color: #a0aec0; border-top: 1px solid #edf2f7; }
+    h1 { color: #1a202c; font-size: 22px; margin: 0 0 16px; }
+    p { margin: 0 0 16px; }
+    .details { background: #f7fafc; border: 1px solid #edf2f7; border-radius: 6px; padding: 20px; margin-bottom: 24px; }
+    .detail-item { margin-bottom: 10px; }
+    .label { font-weight: 600; color: #1a202c; }
+    
+    /* Action Section Styles */
+    .action-section { text-align: center; margin: 35px 0; padding-top: 25px; border-top: 1px solid #edf2f7; }
+    .btn { display: inline-block; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 15px; text-align: center; transition: background-color 0.2s; }
+    .btn-danger { background-color: #e53e3e; color: #ffffff; border: 1px solid #c53030; }
+    .btn-danger:hover { background-color: #c53030; }
+    .warning-text { color: #e53e3e; font-weight: 600; font-size: 16px; margin-bottom: 15px; }
+    .next-steps { font-size: 14px; color: #4a5568; margin-top: 20px; background: #fff5f5; padding: 15px; border-radius: 6px; border: 1px solid #fed7d7; text-align: left; }
+    .raw-link { font-size: 11px; color: #a0aec0; word-break: break-all; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a href="#" class="logo">Dokit</a>
+    </div>
+    <div class="content">
+      <h1>New Sign-in to Your Account</h1>
+      <p>Hello,</p>
+      <p>We noticed a new sign-in to your account. Here are the details of the session:</p>
+      
+      <div class="details">
+        <div class="detail-item"><span class="label">Device:</span> ${session.device.model} (${session.device.type})</div>
+        <div class="detail-item"><span class="label">Browser:</span> ${session.browser.name} ${session.browser.version}</div>
+        <div class="detail-item"><span class="label">Operating System:</span> ${session.os.name} ${session.os.version}</div>
+        <div class="detail-item"><span class="label">Location:</span> ${session.city}, ${session.region}, ${session.country}</div>
+        <div class="detail-item"><span class="label">IP Address:</span> ${session.ip}</div>
+        <div class="detail-item"><span class="label">Sign-in Time:</span> ${new Date().toLocaleString()}</div>
+      </div>
+
+      <p style="font-size: 14px; color: #718096;">
+        If this was you, you can safely ignore this email. No further action is needed.
+      </p>
+
+      <div class="action-section">
+        <p class="warning-text">Don't recognize this activity?</p>
+        <a href="${frontEndUrl}"
+          style="
+            display: inline-block;
+            padding: 14px 28px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 15px;
+            background-color: #e53e3e;
+            color: #ffffff !important;
+            border: 1px solid #c53030;
+          ">
+          Securely Log Out This Session
+        </a>
+        
+        <div class="next-steps">
+          <strong>Recommended Actions:</strong><br>
+          <ol>
+            <li>Log out the unrecognized session immediately</li>
+            <li>Change your account password</li>
+            <li>Enable Two-Factor Authentication (2FA) if not already active</li>
+          </ol>
+        </div>
+        
+        <p class="raw-link">
+          If the button doesn't work, copy and paste this link into your browser:<br>
+          <a href="${frontEndUrl}" style="color: #a0aec0;">${frontEndUrl}</a>
+        </p>
+      </div>
+
+      <p>Best regards,<br>The Dokit Team</p>
+    </div>
+    <div class="footer">
+      <p>&copy; ${new Date().getFullYear()} Dokit. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>`;
     },
 };
 
