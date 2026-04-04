@@ -5,7 +5,6 @@ export function CodeEditorSection() {
         <section className="relative py-24 px-4 flex items-center justify-center bg-background">
             <div className="w-full max-w-4xl">
                 <div className="bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
-                    {/* Window Header */}
                     <div className="flex items-center justify-between px-4 py-3 bg-card border-b border-border">
                         <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-[#ff5f57]" />
@@ -18,7 +17,6 @@ export function CodeEditorSection() {
                         <div className="w-16" />
                     </div>
 
-                    {/* Code Content */}
                     <div className="p-6 font-mono text-sm leading-7 overflow-x-auto">
                         <div className="flex">
                             <div className="flex flex-col items-end pr-6 text-muted-foreground select-none">

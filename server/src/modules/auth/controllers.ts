@@ -12,6 +12,9 @@ import emailTemplates from "@utils/emailTemplates";
 import argon2 from "argon2";
 import crypto from "crypto";
 import { userNameBloomFilter } from "@config/bloomFilter";
+import { generateSecret, generateURI, verify, verifySync } from "otplib";
+import QRCode from "qrcode";
+import jwt from "jsonwebtoken";
 
 const REFRESH_TOKEN_EXPIRY_MS = 15 * 24 * 60 * 60 * 1000;
 const ACCESS_COOKIE_EXPIRY_MS = 15 * 60 * 1000;
@@ -289,6 +292,7 @@ const controllers = {
                     id: true,
                     email: true,
                     passwordHash: true,
+                    twoFactorEnabled: true,
                     firstName: true,
                     lastName: true,
                     username: true,
@@ -315,6 +319,22 @@ const controllers = {
                     success: false,
                     message: "Invalid email or password.",
                     statusCode: StatusCodes.BAD_REQUEST,
+                });
+            }
+            if (user.twoFactorEnabled) {
+                const preAuthToken = jwt.sign(
+                    { id: user.id, isPreAuth: true },
+                    env.JWT_SECRET as string,
+                    { expiresIn: "5m" }
+                );
+                return sendResponse(res, {
+                    success: false,
+                    message: "2FA required. Please verify the OTP from your authenticator app.",
+                    statusCode: StatusCodes.OK,
+                    data: {
+                        requires2FA: true,
+                        preAuthToken,
+                    },
                 });
             }
 
@@ -822,6 +842,409 @@ const controllers = {
             return sendResponse(res, {
                 success: false,
                 message: "Failed to check username availability.",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    },
+    toggle2FA: async (req: Request, res: Response) => {
+        try {
+            const { password } = req.body;
+            const userId = req.meta.user?.id;
+            if (!userId) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "User is not authenticated.",
+                    statusCode: StatusCodes.UNAUTHORIZED,
+                });
+            }
+            const user = await prisma.user.findFirst({
+                where: { id: userId },
+                select: {
+                    id: true,
+                    username: true,
+                    twoFactorEnabled: true,
+                    passwordHash: true,
+                    twoFactorSecret: true,
+                },
+            });
+            if (!user) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "User not found.",
+                    statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+            const isPasswordValid = await argon2.verify(user.passwordHash, password);
+            if (!isPasswordValid) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Invalid password.",
+                    statusCode: StatusCodes.BAD_REQUEST,
+                });
+            }
+            if (user.twoFactorEnabled) {
+                await prisma.user.update({
+                    where: { id: userId },
+                    data: { twoFactorEnabled: false, twoFactorSecret: null, backupCodes: [] },
+                });
+                return sendResponse(res, {
+                    success: true,
+                    message: `Two-factor authentication disabled successfully.`,
+                    statusCode: StatusCodes.OK,
+                });
+            }
+            const secret = generateSecret();
+            const encryptedSecret = authUtils.encryptSecret(secret);
+
+            const otpauthUrl = generateURI({
+                secret: secret,
+                issuer: "Dokit",
+                label: `${user.username} (${new Date().toLocaleDateString()}`,
+            });
+            await prisma.user.update({
+                where: { id: userId },
+                data: { twoFactorSecret: encryptedSecret },
+            });
+
+            const qrCodeImage = await QRCode.toDataURL(otpauthUrl);
+
+            return sendResponse(res, {
+                success: true,
+                message: "2FA setup generated. Please verify the code to complete enablement.",
+                statusCode: StatusCodes.OK,
+                data: {
+                    qrCode: qrCodeImage,
+                    manualSecret: secret,
+                },
+            });
+        } catch (error) {
+            logger.error("Error in enable2FA:");
+            logger.error(error);
+            return sendResponse(res, {
+                success: false,
+                message: "Failed to enable two-factor authentication.",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    },
+    verify2FAsetup: async (req: Request, res: Response) => {
+        try {
+            const userId = req.meta.user?.id;
+            if (!userId) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "User is not authenticated.",
+                    statusCode: StatusCodes.UNAUTHORIZED,
+                });
+            }
+            const { token } = req.body;
+
+            const user = await prisma.user.findFirst({
+                where: { id: userId },
+                select: { id: true, twoFactorEnabled: true, twoFactorSecret: true },
+            });
+            if (!user || !user.twoFactorSecret) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "2FA setup not initialized.",
+                    statusCode: StatusCodes.BAD_REQUEST,
+                });
+            }
+            const cleanToken = String(token).trim();
+
+            const plainTextSecret = authUtils.decryptSecret(user.twoFactorSecret);
+            const isValid = await verifySync({
+                token: cleanToken,
+                secret: plainTextSecret,
+                epochTolerance: 500,
+            });
+
+            if (!isValid.valid) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Invalid 2FA token.",
+                    statusCode: StatusCodes.BAD_REQUEST,
+                });
+            }
+
+            const backupCodes = Array.from({ length: 10 }).map(() =>
+                crypto.randomBytes(4).toString("hex")
+            );
+
+            const hashedBackupCodes = await Promise.all(
+                backupCodes.map((code) => argon2.hash(code))
+            );
+            await prisma.user.update({
+                where: { id: userId },
+                data: {
+                    twoFactorEnabled: true,
+                    backupCodes: hashedBackupCodes,
+                },
+            });
+
+            return sendResponse(res, {
+                success: true,
+                message: "Two-factor authentication setup verified successfully.",
+                data: {
+                    backupCodes: backupCodes,
+                },
+                statusCode: StatusCodes.OK,
+            });
+        } catch (error) {
+            logger.error("Error in verify2FAsetup:");
+            logger.error(error);
+            return sendResponse(res, {
+                success: false,
+                message: "Failed to verify two-factor authentication setup.",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    },
+    regenerateBackupCodes: async (req: Request, res: Response) => {
+        try {
+            const userId = req.meta.user?.id;
+            if (!userId) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "User is not authenticated.",
+                    statusCode: StatusCodes.UNAUTHORIZED,
+                });
+            }
+            const { password } = req.body;
+            const user = await prisma.user.findFirst({
+                where: { id: userId },
+                select: { id: true, twoFactorEnabled: true, passwordHash: true },
+            });
+            if (!user) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "User not found.",
+                    statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+            if (!user.twoFactorEnabled) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Two-factor authentication is not enabled.",
+                    statusCode: StatusCodes.BAD_REQUEST,
+                });
+            }
+            const isPasswordValid = await argon2.verify(user.passwordHash, password);
+            if (!isPasswordValid) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Invalid password.",
+                    statusCode: StatusCodes.BAD_REQUEST,
+                });
+            }
+
+            const newBackupCodes = Array.from({ length: 10 }).map(() =>
+                crypto.randomBytes(4).toString("hex")
+            );
+
+            const hashednewBackupCodes = await Promise.all(
+                newBackupCodes.map((code) => argon2.hash(code))
+            );
+            await prisma.user.update({
+                where: { id: userId },
+                data: {
+                    backupCodes: hashednewBackupCodes,
+                },
+            });
+
+            return sendResponse(res, {
+                success: true,
+                message: "Backup codes regenerated successfully.",
+                data: {
+                    backupCodes: newBackupCodes,
+                },
+                statusCode: StatusCodes.OK,
+            });
+        } catch (error) {
+            logger.error("Error in regenerateBackupCodes:");
+            logger.error(error);
+            return sendResponse(res, {
+                success: false,
+                message: "Failed to regenerate backup codes.",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    },
+    verify2FAForSignIn: async (req: Request, res: Response) => {
+        try {
+            const { preAuthToken, token, code } = req.body;
+            const ua = req.meta?.uaInfo;
+            const geo = req.meta?.geoInfo;
+            const ip = req.meta?.clientIp || "unknown";
+            if (!preAuthToken) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Pre-auth token is required.",
+                    statusCode: StatusCodes.BAD_REQUEST,
+                });
+            }
+
+            let decoded: { id: string; isPreAuth: boolean };
+            try {
+                decoded = jwt.verify(preAuthToken, env.JWT_SECRET) as {
+                    id: string;
+                    isPreAuth: boolean;
+                };
+            } catch (error) {
+                return sendResponse(res, {
+                    success: false,
+                    message:
+                        "Your login session has expired or Invalid session. Please enter your email and password again.",
+                    statusCode: StatusCodes.UNAUTHORIZED,
+                });
+            }
+            if (!decoded || !decoded.isPreAuth || !decoded.id) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Invalid pre-auth token.",
+                    statusCode: StatusCodes.BAD_REQUEST,
+                });
+            }
+
+            const user = await prisma.user.findFirst({
+                where: { id: decoded.id },
+                select: {
+                    id: true,
+                    email: true,
+                    firstName: true,
+                    lastName: true,
+                    username: true,
+                    twoFactorEnabled: true,
+                    backupCodes: true,
+                    twoFactorSecret: true,
+                },
+            });
+            if (!user) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "User not found.",
+                    statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+            if (!user.twoFactorEnabled || !user.twoFactorSecret) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "2FA is not properly set up for this account.",
+                    statusCode: StatusCodes.BAD_REQUEST,
+                });
+            }
+
+            let isAuthenticated = false;
+            let isRunningLowOnBackupCodes = false;
+            if (token) {
+                const plainTextSecret = authUtils.decryptSecret(user.twoFactorSecret);
+                const res = await verify({
+                    token: token,
+                    secret: plainTextSecret,
+                });
+                isAuthenticated = res.valid;
+            } else if (code) {
+                let matchedIndex = -1;
+                const totalLen = user.backupCodes.length;
+                for (let i = 0; i < totalLen; i++) {
+                    const isValid = await argon2.verify(user.backupCodes[i], code);
+                    if (isValid) {
+                        matchedIndex = i;
+                        break;
+                    }
+                }
+                if (matchedIndex !== -1) {
+                    isAuthenticated = true;
+                    const updatedBackupCodes = [...user.backupCodes];
+                    updatedBackupCodes.splice(matchedIndex, 1);
+                    isRunningLowOnBackupCodes = updatedBackupCodes.length <= 2;
+                    await prisma.user.update({
+                        where: { id: user.id },
+                        data: {
+                            backupCodes: updatedBackupCodes,
+                        },
+                    });
+                }
+            }
+
+            if (!isAuthenticated) {
+                return sendResponse(res, {
+                    success: false,
+                    message: `Invalid 2FA ${token ? "token" : "backup"} code.`,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                });
+            }
+
+            const newSessionId = crypto.randomUUID();
+            const randomHex = crypto.randomBytes(48).toString("hex");
+            const plainToken = `${newSessionId}.${randomHex}`;
+            const refreshTokenHash = await argon2.hash(plainToken);
+
+            await prisma.session.create({
+                data: {
+                    id: newSessionId,
+                    userId: user.id,
+                    refreshTokenHash: refreshTokenHash,
+                    userAgent: req.headers["user-agent"] || "unknown",
+                    ip: ip,
+                    device: {
+                        type: ua?.device?.type || "unknown",
+                        model: ua?.device?.model || "unknown",
+                    },
+                    browser: {
+                        name: ua?.browser?.name || "unknown",
+                        version: ua?.browser?.version || "unknown",
+                    },
+                    os: {
+                        name: ua?.os?.name || "unknown",
+                        version: ua?.os?.version || "unknown",
+                    },
+                    city: geo?.city || "unknown",
+                    region: geo?.region || "unknown",
+                    country: geo?.country || "unknown",
+                    expiresAt: new Date(Date.now() + REFRESH_TOKEN_EXPIRY_MS),
+                },
+            });
+
+            const accessToken = authUtils.signAccess(user.id, newSessionId);
+
+            res.cookie("refreshToken", plainToken, {
+                ...cookieOptions,
+                maxAge: REFRESH_TOKEN_EXPIRY_MS,
+            });
+
+            res.cookie("accessToken", accessToken, {
+                ...cookieOptions,
+                maxAge: ACCESS_COOKIE_EXPIRY_MS,
+            });
+
+            await redisClient.set(`session:${newSessionId}`, "true", {
+                EX: 15 * 60,
+            });
+
+            return sendResponse(res, {
+                success: true,
+                message: "Signed in successfully.",
+                statusCode: StatusCodes.OK,
+                data: {
+                    user: {
+                        id: user.id,
+                        email: user.email,
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        username: user.username,
+                    },
+                    warning: isRunningLowOnBackupCodes
+                        ? "You are running low on backup codes. Please regenerate them from your account settings."
+                        : undefined,
+                },
+            });
+        } catch (error) {
+            logger.error("Error in verify2FAForSignIn:");
+            logger.error(error);
+            return sendResponse(res, {
+                success: false,
+                message: "Failed to verify 2FA for sign-in.",
                 statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
             });
         }

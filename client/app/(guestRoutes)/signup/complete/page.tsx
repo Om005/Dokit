@@ -290,7 +290,6 @@ export default function CompletePage() {
                                 </div>
                             </div>
 
-                            {/* Password Strength Bar */}
                             {password && (
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between text-xs">
@@ -312,7 +311,6 @@ export default function CompletePage() {
                                 </div>
                             )}
 
-                            {/* Password Requirements */}
                             <div className="space-y-2 p-3 rounded-lg bg-muted/50 border border-border/50">
                                 <p className="text-xs font-medium text-muted-foreground mb-2">
                                     Password requirements:
@@ -338,7 +336,6 @@ export default function CompletePage() {
                                 </div>
                             </div>
 
-                            {/* Confirm Password */}
                             <div className="space-y-2">
                                 <Label htmlFor="confirmPassword">Confirm Password</Label>
                                 <div className="relative">

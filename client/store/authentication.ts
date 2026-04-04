@@ -21,6 +21,10 @@ interface AuthState {
         loading: boolean;
         available: boolean | null;
     };
+    toggle2FALoading: boolean;
+    verify2FASetupLoading: boolean;
+    regenerateBackupCodesLoading: boolean;
+    verify2FAForSignInLoading: boolean;
 }
 
 const authActions = {
@@ -113,6 +117,36 @@ const authActions = {
         "auth/isUsernameAvailable",
         createApiHandler<{ username: string }>("/api/auth/is-username-available")
     ),
+
+    toggle2FA: createAsyncThunk<ApiResponse, { password: string }, { rejectValue: ApiResponse }>(
+        "auth/toggle2FA",
+        createApiHandler<{ password: string }>("/api/auth/toggle-2fa")
+    ),
+
+    verify2FAsetup: createAsyncThunk<ApiResponse, { token: string }, { rejectValue: ApiResponse }>(
+        "auth/verify2FAsetup",
+        createApiHandler<{ token: string }>("/api/auth/verify-2fa-setup")
+    ),
+
+    regenerateBackupCodes: createAsyncThunk<
+        ApiResponse,
+        { password: string },
+        { rejectValue: ApiResponse }
+    >(
+        "auth/regenerateBackupCodes",
+        createApiHandler<{ password: string }>("/api/auth/regenerate-backup-codes")
+    ),
+
+    verify2FAForSignIn: createAsyncThunk<
+        ApiResponse,
+        { preAuthToken: string; token?: string; code?: string },
+        { rejectValue: ApiResponse }
+    >(
+        "auth/verify2FAForSignIn",
+        createApiHandler<{ preAuthToken: string; token?: string; code?: string }>(
+            "/api/auth/verify-2fa-for-sign-in"
+        )
+    ),
 };
 
 const initialState: AuthState = {
@@ -132,6 +166,10 @@ const initialState: AuthState = {
         loading: false,
         available: null,
     },
+    toggle2FALoading: false,
+    verify2FASetupLoading: false,
+    regenerateBackupCodesLoading: false,
+    verify2FAForSignInLoading: false,
 };
 
 const authSlice = createSlice({
@@ -363,6 +401,42 @@ const authSlice = createSlice({
             .addCase(authActions.isUsernameAvailable.rejected, (state) => {
                 state.usernameAvailability.loading = false;
                 state.usernameAvailability.available = false;
+            })
+            .addCase(authActions.toggle2FA.pending, (state) => {
+                state.toggle2FALoading = true;
+            })
+            .addCase(authActions.toggle2FA.fulfilled, (state) => {
+                state.toggle2FALoading = false;
+            })
+            .addCase(authActions.toggle2FA.rejected, (state) => {
+                state.toggle2FALoading = false;
+            })
+            .addCase(authActions.verify2FAsetup.pending, (state) => {
+                state.verify2FASetupLoading = true;
+            })
+            .addCase(authActions.verify2FAsetup.fulfilled, (state) => {
+                state.verify2FASetupLoading = false;
+            })
+            .addCase(authActions.verify2FAsetup.rejected, (state) => {
+                state.verify2FASetupLoading = false;
+            })
+            .addCase(authActions.regenerateBackupCodes.pending, (state) => {
+                state.regenerateBackupCodesLoading = true;
+            })
+            .addCase(authActions.regenerateBackupCodes.fulfilled, (state) => {
+                state.regenerateBackupCodesLoading = false;
+            })
+            .addCase(authActions.regenerateBackupCodes.rejected, (state) => {
+                state.regenerateBackupCodesLoading = false;
+            })
+            .addCase(authActions.verify2FAForSignIn.pending, (state) => {
+                state.verify2FAForSignInLoading = true;
+            })
+            .addCase(authActions.verify2FAForSignIn.fulfilled, (state) => {
+                state.verify2FAForSignInLoading = false;
+            })
+            .addCase(authActions.verify2FAForSignIn.rejected, (state) => {
+                state.verify2FAForSignInLoading = false;
             });
     },
 });

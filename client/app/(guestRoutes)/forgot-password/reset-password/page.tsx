@@ -133,7 +133,6 @@ export default function ResetPasswordPage() {
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-5">
-                            {/* Password Field */}
                             <div className="space-y-2">
                                 <Label htmlFor="password" className="text-sm font-medium">
                                     New password
@@ -162,7 +161,6 @@ export default function ResetPasswordPage() {
                                     </button>
                                 </div>
 
-                                {/* Password Strength Bar */}
                                 {password.length > 0 && (
                                     <div className="space-y-2 pt-1">
                                         <div className="flex items-center justify-between text-xs">
@@ -194,7 +192,6 @@ export default function ResetPasswordPage() {
                                     </div>
                                 )}
 
-                                {/* Password Requirements */}
                                 <div className="space-y-1.5 pt-2">
                                     {passwordChecks.map((check, index) => (
                                         <div

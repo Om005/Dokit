@@ -71,6 +71,40 @@ const validators = {
                 "Username can only contain letters, numbers, and underscores"
             ),
     }),
+
+    toggle2FA: z.object({
+        password: z.string().min(1, "Password is required"),
+    }),
+
+    verify2FAsetup: z.object({
+        token: z
+            .string()
+            .length(6, "Token must be 6 characters long")
+            .regex(/^\d+$/, "Token must be a number"),
+    }),
+
+    regenerateBackupCodes: z.object({
+        password: z.string().min(1, "Password is required"),
+    }),
+
+    verify2FAForSignIn: z
+        .object({
+            preAuthToken: z
+                .string()
+                .min(
+                    1,
+                    "Login session expired or invalid, please enter your email and password again"
+                ),
+            token: z
+                .string()
+                .length(6, "Token must be 6 characters long")
+                .regex(/^\d+$/, "Token must be a number")
+                .optional(),
+            backupCode: z.string().length(10, "Backup code must be 10 characters long").optional(),
+        })
+        .refine((data) => data.token || data.backupCode, {
+            message: "Either token or backup code must be provided",
+        }),
 };
 
 export default validators;

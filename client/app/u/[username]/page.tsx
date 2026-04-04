@@ -6,6 +6,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useParams, useRouter } from "next/navigation";
 import { AppDispatch, RootState } from "@/store/store";
 import { accountActions } from "@/store/account";
+import { authActions } from "@/store/authentication";
 import { ProfileProjectCard } from "@/components/profile-project-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -36,8 +37,24 @@ import {
     FolderOpen,
     Loader2,
     Lock,
+    ShieldAlert,
+    Copy,
+    Check,
+    X,
 } from "lucide-react";
 import { Navbar } from "@/components/navbar";
+
+interface PasswordRequirement {
+    label: string;
+    test: (password: string) => boolean;
+}
+
+const passwordRequirements: PasswordRequirement[] = [
+    { label: "One uppercase letter", test: (p) => /[A-Z]/.test(p) },
+    { label: "One lowercase letter", test: (p) => /[a-z]/.test(p) },
+    { label: "One number", test: (p) => /[0-9]/.test(p) },
+    { label: "One special character", test: (p) => /[!@#$%^&*(),.?\":{}|<>]/.test(p) },
+];
 
 export default function ProfilePage() {
     const params = useParams();
@@ -65,6 +82,9 @@ export default function ProfilePage() {
         isAuthenticated,
         isAuthLoading,
         username: currentUsername,
+        toggle2FALoading,
+        verify2FASetupLoading,
+        regenerateBackupCodesLoading,
     } = useSelector((state: RootState) => state.auth);
 
     const isOwnProfile =
@@ -80,8 +100,20 @@ export default function ProfilePage() {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [profileReadmeDraft, setProfileReadmeDraft] = useState("");
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [twoFactorSetup, setTwoFactorSetup] = useState<{
+        qrCode: string;
+        manualSecret: string;
+    } | null>(null);
+    const [twoFactorToken, setTwoFactorToken] = useState("");
+    const [backupCodes, setBackupCodes] = useState<string[]>([]);
+    const [twoFactorDialogOpen, setTwoFactorDialogOpen] = useState(false);
+    const [twoFactorDialogMode, setTwoFactorDialogMode] = useState<
+        "enable" | "disable" | "regenerate" | null
+    >(null);
 
     const profileData = isOwnProfile ? myProfile : publicProfile;
+    const isTwoFactorSetupPending = !!twoFactorSetup;
+    const twoFactorSwitchChecked = twoFactorEnabled || isTwoFactorSetupPending;
 
     useEffect(() => {
         if (!routeUsername || isAuthLoading) {
@@ -120,15 +152,28 @@ export default function ProfilePage() {
         (isOwnProfile ? myProfile?.publicProjects : publicProfile?.projects) || [];
     const privateProjects = isOwnProfile ? myProfile?.privateProjects || [] : [];
 
+    const passwordValidation = useMemo(() => {
+        return passwordRequirements.map((req) => ({
+            ...req,
+            passed: req.test(newPassword),
+        }));
+    }, [newPassword]);
+
+    const isPasswordValid = useMemo(() => {
+        return passwordValidation.every((req) => req.passed);
+    }, [passwordValidation]);
+
+    const passwordsMatch = newPassword === confirmPassword && confirmPassword !== "";
+
     const canSavePassword =
         oldPassword.trim().length > 0 &&
         newPassword.trim().length > 0 &&
-        newPassword === confirmPassword;
+        isPasswordValid &&
+        passwordsMatch;
 
-    const handleUpdateSettings = async (nextTwoFactor: boolean, nextSigninEmail: boolean) => {
+    const handleUpdateSettings = async (nextSigninEmail: boolean) => {
         const result = await dispatch(
             accountActions.updateSettings({
-                twoFactorEnabled: nextTwoFactor,
                 signInEmailEnabled: nextSigninEmail,
             })
         );
@@ -137,6 +182,90 @@ export default function ProfilePage() {
             toast.success("Settings updated");
         } else {
             toast.error(payload.message || "Failed to update settings");
+        }
+    };
+
+    const requestTwoFactorToggle = (nextValue: boolean) => {
+        setTwoFactorDialogMode(nextValue ? "enable" : "disable");
+        setTwoFactorDialogOpen(true);
+    };
+
+    const handleTwoFactorToggle = async (password: string) => {
+        if (!twoFactorDialogMode) {
+            return;
+        }
+        try {
+            const result = await dispatch(authActions.toggle2FA({ password }));
+            const payload = result.payload as Payload<{
+                qrCode?: string;
+                manualSecret?: string;
+            }>;
+            if (payload.success) {
+                if (payload.data?.qrCode && payload.data?.manualSecret) {
+                    setTwoFactorSetup({
+                        qrCode: payload.data.qrCode,
+                        manualSecret: payload.data.manualSecret,
+                    });
+                    setBackupCodes([]);
+                    setTwoFactorToken("");
+                    toast.success("2FA setup generated. Verify the code to enable it.");
+                } else {
+                    setTwoFactorSetup(null);
+                    setBackupCodes([]);
+                    setTwoFactorToken("");
+                    setTwoFactorEnabled(false);
+                    toast.success("Two-factor authentication disabled.");
+                }
+                dispatch(accountActions.fetchMyProfile());
+            } else {
+                toast.error(payload.message || "Failed to update 2FA settings");
+            }
+        } catch (error) {
+            toast.error("Failed to update 2FA settings");
+        }
+    };
+
+    const handleVerifyTwoFactorSetup = async () => {
+        const trimmed = twoFactorToken.trim();
+        if (trimmed.length !== 6) {
+            toast.error("Enter the 6-digit code from your authenticator app.");
+            return;
+        }
+        try {
+            const result = await dispatch(authActions.verify2FAsetup({ token: trimmed }));
+            const payload = result.payload as Payload<{ backupCodes?: string[] }>;
+            if (payload.success) {
+                setBackupCodes(payload.data?.backupCodes || []);
+                setTwoFactorSetup(null);
+                setTwoFactorToken("");
+                setTwoFactorEnabled(true);
+                dispatch(accountActions.fetchMyProfile());
+                toast.success("Two-factor authentication enabled.");
+            } else {
+                toast.error(payload.message || "Failed to verify 2FA setup");
+            }
+        } catch (error) {
+            toast.error("Failed to verify 2FA setup");
+        }
+    };
+
+    const requestRegenerateBackupCodes = () => {
+        setTwoFactorDialogMode("regenerate");
+        setTwoFactorDialogOpen(true);
+    };
+
+    const handleRegenerateBackupCodes = async (password: string) => {
+        try {
+            const result = await dispatch(authActions.regenerateBackupCodes({ password }));
+            const payload = result.payload as Payload<{ backupCodes?: string[] }>;
+            if (payload.success) {
+                setBackupCodes(payload.data?.backupCodes || []);
+                toast.success("Backup codes regenerated.");
+            } else {
+                toast.error(payload.message || "Failed to regenerate backup codes");
+            }
+        } catch (error) {
+            toast.error("Failed to regenerate backup codes");
         }
     };
 
@@ -238,7 +367,7 @@ export default function ProfilePage() {
         return date.toLocaleString();
     };
 
-    if (isAuthLoading || isLoadingProfile) {
+    if (isAuthLoading || (isLoadingProfile && !profileData?.user)) {
         return <Loader />;
     }
 
@@ -266,7 +395,6 @@ export default function ProfilePage() {
             <Navbar />
             <div className="mx-auto max-w-6xl px-4 pb-16 pt-24 sm:px-6 lg:px-8">
                 <div className="grid gap-8 lg:grid-cols-[300px_1fr]">
-                    {/* Profile Sidebar */}
                     <Card className="h-fit border-border/50 bg-gradient-to-b from-card to-card/80 shadow-lg sticky top-8">
                         <CardHeader className="pb-4">
                             <div className="flex flex-col items-center gap-4 text-center">
@@ -320,7 +448,6 @@ export default function ProfilePage() {
                         </CardContent>
                     </Card>
 
-                    {/* Main Content */}
                     <div className="space-y-6">
                         {isOwnProfile ? (
                             <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -521,17 +648,254 @@ export default function ProfilePage() {
                                                     </div>
                                                 </div>
                                                 <Switch
-                                                    checked={twoFactorEnabled}
+                                                    checked={twoFactorSwitchChecked}
                                                     onCheckedChange={(checked) => {
-                                                        setTwoFactorEnabled(checked);
-                                                        handleUpdateSettings(
-                                                            checked,
-                                                            signInEmailEnabled
-                                                        );
+                                                        requestTwoFactorToggle(checked);
                                                     }}
-                                                    disabled={updatingSettings}
+                                                    disabled={
+                                                        toggle2FALoading || isTwoFactorSetupPending
+                                                    }
                                                 />
                                             </div>
+
+                                            {twoFactorSetup && (
+                                                <div className="rounded-xl border border-border/50 bg-muted/20 p-4 space-y-4">
+                                                    <div className="space-y-1">
+                                                        <p className="text-sm font-medium">
+                                                            Scan the QR code
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Use an authenticator app to scan, or
+                                                            enter the secret manually.
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                                                        <div className="rounded-lg border border-border/60 bg-background p-3 shadow-xs">
+                                                            <img
+                                                                src={twoFactorSetup.qrCode}
+                                                                alt="2FA QR code"
+                                                                className="h-40 w-40"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2 flex-1">
+                                                            <Label className="text-sm">
+                                                                Manual secret
+                                                            </Label>
+                                                            <div className="rounded-lg border border-border/60 bg-background px-3 py-2 font-mono text-sm break-all">
+                                                                {twoFactorSetup.manualSecret}
+                                                            </div>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                Enter this if you cannot scan the QR
+                                                                code.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="twofactor-token">
+                                                            6-digit code
+                                                        </Label>
+                                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                                            <Input
+                                                                id="twofactor-token"
+                                                                inputMode="numeric"
+                                                                placeholder="123456"
+                                                                value={twoFactorToken}
+                                                                maxLength={6}
+                                                                onChange={(event) =>
+                                                                    setTwoFactorToken(
+                                                                        event.target.value.replace(
+                                                                            /\D/g,
+                                                                            ""
+                                                                        )
+                                                                    )
+                                                                }
+                                                                className="h-10 rounded-lg"
+                                                            />
+                                                            <Button
+                                                                onClick={handleVerifyTwoFactorSetup}
+                                                                disabled={
+                                                                    verify2FASetupLoading ||
+                                                                    twoFactorToken.trim().length !==
+                                                                        6
+                                                                }
+                                                                className="h-10 rounded-lg"
+                                                            >
+                                                                {verify2FASetupLoading ? (
+                                                                    <>
+                                                                        <Loader2 className="size-4 animate-spin mr-2" />
+                                                                        Verifying...
+                                                                    </>
+                                                                ) : (
+                                                                    "Verify & enable"
+                                                                )}
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {twoFactorEnabled && (
+                                                <div className="rounded-xl border border-border/50 bg-muted/20 p-4 space-y-3">
+                                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                                        <div>
+                                                            <p className="text-sm font-medium">
+                                                                Backup codes
+                                                            </p>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                Use these codes to sign in if you
+                                                                lose access to your authenticator.
+                                                            </p>
+                                                        </div>
+                                                        {backupCodes.length === 0 && (
+                                                            <Button
+                                                                variant="outline"
+                                                                onClick={
+                                                                    requestRegenerateBackupCodes
+                                                                }
+                                                                disabled={
+                                                                    regenerateBackupCodesLoading
+                                                                }
+                                                                className="rounded-lg"
+                                                            >
+                                                                {regenerateBackupCodesLoading ? (
+                                                                    <>
+                                                                        <Loader2 className="size-4 animate-spin mr-2" />
+                                                                        Generating...
+                                                                    </>
+                                                                ) : (
+                                                                    "Generate codes"
+                                                                )}
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                    {backupCodes.length > 0 ? (
+                                                        <div className="space-y-4">
+                                                            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 flex items-start gap-3">
+                                                                <ShieldAlert className="size-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                                                                <p className="text-sm">
+                                                                    <strong className="text-amber-600 dark:text-amber-400">
+                                                                        These codes are shown only
+                                                                        once for security purposes.
+                                                                    </strong>{" "}
+                                                                    Please save them somewhere safe
+                                                                    before closing.
+                                                                </p>
+                                                            </div>
+
+                                                            <div className="rounded-xl border border-border/50 bg-background p-4">
+                                                                <div className="grid gap-2 sm:grid-cols-2">
+                                                                    {backupCodes.map(
+                                                                        (code, index) => (
+                                                                            <div
+                                                                                key={code}
+                                                                                className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5"
+                                                                            >
+                                                                                <span className="text-xs text-muted-foreground font-medium w-5">
+                                                                                    {index + 1}.
+                                                                                </span>
+                                                                                <code className="font-mono text-sm tracking-wider flex-1">
+                                                                                    {code}
+                                                                                </code>
+                                                                            </div>
+                                                                        )
+                                                                    )}
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                                                                <Button
+                                                                    variant="outline"
+                                                                    onClick={() => {
+                                                                        const codesText =
+                                                                            backupCodes.join("\n");
+                                                                        if (
+                                                                            navigator.clipboard &&
+                                                                            window.isSecureContext
+                                                                        ) {
+                                                                            navigator.clipboard
+                                                                                .writeText(
+                                                                                    codesText
+                                                                                )
+                                                                                .then(() =>
+                                                                                    toast.success(
+                                                                                        "Backup codes copied to clipboard"
+                                                                                    )
+                                                                                )
+                                                                                .catch(() =>
+                                                                                    toast.error(
+                                                                                        "Failed to copy codes"
+                                                                                    )
+                                                                                );
+                                                                        } else {
+                                                                            const textArea =
+                                                                                document.createElement(
+                                                                                    "textarea"
+                                                                                );
+                                                                            textArea.value =
+                                                                                codesText;
+
+                                                                            textArea.style.position =
+                                                                                "fixed";
+                                                                            textArea.style.left =
+                                                                                "-999999px";
+                                                                            textArea.style.top =
+                                                                                "-999999px";
+                                                                            document.body.appendChild(
+                                                                                textArea
+                                                                            );
+
+                                                                            textArea.focus();
+                                                                            textArea.select();
+
+                                                                            try {
+                                                                                document.execCommand(
+                                                                                    "copy"
+                                                                                );
+                                                                                toast.success(
+                                                                                    "Backup codes copied to clipboard"
+                                                                                );
+                                                                            } catch (error) {
+                                                                                console.error(
+                                                                                    "Fallback copy failed",
+                                                                                    error
+                                                                                );
+                                                                                toast.error(
+                                                                                    "Failed to copy codes"
+                                                                                );
+                                                                            }
+
+                                                                            textArea.remove();
+                                                                        }
+                                                                    }}
+                                                                    className="rounded-lg gap-2"
+                                                                >
+                                                                    <Copy className="size-4" />
+                                                                    Copy all codes
+                                                                </Button>
+                                                                <Button
+                                                                    variant="default"
+                                                                    onClick={() =>
+                                                                        setBackupCodes([])
+                                                                    }
+                                                                    className="rounded-lg gap-2"
+                                                                >
+                                                                    <Check className="size-4" />
+                                                                    I&apos;ve saved my codes
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="rounded-lg border border-dashed border-border/60 p-6 text-center">
+                                                            <Key className="mx-auto h-8 w-8 text-muted-foreground/50 mb-2" />
+                                                            <p className="text-sm text-muted-foreground">
+                                                                Generate backup codes to use when
+                                                                you can&apos;t access your
+                                                                authenticator.
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
 
                                             <div className="rounded-xl border border-border/50 p-4 flex items-center justify-between gap-4 hover:bg-muted/30 transition-colors">
                                                 <div className="flex items-center gap-3">
@@ -551,10 +915,7 @@ export default function ProfilePage() {
                                                     checked={signInEmailEnabled}
                                                     onCheckedChange={(checked) => {
                                                         setSignInEmailEnabled(checked);
-                                                        handleUpdateSettings(
-                                                            twoFactorEnabled,
-                                                            checked
-                                                        );
+                                                        handleUpdateSettings(checked);
                                                     }}
                                                     disabled={updatingSettings}
                                                 />
@@ -608,7 +969,15 @@ export default function ProfilePage() {
                                                             onChange={(event) =>
                                                                 setNewPassword(event.target.value)
                                                             }
-                                                            className="h-10 bg-muted/30 border-border/50 rounded-lg"
+                                                            className={`h-10 bg-muted/30 border-border/50 rounded-lg ${
+                                                                newPassword.length > 0 &&
+                                                                !isPasswordValid
+                                                                    ? "border-red-500 focus-visible:ring-red-500"
+                                                                    : newPassword.length > 0 &&
+                                                                        isPasswordValid
+                                                                      ? "border-green-500 focus-visible:ring-green-500"
+                                                                      : ""
+                                                            }`}
                                                         />
                                                     </div>
                                                     <div className="space-y-2">
@@ -627,9 +996,53 @@ export default function ProfilePage() {
                                                                     event.target.value
                                                                 )
                                                             }
-                                                            className="h-10 bg-muted/30 border-border/50 rounded-lg"
+                                                            className={`h-10 bg-muted/30 border-border/50 rounded-lg ${
+                                                                confirmPassword && !passwordsMatch
+                                                                    ? "border-red-500 focus-visible:ring-red-500"
+                                                                    : confirmPassword &&
+                                                                        passwordsMatch
+                                                                      ? "border-green-500 focus-visible:ring-green-500"
+                                                                      : ""
+                                                            }`}
                                                         />
                                                     </div>
+                                                </div>
+                                                <div className="pl-[52px] space-y-2">
+                                                    <div className="space-y-2 p-3 rounded-lg bg-muted/50 border border-border/50">
+                                                        <p className="text-xs font-medium text-muted-foreground mb-2">
+                                                            Password requirements:
+                                                        </p>
+                                                        <div className="grid grid-cols-1 gap-1.5">
+                                                            {passwordValidation.map((req) => (
+                                                                <div
+                                                                    key={req.label}
+                                                                    className={`flex items-center gap-2 text-xs transition-colors ${
+                                                                        req.passed
+                                                                            ? "text-green-600 dark:text-green-400"
+                                                                            : "text-muted-foreground"
+                                                                    }`}
+                                                                >
+                                                                    {req.passed ? (
+                                                                        <Check className="size-3.5" />
+                                                                    ) : (
+                                                                        <X className="size-3.5" />
+                                                                    )}
+                                                                    <span>{req.label}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    {confirmPassword && !passwordsMatch && (
+                                                        <p className="text-xs text-red-500">
+                                                            Passwords do not match
+                                                        </p>
+                                                    )}
+                                                    {passwordsMatch && (
+                                                        <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                                                            <Check className="size-3" /> Passwords
+                                                            match
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <div className="pl-[52px]">
                                                     <Button
@@ -1098,6 +1511,36 @@ export default function ProfilePage() {
                     </div>
                 </div>
             </div>
+
+            <AccountPasswordDialog
+                open={twoFactorDialogOpen}
+                onOpenChange={setTwoFactorDialogOpen}
+                onSubmit={(password) => {
+                    if (twoFactorDialogMode === "regenerate") {
+                        return handleRegenerateBackupCodes(password);
+                    }
+                    return handleTwoFactorToggle(password);
+                }}
+                isLoading={
+                    twoFactorDialogMode === "regenerate"
+                        ? regenerateBackupCodesLoading
+                        : toggle2FALoading
+                }
+                title={
+                    twoFactorDialogMode === "regenerate"
+                        ? "Regenerate backup codes"
+                        : twoFactorDialogMode === "disable"
+                          ? "Disable two-factor authentication"
+                          : "Enable two-factor authentication"
+                }
+                description={
+                    twoFactorDialogMode === "regenerate"
+                        ? "Enter your password to generate new backup codes."
+                        : twoFactorDialogMode === "disable"
+                          ? "Enter your password to disable 2FA for this account."
+                          : "Enter your password to generate a QR code for 2FA setup."
+                }
+            />
 
             <AccountPasswordDialog
                 open={deleteDialogOpen}
