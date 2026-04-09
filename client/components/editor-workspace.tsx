@@ -18,8 +18,9 @@ import {
     setCurrProject,
     setOpenTabs,
     toggleLineWrapping,
+    clearWorkspaceStatus,
 } from "@/store/editor";
-import { projectActions, setLastProject, setPendingPassword } from "@/store/project";
+import { projectActions, setPendingPassword } from "@/store/project";
 import {
     Eye,
     EyeOff,
@@ -43,6 +44,10 @@ import {
     UserCog,
     Inbox,
     Users,
+    CheckCircle2,
+    XCircle,
+    Wrench,
+    Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -65,6 +70,7 @@ import { toggleTerminalPosition } from "@/store/editor";
 import { PreviewPane } from "@/components/preview-panel";
 import defaultPorts from "@/utils/defaultPorts";
 import { useOnlineMembers } from "@/hooks/use-online-members";
+import { ALLOWED_TOOL_KEYS } from "@/utils/allowedTools";
 
 interface Props {
     projectId: string;
@@ -74,7 +80,7 @@ interface Props {
 export default function ProjectPage({ projectId, token }: Props) {
     const dispatch = useDispatch<AppDispatch>();
     const router = useRouter();
-    const { lastProject, closingProject } = useSelector((state: RootState) => state.project);
+    const { closingProject } = useSelector((state: RootState) => state.project);
     const {
         pendingRequests,
         gettingPendingRequests,
@@ -87,10 +93,13 @@ export default function ProjectPage({ projectId, token }: Props) {
     const fileTree = useSelector((state: RootState) => state.editor.fileTree);
     const openTabs = useSelector((state: RootState) => state.editor.openTabs);
     const activeTab = useSelector((state: RootState) => state.editor.activeTab);
+    const isProtectedFile = activeTab === "/.dokit/config.json";
     const gettingFileContent = useSelector((state: RootState) => state.editor.gettingFileContent);
     const pendingPassword = useSelector((state: RootState) => state.project.pendingPassword);
     const terminalPosition = useSelector((state: RootState) => state.editor.terminalPosition);
     const lineWrapping = useSelector((state: RootState) => state.editor.lineWrapping);
+    const workspaceStatus = useSelector((state: RootState) => state.editor.workspaceStatus);
+    const toolStatusByName = useSelector((state: RootState) => state.editor.toolStatusByName);
     const apiProjectId = `${projectId.slice(0, 8)}-${projectId.slice(8, 12)}-${projectId.slice(12, 16)}-${projectId.slice(16, 20)}-${projectId.slice(20)}`;
     const username = useSelector((state: RootState) => state.auth.username) || "Anonymous";
     const cursorColor = useSelector((state: RootState) => state.editor.cursorColor) || "#000000";
@@ -110,6 +119,7 @@ export default function ProjectPage({ projectId, token }: Props) {
     const [previewWidth, setPreviewWidth] = useState(400);
     const [previewHeight, setPreviewHeight] = useState(250);
     const [showAccessPanel, setShowAccessPanel] = useState(false);
+    const [showToolsPanel, setShowToolsPanel] = useState(false);
     const [pendingRequestQuery, setPendingRequestQuery] = useState("");
     const [accessPanelTab, setAccessPanelTab] = useState<"members" | "requests" | "invite">(
         "members"
@@ -120,6 +130,7 @@ export default function ProjectPage({ projectId, token }: Props) {
     const isDragging = useRef(false);
     const startPos = useRef(0);
     const startSize = useRef(0);
+    const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const onNodeCreation = useCallback(
         (parentPath: string, newNode: TreeNode) => {
@@ -263,14 +274,11 @@ export default function ProjectPage({ projectId, token }: Props) {
                 if (payload.data?.project) {
                     dispatch(setCurrProject(payload.data.project));
                 }
-                if (lastProject !== apiProjectId) {
-                    await dispatch(
-                        editorActions.getRootContent({ projectId: apiProjectId, folderPath: "/" })
-                    );
-                    dispatch(setOpenTabs([]));
-                    dispatch(setActiveTab(null));
-                }
-                await dispatch(setLastProject(apiProjectId));
+                await dispatch(
+                    editorActions.getRootContent({ projectId: apiProjectId, folderPath: "/" })
+                );
+                dispatch(setOpenTabs([]));
+                dispatch(setActiveTab(null));
                 setIsBooting(false);
             } else {
                 if (payload.message === "Password is required to start this project.") {
@@ -302,6 +310,26 @@ export default function ProjectPage({ projectId, token }: Props) {
         }
     }, [accessPanelTab, isProjectPublic]);
 
+    useEffect(() => {
+        if (statusTimeoutRef.current) {
+            clearTimeout(statusTimeoutRef.current);
+            statusTimeoutRef.current = null;
+        }
+
+        if (workspaceStatus.status === "ready" || workspaceStatus.status === "error") {
+            statusTimeoutRef.current = setTimeout(() => {
+                dispatch(clearWorkspaceStatus());
+            }, 2000);
+        }
+
+        return () => {
+            if (statusTimeoutRef.current) {
+                clearTimeout(statusTimeoutRef.current);
+                statusTimeoutRef.current = null;
+            }
+        };
+    }, [workspaceStatus.status, dispatch]);
+
     const handlePasswordFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!passwordInput.trim()) return;
@@ -321,14 +349,11 @@ export default function ProjectPage({ projectId, token }: Props) {
                 if (payload.data?.project) {
                     dispatch(setCurrProject(payload.data.project));
                 }
-                if (lastProject !== apiProjectId) {
-                    await dispatch(
-                        editorActions.getRootContent({ projectId: apiProjectId, folderPath: "/" })
-                    );
-                    dispatch(setOpenTabs([]));
-                    dispatch(setActiveTab(null));
-                }
-                dispatch(setLastProject(apiProjectId));
+                await dispatch(
+                    editorActions.getRootContent({ projectId: apiProjectId, folderPath: "/" })
+                );
+                dispatch(setOpenTabs([]));
+                dispatch(setActiveTab(null));
                 setShowPasswordForm(false);
             } else {
                 setIsBooting(false);
@@ -364,9 +389,11 @@ export default function ProjectPage({ projectId, token }: Props) {
     const activeFile = activeTab && fileTree ? fileTree[activeTab] : null;
     const isOwner = currProject?.currentUserAccess === "OWNER" || currProject?.isOwner === true;
     const canUseTerminal = isOwner || currProject?.currentUserAccess === "WRITE";
+    const canManageTools = isOwner || currProject?.currentUserAccess === "WRITE";
     const canTogglePreview = isPreviewSupported && canUseTerminal;
     const shouldShowPreview = isPreviewSupported && (canUseTerminal ? showPreview : true);
     const onlineUsers = useOnlineMembers(apiProjectId, username, cursorColor);
+    const installedTools = new Set(currProject?.tools ?? []);
 
     const wsUrl = `ws://${process.env.NEXT_PUBLIC_NGINX_HOST}/terminal/${projectId}/ws`;
 
@@ -524,6 +551,10 @@ export default function ProjectPage({ projectId, token }: Props) {
         }
     };
 
+    const handleToggleToolsPanel = () => {
+        setShowToolsPanel((value) => !value);
+    };
+
     const handleRefreshPendingRequests = () => {
         dispatch(projectActions.getPendingAccessRequests({ projectId: apiProjectId }));
     };
@@ -679,6 +710,17 @@ export default function ProjectPage({ projectId, token }: Props) {
                                 <UserCog className="w-4 h-4" />
                             </Button>
                         )}
+                        {canManageTools && (
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                className="gap-1.5"
+                                onClick={handleToggleToolsPanel}
+                                title="Manage tools"
+                            >
+                                <Wrench className="w-4 h-4" />
+                            </Button>
+                        )}
                         {canTogglePreview && (
                             <Button
                                 size="sm"
@@ -741,6 +783,32 @@ export default function ProjectPage({ projectId, token }: Props) {
                         </Button>
                     </div>
                 </header>
+
+                {workspaceStatus.status && workspaceStatus.message && (
+                    <div className="absolute top-16 right-4 z-50">
+                        <div
+                            className={cn(
+                                "flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium shadow-md backdrop-blur",
+                                workspaceStatus.status === "installing_tools"
+                                    ? "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                                    : workspaceStatus.status === "ready"
+                                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                      : "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400"
+                            )}
+                        >
+                            {workspaceStatus.status === "installing_tools" && (
+                                <Loader2 className="size-4 animate-spin" />
+                            )}
+                            {workspaceStatus.status === "ready" && (
+                                <CheckCircle2 className="size-4" />
+                            )}
+                            {workspaceStatus.status === "error" && <XCircle className="size-4" />}
+                            <span className="max-w-[220px] truncate">
+                                {workspaceStatus.message}
+                            </span>
+                        </div>
+                    </div>
+                )}
 
                 {isOwner && showAccessPanel && (
                     <div className="absolute right-4 top-14 z-50 w-[400px] max-w-[92vw] rounded-2xl border border-border/40 bg-gradient-to-b from-background to-background/95 backdrop-blur-md shadow-2xl shadow-black/15 dark:shadow-black/40">
@@ -1053,6 +1121,138 @@ export default function ProjectPage({ projectId, token }: Props) {
                     </div>
                 )}
 
+                {canManageTools && showToolsPanel && (
+                    <div className="absolute right-4 top-14 z-50 w-[360px] max-w-[92vw] rounded-2xl border border-border/50 bg-gradient-to-b from-card to-card/95 backdrop-blur-xl shadow-2xl shadow-black/20 dark:shadow-black/50 overflow-hidden">
+                        <div className="flex items-center justify-between border-b border-border/40 px-5 py-4 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
+                            <div className="flex items-center gap-3">
+                                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                                    <Wrench className="h-4 w-4 text-primary" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-semibold text-foreground">
+                                        Workspace Tools
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground">
+                                        {installedTools.size} of {ALLOWED_TOOL_KEYS.length}{" "}
+                                        installed
+                                    </p>
+                                </div>
+                            </div>
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-lg"
+                                onClick={() => setShowToolsPanel(false)}
+                            >
+                                <X className="size-4" />
+                            </Button>
+                        </div>
+
+                        <div className="p-4">
+                            <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+                                {ALLOWED_TOOL_KEYS.map((toolKey) => {
+                                    const isInstalled = installedTools.has(toolKey);
+                                    const toolStatus = toolStatusByName[toolKey];
+                                    const isBusy = Boolean(toolStatus);
+                                    const statusLabel =
+                                        toolStatus === "installing"
+                                            ? "Installing..."
+                                            : toolStatus === "uninstalling"
+                                              ? "Removing..."
+                                              : isInstalled
+                                                ? "Remove"
+                                                : "Install";
+
+                                    return (
+                                        <div
+                                            key={toolKey}
+                                            className={`group flex items-center justify-between gap-3 rounded-xl border p-3 transition-all duration-200 ${
+                                                isInstalled
+                                                    ? "border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 hover:from-emerald-500/15 hover:to-emerald-500/10"
+                                                    : "border-border/40 bg-gradient-to-r from-muted/40 to-muted/20 hover:from-muted/60 hover:to-muted/40"
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div
+                                                    className={`h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
+                                                        isInstalled
+                                                            ? "bg-emerald-500/15"
+                                                            : "bg-muted/60 group-hover:bg-muted"
+                                                    }`}
+                                                >
+                                                    <Package
+                                                        className={`h-4 w-4 ${
+                                                            isInstalled
+                                                                ? "text-emerald-500"
+                                                                : "text-muted-foreground"
+                                                        }`}
+                                                    />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-medium text-foreground truncate capitalize">
+                                                        {toolKey.replace(/-/g, " ")}
+                                                    </p>
+                                                    <div className="flex items-center gap-1.5">
+                                                        {isInstalled ? (
+                                                            <>
+                                                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                                                <span className="text-xs text-emerald-600 dark:text-emerald-400">
+                                                                    Active
+                                                                </span>
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-xs text-muted-foreground">
+                                                                Not installed
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <Button
+                                                size="sm"
+                                                variant={isInstalled ? "ghost" : "default"}
+                                                className={`h-8 min-w-[90px] rounded-lg text-xs font-medium transition-all ${
+                                                    isInstalled
+                                                        ? "text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
+                                                        : "bg-primary hover:bg-primary/90"
+                                                }`}
+                                                disabled={isBusy}
+                                                onClick={() => {
+                                                    if (isInstalled) {
+                                                        dispatch(
+                                                            editorActions.uninstallTool({
+                                                                projectId: apiProjectId,
+                                                                toolName: toolKey,
+                                                            })
+                                                        );
+                                                    } else {
+                                                        dispatch(
+                                                            editorActions.installTool({
+                                                                projectId: apiProjectId,
+                                                                toolName: toolKey,
+                                                            })
+                                                        );
+                                                    }
+                                                }}
+                                            >
+                                                {isBusy && (
+                                                    <Loader2 className="size-3 animate-spin mr-1.5" />
+                                                )}
+                                                {statusLabel}
+                                            </Button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="border-t border-border/40 px-5 py-3 bg-muted/30">
+                            <p className="text-xs text-muted-foreground text-center">
+                                Tools extend your workspace capabilities
+                            </p>
+                        </div>
+                    </div>
+                )}
                 {openTabs.length > 0 && (
                     <div className="flex shrink-0 items-end overflow-x-auto border-b bg-muted/30 scrollbar-none">
                         {openTabs.map((filePath) => {
@@ -1135,7 +1335,10 @@ export default function ProjectPage({ projectId, token }: Props) {
                                         className="h-full"
                                         filePath={activeFile.path}
                                         projectId={projectId}
-                                        readOnly={currProject?.currentUserAccess === "READ"}
+                                        readOnly={
+                                            currProject?.currentUserAccess === "READ" ||
+                                            isProtectedFile
+                                        }
                                     />
                                 )
                             ) : (

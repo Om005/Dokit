@@ -19,11 +19,14 @@ gosu dokituser rclone copy r2:${R2_BUCKET_NAME}/code/${PROJECT_ID}/ /workspace/ 
 rm -rf /home/dokituser/.config/rclone/rclone.conf
 
 cat > /home/dokituser/.bashrc << 'BASHRC'
-export HISTFILE=/dev/null
-export HISTSIZE=0
+export HISTFILE=/home/dokituser/.bash_history
+export HISTSIZE=1000
+export HISTFILESIZE=2000
+
+export PIP_PROGRESS_BAR=off
 
 export PS1="\[\033[01;32m\]dokit\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ "
-export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export PATH="/home/dokituser/.local/bin:/workspace/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 alias ll='ls -alF'
 
 echo ""

@@ -19,6 +19,7 @@ export interface Project {
     stack: string;
     visibility: "PUBLIC" | "PRIVATE";
     isPasswordProtected: boolean;
+    tools: string[];
     createdAt: string;
     updatedAt: string;
     lastAccessedAt: string;

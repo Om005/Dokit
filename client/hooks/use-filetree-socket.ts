@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/store/store";
-import { setCurrProject } from "@/store/editor";
+import { setCurrProject, setToolStatus, setWorkspaceStatus } from "@/store/editor";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -65,6 +65,50 @@ function useFileTreeSocket(
                     await dispatch(
                         setCurrProject({ ...currProject, currentUserAccess: data.newAccessLevel })
                     );
+                }
+            }
+        );
+        socket.on(
+            "workspace-status",
+            (data: {
+                status:
+                    | "installing_tools"
+                    | "installing_tool"
+                    | "uninstalling_tool"
+                    | "ready"
+                    | "error";
+                message?: string;
+                toolName?: string;
+            }) => {
+                if (!data?.status) return;
+
+                if (
+                    (data.status === "installing_tool" || data.status === "uninstalling_tool") &&
+                    data.toolName
+                ) {
+                    dispatch(
+                        setToolStatus({
+                            toolName: data.toolName,
+                            status:
+                                data.status === "installing_tool" ? "installing" : "uninstalling",
+                        })
+                    );
+                    return;
+                }
+
+                if ((data.status === "ready" || data.status === "error") && data.toolName) {
+                    dispatch(setToolStatus({ toolName: data.toolName, status: data.status }));
+                    return;
+                }
+
+                if (!data.message) return;
+
+                if (
+                    data.status === "installing_tools" ||
+                    data.status === "ready" ||
+                    data.status === "error"
+                ) {
+                    dispatch(setWorkspaceStatus({ status: data.status, message: data.message }));
                 }
             }
         );

@@ -1,3 +1,4 @@
+import { ALLOWED_TOOLS } from "constants/tools";
 import { z } from "zod";
 
 const validators = {
@@ -22,6 +23,25 @@ const validators = {
         projectId: z.string().uuid("Invalid projectId format").min(1, "projectId is required"),
         oldPath: z.string().min(1, "oldPath is required"),
         newPath: z.string().min(1, "newPath is required"),
+    }),
+
+    installEnvironmentTool: z.object({
+        projectId: z.string().uuid("Invalid projectId format").min(1, "projectId is required"),
+        toolName: z
+            .string()
+            .min(1, "toolName is required")
+            .refine((value) => value in ALLOWED_TOOLS, {
+                message: "Invalid toolName",
+            }),
+    }),
+    uninstallEnvironmentTool: z.object({
+        projectId: z.string().uuid("Invalid projectId format").min(1, "projectId is required"),
+        toolName: z
+            .string()
+            .min(1, "toolName is required")
+            .refine((value) => value in ALLOWED_TOOLS, {
+                message: "Invalid toolName",
+            }),
     }),
 };
 

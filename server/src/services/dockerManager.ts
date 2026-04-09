@@ -8,6 +8,7 @@ import { PassThrough } from "stream";
 import { FileNode } from "types/express";
 import { syncDockerToYjs } from "sockets/yjsServer";
 import { io } from "index";
+import { ALLOWED_TOOLS } from "constants/tools";
 
 const docker = new Docker();
 
@@ -77,6 +78,10 @@ async function createDokitContainer(
         if (!info.State.Running) {
             await existingContainer.start();
         }
+        await startFileSystemWatcher(projectId).catch((err) => {
+            logger.error("Failed to start filesystem watcher:");
+            logger.error(err);
+        });
 
         return { containerId: info.Id, containerName };
     } catch (error) {
@@ -119,6 +124,10 @@ async function createDokitContainer(
 
             await startFileSystemWatcher(projectId).catch((err) => {
                 logger.error("Failed to start filesystem watcher:");
+                logger.error(err);
+            });
+            restoreTools(container, projectId).catch((err) => {
+                logger.error("Failed to restore environment tools:");
                 logger.error(err);
             });
 
@@ -246,13 +255,24 @@ async function syncWorkspaceToR2(projectId: string): Promise<void> {
                 --exclude ".DS_Store" \\
                 --exclude "Thumbs.db"
             `;
+
         const exec = await container.exec({
             Cmd: ["bash", "-c", rcloneCmd],
             AttachStdout: true,
             AttachStderr: true,
             User: "dokituser",
+            Env: [
+                "RCLONE_CONFIG_R2_TYPE=s3",
+                "RCLONE_CONFIG_R2_PROVIDER=Cloudflare",
+                `RCLONE_CONFIG_R2_ACCESS_KEY_ID=${env.R2_ACCESS_KEY_ID}`,
+                `RCLONE_CONFIG_R2_SECRET_ACCESS_KEY=${env.R2_SECRET_ACCESS_KEY}`,
+                `RCLONE_CONFIG_R2_ENDPOINT=https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+            ],
         });
+
         const stream = await exec.start({ hijack: true, stdin: false });
+        stream.resume();
+
         await new Promise((resolve, reject) => {
             stream.on("end", resolve);
             stream.on("error", reject);
@@ -722,6 +742,178 @@ async function renameNode(projectId: string, oldPath: string, newPath: string): 
     }
 }
 
+async function restoreTools(container: Docker.Container, projectId: string): Promise<void> {
+    try {
+        io.to(projectId).emit("workspace-status", {
+            status: "installing_tools",
+            message: "Restoring environment tools, please wait...",
+        });
+
+        const project = await prisma.project.findUnique({
+            where: {
+                id: projectId,
+            },
+        });
+
+        const toolKeys = project!.tools;
+        if (toolKeys.length == 0) {
+            io.to(projectId).emit("workspace-status", {
+                status: "ready",
+                message: "Workspace is ready",
+            });
+            return;
+        }
+
+        const packagesToInstall = toolKeys
+            .map((key) => ALLOWED_TOOLS[key])
+            .filter(Boolean)
+            .join(" ");
+
+        if (!packagesToInstall.trim()) {
+            io.to(projectId).emit("workspace-status", {
+                status: "ready",
+                message: "Workspace is ready",
+            });
+            return;
+        }
+
+        const installExec = await container.exec({
+            Cmd: [
+                "sh",
+                "-c",
+                `apt-get update > /dev/null && apt-get install -y ${packagesToInstall} > /dev/null`,
+            ],
+            User: "root",
+            AttachStdout: true,
+            AttachStderr: true,
+        });
+        const stream = await installExec.start({ hijack: true, stdin: false });
+        stream.resume();
+
+        await new Promise((resolve, reject) => {
+            stream.on("end", resolve);
+            stream.on("error", reject);
+        });
+
+        io.to(projectId).emit("workspace-status", {
+            status: "ready",
+            message: "Workspace is ready",
+        });
+    } catch (error) {
+        logger.error(`Failed to restore environment tools for project ${projectId}:`);
+        logger.error(error);
+        io.to(projectId).emit("workspace-status", {
+            status: "error",
+            message: "Failed to restore environment tools",
+        });
+        throw error;
+    }
+}
+
+async function installTool(projectId: string, toolName: string): Promise<void> {
+    try {
+        io.to(projectId).emit("workspace-status", {
+            status: "installing_tool",
+            message: `Installing ${toolName}, please wait...`,
+            toolName,
+        });
+
+        const containerProjectId = projectId.replaceAll("-", "");
+        const containerName = `dokit-${containerProjectId}`;
+        const container = docker.getContainer(containerName);
+
+        const packageToInstall = ALLOWED_TOOLS[toolName];
+        if (!packageToInstall) {
+            throw new Error(`Invalid or unsupported tool requested.`);
+        }
+
+        const exec = await container.exec({
+            Cmd: [
+                "sh",
+                "-c",
+                `apt-get update > /dev/null && apt-get install -y ${packageToInstall} > /dev/null`,
+            ],
+            User: "root",
+            AttachStdout: true,
+            AttachStderr: true,
+        });
+
+        const stream = await exec.start({ hijack: true, stdin: false });
+        stream.resume();
+
+        await new Promise((resolve, reject) => {
+            stream.on("end", resolve);
+            stream.on("error", reject);
+        });
+
+        io.to(projectId).emit("workspace-status", {
+            status: "ready",
+            message: `${toolName} installed successfully`,
+            toolName,
+        });
+    } catch (error) {
+        logger.error(`Failed to install tool ${toolName} for project ${projectId}:`);
+        logger.error(error);
+        io.to(projectId).emit("workspace-status", {
+            status: "error",
+            message: `Failed to install tool ${toolName}`,
+        });
+        throw error;
+    }
+}
+
+async function uninstallTool(projectId: string, toolName: string): Promise<void> {
+    try {
+        io.to(projectId).emit("workspace-status", {
+            status: "uninstalling_tool",
+            message: `Uninstalling ${toolName}, please wait...`,
+            toolName,
+        });
+
+        const containerProjectId = projectId.replaceAll("-", "");
+        const containerName = `dokit-${containerProjectId}`;
+        const container = docker.getContainer(containerName);
+
+        const packageToUninstall = ALLOWED_TOOLS[toolName];
+        if (!packageToUninstall) {
+            throw new Error(`Invalid or unsupported tool requested.`);
+        }
+
+        const exec = await container.exec({
+            Cmd: [
+                "sh",
+                "-c",
+                `apt-get remove -y ${packageToUninstall} > /dev/null && apt-get autoremove -y > /dev/null`,
+            ],
+            User: "root",
+            AttachStdout: true,
+            AttachStderr: true,
+        });
+
+        const stream = await exec.start({ hijack: true, stdin: false });
+        stream.resume();
+
+        await new Promise((resolve, reject) => {
+            stream.on("end", resolve);
+            stream.on("error", reject);
+        });
+
+        io.to(projectId).emit("workspace-status", {
+            status: "ready",
+            message: `${toolName} uninstalled successfully`,
+            toolName,
+        });
+    } catch (error) {
+        logger.error(`Failed to uninstall tool ${toolName} for project ${projectId}:`);
+        logger.error(error);
+        io.to(projectId).emit("workspace-status", {
+            status: "error",
+            message: `Failed to uninstall tool ${toolName}`,
+        });
+        throw error;
+    }
+}
+
 const DockerManager = {
     createDokitContainer,
     deleteDokitContainer,
@@ -736,6 +928,8 @@ const DockerManager = {
     createNode,
     deleteNode,
     renameNode,
+    installTool,
+    uninstallTool,
 };
 
 export default DockerManager;

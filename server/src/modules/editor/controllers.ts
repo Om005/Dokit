@@ -276,6 +276,130 @@ const controllers = {
             });
         }
     },
+    installEnvironmentTool: async (req: Request, res: Response) => {
+        try {
+            const userId = req.meta.user?.id;
+            if (!userId) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Unauthorized",
+                    statusCode: StatusCodes.UNAUTHORIZED,
+                });
+            }
+            const { projectId, toolName } = req.body;
+            const project = await prisma.project.findFirst({
+                where: {
+                    id: projectId,
+                    OR: [
+                        { ownerId: userId },
+                        { collaborators: { some: { userId: userId, access: "WRITE" } } },
+                    ],
+                },
+                select: { id: true },
+            });
+            if (!project) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Project not found or you don't have permission to modify it.",
+                    statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+
+            await DockerManager.installTool(projectId, toolName).catch((error) => {
+                const errorMessage = error instanceof Error ? error.message : "Unknown error";
+                return sendResponse(res, {
+                    success: false,
+                    message: `Error installing tool: ${errorMessage}`,
+                    statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+                });
+            });
+
+            await prisma.project.update({
+                where: { id: projectId },
+                data: {
+                    tools: {
+                        push: toolName,
+                    },
+                },
+            });
+
+            return sendResponse(res, {
+                success: true,
+                message: "Tool installed successfully",
+                statusCode: StatusCodes.OK,
+            });
+        } catch (error) {
+            logger.error("Error in installEnvironmentTool controller:");
+            logger.error(error);
+            sendResponse(res, {
+                success: false,
+                message: "Error installing tool",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    },
+    uninstallEnvironmentTool: async (req: Request, res: Response) => {
+        try {
+            const userId = req.meta.user?.id;
+            if (!userId) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Unauthorized",
+                    statusCode: StatusCodes.UNAUTHORIZED,
+                });
+            }
+            const { projectId, toolName } = req.body;
+            const project = await prisma.project.findFirst({
+                where: {
+                    id: projectId,
+                    OR: [
+                        { ownerId: userId },
+                        { collaborators: { some: { userId: userId, access: "WRITE" } } },
+                    ],
+                },
+                select: { id: true, tools: true },
+            });
+            if (!project) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Project not found or you don't have permission to modify it.",
+                    statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+
+            await DockerManager.uninstallTool(projectId, toolName).catch((error) => {
+                const errorMessage = error instanceof Error ? error.message : "Unknown error";
+                return sendResponse(res, {
+                    success: false,
+                    message: `Error uninstalling tool: ${errorMessage}`,
+                    statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+                });
+            });
+
+            await prisma.project.update({
+                where: { id: projectId },
+                data: {
+                    tools: {
+                        set: project.tools.filter((tool) => tool !== toolName),
+                    },
+                },
+            });
+
+            return sendResponse(res, {
+                success: true,
+                message: "Tool uninstalled successfully",
+                statusCode: StatusCodes.OK,
+            });
+        } catch (error) {
+            logger.error("Error in uninstallEnvironmentTool controller:");
+            logger.error(error);
+            sendResponse(res, {
+                success: false,
+                message: "Error uninstalling tool",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    },
 };
 
 export default controllers;

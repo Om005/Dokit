@@ -25,4 +25,16 @@ router.post("/delete-node", validationMiddleware(validators.deleteNode), control
 
 router.post("/rename-node", validationMiddleware(validators.renameNode), controllers.renameNode);
 
+router.post(
+    "/install-tool",
+    validationMiddleware(validators.installEnvironmentTool),
+    controllers.installEnvironmentTool
+);
+
+router.post(
+    "/uninstall-tool",
+    validationMiddleware(validators.uninstallEnvironmentTool),
+    controllers.uninstallEnvironmentTool
+);
+
 export default router;

@@ -41,6 +41,11 @@ interface initialEditorState {
     terminalPosition: "bottom" | "right";
     lineWrapping: boolean;
     cursorColor: string | null;
+    workspaceStatus: {
+        status: "installing_tools" | "ready" | "error" | null;
+        message: string | null;
+    };
+    toolStatusByName: Record<string, "installing" | "uninstalling">;
 }
 
 const editorActions = {
@@ -107,6 +112,28 @@ const editorActions = {
             "post"
         )
     ),
+    installTool: createAsyncThunk<
+        ApiResponse,
+        { projectId: string; toolName: string },
+        { rejectValue: ApiResponse }
+    >(
+        "editor/installTool",
+        createApiHandler<{ projectId: string; toolName: string }>(
+            "/api/editor/install-tool",
+            "post"
+        )
+    ),
+    uninstallTool: createAsyncThunk<
+        ApiResponse,
+        { projectId: string; toolName: string },
+        { rejectValue: ApiResponse }
+    >(
+        "editor/uninstallTool",
+        createApiHandler<{ projectId: string; toolName: string }>(
+            "/api/editor/uninstall-tool",
+            "post"
+        )
+    ),
 };
 
 const initialState: initialEditorState = {
@@ -123,6 +150,11 @@ const initialState: initialEditorState = {
     terminalPosition: "bottom",
     lineWrapping: false,
     cursorColor: null,
+    workspaceStatus: {
+        status: null,
+        message: null,
+    },
+    toolStatusByName: {},
 };
 
 const editorSlice = createSlice({
@@ -328,6 +360,54 @@ const editorSlice = createSlice({
         setCursorColor(state, action: PayloadAction<string>) {
             state.cursorColor = action.payload;
         },
+        setWorkspaceStatus(
+            state,
+            action: PayloadAction<{
+                status: "installing_tools" | "ready" | "error";
+                message: string;
+            }>
+        ) {
+            state.workspaceStatus = {
+                status: action.payload.status,
+                message: action.payload.message,
+            };
+        },
+        clearWorkspaceStatus(state) {
+            state.workspaceStatus = { status: null, message: null };
+        },
+        setToolStatus(
+            state,
+            action: PayloadAction<{
+                toolName: string;
+                status: "installing" | "uninstalling" | "ready" | "error";
+            }>
+        ) {
+            const { toolName, status } = action.payload;
+            const previousStatus = state.toolStatusByName[toolName];
+
+            if (status === "installing" || status === "uninstalling") {
+                state.toolStatusByName[toolName] = status;
+                return;
+            }
+
+            if (status === "ready") {
+                if (!state.currProject) {
+                    delete state.toolStatusByName[toolName];
+                    return;
+                }
+                const tools = state.currProject.tools ?? [];
+                if (previousStatus === "installing" && !tools.includes(toolName)) {
+                    tools.push(toolName);
+                }
+                if (previousStatus === "uninstalling") {
+                    state.currProject.tools = tools.filter((tool) => tool !== toolName);
+                } else {
+                    state.currProject.tools = tools;
+                }
+            }
+
+            delete state.toolStatusByName[toolName];
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -432,6 +512,37 @@ const editorSlice = createSlice({
             .addCase(editorActions.renameNode.rejected, (state) => {
                 state.renamingNode = false;
             })
+            .addCase(editorActions.installTool.pending, (state, action) => {
+                state.toolStatusByName[action.meta.arg.toolName] = "installing";
+            })
+            .addCase(editorActions.installTool.fulfilled, (state, action) => {
+                const toolName = action.meta.arg.toolName;
+                if (state.currProject) {
+                    const tools = state.currProject.tools ?? [];
+                    if (!tools.includes(toolName)) {
+                        tools.push(toolName);
+                    }
+                    state.currProject.tools = tools;
+                }
+                delete state.toolStatusByName[toolName];
+            })
+            .addCase(editorActions.installTool.rejected, (state, action) => {
+                delete state.toolStatusByName[action.meta.arg.toolName];
+            })
+            .addCase(editorActions.uninstallTool.pending, (state, action) => {
+                state.toolStatusByName[action.meta.arg.toolName] = "uninstalling";
+            })
+            .addCase(editorActions.uninstallTool.fulfilled, (state, action) => {
+                const toolName = action.meta.arg.toolName;
+                if (state.currProject) {
+                    const tools = state.currProject.tools ?? [];
+                    state.currProject.tools = tools.filter((tool) => tool !== toolName);
+                }
+                delete state.toolStatusByName[toolName];
+            })
+            .addCase(editorActions.uninstallTool.rejected, (state, action) => {
+                delete state.toolStatusByName[action.meta.arg.toolName];
+            })
             .addCase(projectActions.inviteMemeber.fulfilled, (state, action) => {
                 const payload = action.payload as ApiResponse;
                 if (!payload.success || !state.currProject) return;
@@ -497,7 +608,6 @@ const editorPersistConfig = {
     key: "editor",
     storage,
     whitelist: [
-        "fileTree",
         "currProject",
         "openTabs",
         "activeTab",
@@ -520,6 +630,9 @@ export const {
     toggleTerminalPosition,
     toggleLineWrapping,
     setCursorColor,
+    setWorkspaceStatus,
+    clearWorkspaceStatus,
+    setToolStatus,
 } = editorSlice.actions;
 
 const persistedEditorReducer = persistReducer(editorPersistConfig, editorSlice.reducer);

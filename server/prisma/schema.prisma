@@ -59,6 +59,7 @@ model Project {
   passwordHash    String?
   description    String?
   stack          ProjectStack
+  tools         String[]      @default([])
   visibility       Visibility  @default(PRIVATE)
   ownerId        String
   owner          User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)

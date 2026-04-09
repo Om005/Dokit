@@ -101,6 +101,7 @@ const controllers = {
                             currentUserAccess: "OWNER",
                             ownerId: userId,
                             members: [],
+                            tools: project.tools ?? [],
                         },
                     },
                 });
@@ -241,6 +242,7 @@ const controllers = {
                     createdAt: true,
                     updatedAt: true,
                     lastAccessedAt: true,
+                    tools: true,
                     ownerId: true,
                     owner: {
                         select: {
@@ -280,6 +282,7 @@ const controllers = {
                     createdAt: project.createdAt,
                     updatedAt: project.updatedAt,
                     lastAccessedAt: project.lastAccessedAt,
+                    tools: project.tools ?? [],
 
                     isOwner: isOwner,
                     ownerId: project.ownerId,
@@ -347,6 +350,7 @@ const controllers = {
                     createdAt: true,
                     updatedAt: true,
                     lastAccessedAt: true,
+                    tools: true,
                     ownerId: true,
                     owner: {
                         select: {
@@ -406,6 +410,7 @@ const controllers = {
                 createdAt: project.createdAt,
                 updatedAt: project.updatedAt,
                 lastAccessedAt: project.lastAccessedAt,
+                tools: project.tools ?? [],
 
                 isOwner: isOwner,
                 ownerId: project.ownerId,
@@ -540,6 +545,7 @@ const controllers = {
                     createdAt: project.createdAt,
                     updatedAt: project.updatedAt,
                     lastAccessedAt: project.lastAccessedAt,
+                    tools: project.tools ?? [],
 
                     isOwner: isOwner,
                     ownerId: project.ownerId,
