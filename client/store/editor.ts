@@ -543,7 +543,7 @@ const editorSlice = createSlice({
             .addCase(editorActions.uninstallTool.rejected, (state, action) => {
                 delete state.toolStatusByName[action.meta.arg.toolName];
             })
-            .addCase(projectActions.inviteMemeber.fulfilled, (state, action) => {
+            .addCase(projectActions.inviteMember.fulfilled, (state, action) => {
                 const payload = action.payload as ApiResponse;
                 if (!payload.success || !state.currProject) return;
 

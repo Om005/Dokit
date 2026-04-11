@@ -104,6 +104,7 @@ enum ProjectStack {
   NODE
   REACT_VITE
   EXPRESS
+  GITHUB
 }
 
 enum Visibility {

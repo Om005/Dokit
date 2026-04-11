@@ -184,10 +184,7 @@ const controllers = {
                 });
             }
 
-            await Promise.all([
-                queueActions.addDeleteProjectJob(projectId),
-                queueActions.addContainerCleanupJob(projectId),
-            ]);
+            await Promise.all([queueActions.addDeleteProjectJob(projectId)]);
 
             await prisma.project.delete({
                 where: { id: projectId },
@@ -805,6 +802,114 @@ const controllers = {
             return sendResponse(res, {
                 success: false,
                 message: "Failed to close project.",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    },
+    createProjectFromGitHub: async (req: Request, res: Response) => {
+        try {
+            const userId = req.meta.user?.id;
+            if (!userId) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Unauthorized",
+                    statusCode: StatusCodes.UNAUTHORIZED,
+                });
+            }
+
+            const { name, description, visibility, githubRepoUrl, password } = req.body;
+
+            let isPasswordProtected = false;
+            let passwordHash: string | null = null;
+            if (password !== undefined && typeof password === "string") {
+                isPasswordProtected = true;
+
+                passwordHash = await argon2.hash(password);
+            }
+
+            const existingProject = await prisma.project.findFirst({
+                where: {
+                    name,
+                    ownerId: userId,
+                },
+            });
+            if (existingProject) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "A project with this name already exists.",
+                    statusCode: StatusCodes.CONFLICT,
+                });
+            }
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { username: true },
+            });
+            if (!user) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "User not found.",
+                    statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+            const projectId = crypto.randomUUID();
+
+            const project = await prisma.project.create({
+                data: {
+                    id: projectId,
+                    name,
+                    description,
+                    stack: "GITHUB",
+                    visibility: visibility as Visibility,
+                    ownerId: userId,
+                    isPasswordProtected,
+                    passwordHash: isPasswordProtected ? passwordHash : null,
+                },
+            });
+
+            try {
+                const containerInfo = await DockerManager.createDokitContainerFromGithub(
+                    projectId,
+                    githubRepoUrl
+                );
+            } catch (error) {
+                await prisma.project.delete({
+                    where: { id: projectId },
+                });
+                return sendResponse(res, {
+                    success: false,
+                    message:
+                        "Failed to create project from GitHub repository. Please check the repository URL, make sure it's a public repository.",
+                    statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+                });
+            }
+
+            queueActions.addSyncToR2Job(projectId).catch((error) => {
+                logger.error(`Failed to add sync to R2 job for project ${projectId}:`);
+                logger.error(error);
+            });
+
+            return sendResponse(res, {
+                success: true,
+                message: "Project created successfully from GitHub repository.",
+                data: {
+                    project: {
+                        ...project,
+                        passwordHash: undefined,
+                        isOwner: true,
+                        ownerUsername: user.username,
+                        currentUserAccess: "OWNER",
+                        ownerId: userId,
+                        members: [],
+                        tools: [],
+                    },
+                },
+            });
+        } catch (error) {
+            logger.error("Error in createProjectFromGitHub controller:");
+            logger.error(error);
+            return sendResponse(res, {
+                success: false,
+                message: "Failed to create project from GitHub repository.",
                 statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
             });
         }

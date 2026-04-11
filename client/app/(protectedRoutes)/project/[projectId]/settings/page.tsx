@@ -317,7 +317,7 @@ export default function ProjectSettings() {
     const handleInviteMember = async () => {
         if (!inviteEmail.trim()) return;
         const response = await dispatch(
-            projectActions.inviteMemeber({
+            projectActions.inviteMember({
                 projectId,
                 email: inviteEmail.trim(),
                 accessLevel: inviteAccessLevel,

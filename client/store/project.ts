@@ -23,6 +23,7 @@ interface intialProjectState {
     invitingMember: boolean;
     changingMemberAccess: boolean;
     removingMember: boolean;
+    creatingProjectFromGithub: boolean;
 }
 
 const projectActions = {
@@ -144,12 +145,12 @@ const projectActions = {
         "project/getPendingAccessRequests",
         createApiHandler<{ projectId: string }>("/api/project/access/get-pending-requests", "post")
     ),
-    inviteMemeber: createAsyncThunk<
+    inviteMember: createAsyncThunk<
         ApiResponse,
         { projectId: string; email: string; accessLevel: "READ" | "WRITE" },
         { rejectValue: ApiResponse }
     >(
-        "project/inviteMemeber",
+        "project/inviteMember",
         createApiHandler<{ projectId: string; email: string; accessLevel: "READ" | "WRITE" }>(
             "/api/project/access/invite-member",
             "post"
@@ -177,6 +178,27 @@ const projectActions = {
             "post"
         )
     ),
+
+    createProjectFromGithub: createAsyncThunk<
+        ApiResponse,
+        {
+            githubRepoUrl: string;
+            name: string;
+            description?: string;
+            visibility: "PUBLIC" | "PRIVATE";
+            password?: string;
+        },
+        { rejectValue: ApiResponse }
+    >(
+        "project/createProjectFromGithub",
+        createApiHandler<{
+            githubRepoUrl: string;
+            name: string;
+            description?: string;
+            visibility: "PUBLIC" | "PRIVATE";
+            password?: string;
+        }>("/api/project/create-project-from-github", "post")
+    ),
 };
 
 const initialState: intialProjectState = {
@@ -197,6 +219,7 @@ const initialState: intialProjectState = {
     invitingMember: false,
     changingMemberAccess: false,
     removingMember: false,
+    creatingProjectFromGithub: false,
 };
 
 const projectSlice = createSlice({
@@ -357,13 +380,13 @@ const projectSlice = createSlice({
             .addCase(projectActions.getPendingAccessRequests.rejected, (state) => {
                 state.gettingPendingRequests = false;
             })
-            .addCase(projectActions.inviteMemeber.pending, (state) => {
+            .addCase(projectActions.inviteMember.pending, (state) => {
                 state.invitingMember = true;
             })
-            .addCase(projectActions.inviteMemeber.fulfilled, (state) => {
+            .addCase(projectActions.inviteMember.fulfilled, (state) => {
                 state.invitingMember = false;
             })
-            .addCase(projectActions.inviteMemeber.rejected, (state) => {
+            .addCase(projectActions.inviteMember.rejected, (state) => {
                 state.invitingMember = false;
             })
             .addCase(projectActions.changeMemberAccess.pending, (state) => {
@@ -383,6 +406,21 @@ const projectSlice = createSlice({
             })
             .addCase(projectActions.removeMember.rejected, (state) => {
                 state.removingMember = false;
+            })
+            .addCase(projectActions.createProjectFromGithub.pending, (state) => {
+                state.creatingProjectFromGithub = true;
+            })
+
+            .addCase(projectActions.createProjectFromGithub.fulfilled, (state, action) => {
+                state.creatingProjectFromGithub = false;
+                const payload = action.payload as ApiResponse & { data?: { project: Project } };
+                if (payload.success && payload.data && payload.data.project) {
+                    state.projects.push(payload.data.project);
+                }
+            })
+
+            .addCase(projectActions.createProjectFromGithub.rejected, (state) => {
+                state.creatingProjectFromGithub = false;
             });
     },
 });

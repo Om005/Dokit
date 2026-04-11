@@ -5,11 +5,12 @@ import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams, useRouter } from "next/navigation";
 import { AppDispatch, RootState } from "@/store/store";
 import { projectActions } from "@/store/project";
-import { Plus, Search, Users } from "lucide-react";
+import { Github, Plus, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreateProjectDialog } from "@/components/create-project-dialog";
+import { CreateProjectFromGithubDialog } from "@/components/create-project-from-github-dialog";
 import { ProjectCard } from "@/components/project-card";
 
 export default function ProjectsDashboard() {
@@ -19,6 +20,7 @@ export default function ProjectsDashboard() {
     const { projects, loadingProjects } = useSelector((state: RootState) => state.project);
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const [createFromGithubDialogOpen, setCreateFromGithubDialogOpen] = useState(false);
     const [activeTab, setActiveTab] = useState(
         searchParams.get("shared") === "true" ? "shared" : "mine"
     );
@@ -47,7 +49,7 @@ export default function ProjectsDashboard() {
 
     return (
         <div className="min-h-screen bg-background">
-            <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-7xl px-4 py-8 pt-16 sm:px-6 lg:px-8">
                 <div className="mb-8 space-y-4">
                     <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                         <div>
@@ -58,14 +60,25 @@ export default function ProjectsDashboard() {
                                 Manage and create your coding projects
                             </p>
                         </div>
-                        <Button
-                            className="w-full sm:w-fit"
-                            onClick={() => setCreateDialogOpen(true)}
-                            size="lg"
-                        >
-                            <Plus className="size-4" />
-                            New Project
-                        </Button>
+                        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                            <Button
+                                className="w-full sm:w-fit"
+                                onClick={() => setCreateDialogOpen(true)}
+                                size="lg"
+                            >
+                                <Plus className="size-4" />
+                                New Project
+                            </Button>
+                            <Button
+                                className="w-full sm:w-fit"
+                                variant="outline"
+                                onClick={() => setCreateFromGithubDialogOpen(true)}
+                                size="lg"
+                            >
+                                <Github className="size-4" />
+                                Import from GitHub
+                            </Button>
+                        </div>
                     </div>
 
                     <div className="relative">
@@ -150,6 +163,10 @@ export default function ProjectsDashboard() {
             </div>
 
             <CreateProjectDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+            <CreateProjectFromGithubDialog
+                open={createFromGithubDialogOpen}
+                onOpenChange={setCreateFromGithubDialogOpen}
+            />
         </div>
     );
 }

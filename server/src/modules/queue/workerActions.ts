@@ -38,6 +38,7 @@ const workers = {
         const { projectId } = job.data;
         try {
             await R2Manager.deleteProject(projectId);
+            await DockerManager.deleteDokitContainer(projectId);
             logger.info(`Project deletion completed for project ${projectId} by job id: ${job.id}`);
         } catch (error) {
             logger.error(`Failed to delete project ${projectId} by job id: ${job.id}`);

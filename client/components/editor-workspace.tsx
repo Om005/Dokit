@@ -584,7 +584,7 @@ export default function ProjectPage({ projectId, token }: Props) {
     const handleInviteMember = async () => {
         if (!inviteEmail.trim()) return;
         const response = await dispatch(
-            projectActions.inviteMemeber({
+            projectActions.inviteMember({
                 projectId: apiProjectId,
                 email: inviteEmail.trim(),
                 accessLevel: inviteAccessLevel,

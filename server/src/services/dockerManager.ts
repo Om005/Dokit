@@ -222,39 +222,43 @@ async function syncWorkspaceToR2(projectId: string): Promise<void> {
         const containerName = `dokit-${containerProjectId}`;
         const container = docker.getContainer(containerName);
 
-        const rcloneCmd = `
-                rclone sync /workspace/ r2:${env.R2_BUCKET_NAME}/code/${projectId}/ \\
-                --create-empty-src-dirs \\
-                --s3-directory-markers \\
-                --exclude "node_modules/**" \\
-                --exclude "dist/**" \\
-                --exclude "build/**" \\
-                --exclude "out/**" \\
-                --exclude ".next/**" \\
-                --exclude ".nuxt/**" \\
-                --exclude ".svelte-kit/**" \\
-                --exclude ".angular/**" \\
-                --exclude ".cache/**" \\
-                --exclude "coverage/**" \\
-                --exclude "__pycache__/**" \\
-                --exclude "*.py[cod]" \\
-                --exclude "*\$py.class" \\
-                --exclude "venv/**" \\
-                --exclude ".venv/**" \\
-                --exclude "env/**" \\
-                --exclude ".pytest_cache/**" \\
-                --exclude ".tox/**" \\
-                --exclude "vendor/**" \\
-                --exclude "target/**" \\
-                --exclude "bin/**" \\
-                --exclude "obj/**" \\
-                --exclude ".gradle/**" \\
-                --exclude "*.log" \\
-                --exclude "npm-debug.log*" \\
-                --exclude "yarn-error.log*" \\
-                --exclude ".DS_Store" \\
-                --exclude "Thumbs.db"
-            `;
+        const rcloneArgs = [
+            `rclone sync /workspace/ R2:${env.R2_BUCKET_NAME}/code/${projectId}/`,
+            `--create-empty-src-dirs`,
+            `--s3-directory-markers`,
+            `--s3-no-check-bucket`,
+            `--exclude 'node_modules/**'`,
+            `--exclude 'dist/**'`,
+            `--exclude 'build/**'`,
+            `--exclude 'out/**'`,
+            `--exclude '.next/**'`,
+            `--exclude '.nuxt/**'`,
+            `--exclude '.svelte-kit/**'`,
+            `--exclude '.angular/**'`,
+            `--exclude '.cache/**'`,
+            `--exclude 'coverage/**'`,
+            `--exclude '__pycache__/**'`,
+            `--exclude '*.py[cod]'`,
+            `--exclude '*$py.class'`,
+            `--exclude 'venv/**'`,
+            `--exclude '.venv/**'`,
+            `--exclude 'env/**'`,
+            `--exclude '.pytest_cache/**'`,
+            `--exclude '.tox/**'`,
+            `--exclude 'vendor/**'`,
+            `--exclude 'target/**'`,
+            `--exclude 'bin/**'`,
+            `--exclude 'obj/**'`,
+            `--exclude '.gradle/**'`,
+            `--exclude '*.log'`,
+            `--exclude 'npm-debug.log*'`,
+            `--exclude 'yarn-error.log*'`,
+            `--exclude '.DS_Store'`,
+            `--exclude 'Thumbs.db'`,
+            `-v`,
+        ];
+
+        const rcloneCmd = rcloneArgs.join(" ");
 
         const exec = await container.exec({
             Cmd: ["bash", "-c", rcloneCmd],
@@ -271,12 +275,20 @@ async function syncWorkspaceToR2(projectId: string): Promise<void> {
         });
 
         const stream = await exec.start({ hijack: true, stdin: false });
-        stream.resume();
+
+        const stdout = new PassThrough();
+        const stderr = new PassThrough();
+
+        container.modem.demuxStream(stream, stdout, stderr);
+
+        stdout.on("data", (chunk) => logger.info(`[Rclone]: ${chunk.toString().trim()}`));
+        stderr.on("data", (chunk) => logger.error(`[Rclone Error]: ${chunk.toString().trim()}`));
 
         await new Promise((resolve, reject) => {
             stream.on("end", resolve);
             stream.on("error", reject);
         });
+
         const inspectResult = await exec.inspect();
         if (inspectResult.ExitCode !== 0) {
             logger.error(
@@ -321,7 +333,7 @@ async function getFolderContent(
         const container = docker.getContainer(containerName);
 
         const targetPath = folderPath === "/" ? "/workspace" : `/workspace/${folderPath}`;
-        const command = `find ${targetPath} -maxdepth 1 -mindepth 1 -not -name "*.git" -not -name "node_modules" -printf "%y|%f\\n"`;
+        const command = `find "${targetPath}" -maxdepth 1 -mindepth 1 -not -name "*.git" -not -name "node_modules" -printf "%y|%f\\n"`;
 
         const exec = await container.exec({
             Cmd: ["bash", "-c", command],
@@ -383,7 +395,7 @@ async function getFileContent(projectId: string, filePath: string): Promise<stri
         const container = docker.getContainer(containerName);
 
         const targetPath = `/workspace/${filePath}`;
-        const command = `cat ${targetPath}`;
+        const command = `cat "${targetPath}"`;
 
         const exec = await container.exec({
             Cmd: ["bash", "-c", command],
@@ -431,7 +443,7 @@ async function writeFileToContainer(
 
         const base64Content = Buffer.from(content).toString("base64");
 
-        const command = `echo "${base64Content}" | base64 -d > ${targetPath}`;
+        const command = `echo "${base64Content}" | base64 -d > "${targetPath}"`;
 
         const exec = await container.exec({
             Cmd: ["bash", "-c", command],
@@ -914,6 +926,52 @@ async function uninstallTool(projectId: string, toolName: string): Promise<void>
     }
 }
 
+async function createDokitContainerFromGithub(
+    projectId: string,
+    repoUrl: string
+): Promise<{ containerId: string | null; containerName: string }> {
+    const containerProjectId = projectId.replaceAll("-", "");
+    const containerName = `dokit-${containerProjectId}`;
+    const imageName = `dokit-github:latest`;
+
+    try {
+        const container = await docker.createContainer({
+            name: containerName,
+            Image: imageName,
+            Tty: true,
+            OpenStdin: true,
+            AttachStdout: true,
+            AttachStderr: true,
+            ExposedPorts: { "7681/tcp": {} },
+            Env: [`PROJECT_ID=${projectId}`, `GITHUB_REPO_URL=${repoUrl}`],
+            HostConfig: {
+                NetworkMode: NETWORK,
+                AutoRemove: false,
+                Memory: 512 * 1024 * 1024,
+                MemorySwap: 512 * 1024 * 1024,
+                CpuQuota: 50000,
+                CpuPeriod: 100000,
+                SecurityOpt: ["no-new-privileges"],
+                Tmpfs: { "/tmp": "rw,noexec,nosuid,size=64m" },
+            },
+        });
+
+        await container.start();
+        await waitForContainerReady(container.id);
+
+        await startFileSystemWatcher(projectId).catch((err) => {
+            logger.error("Failed to start filesystem watcher:");
+            logger.error(err);
+        });
+
+        return { containerId: container.id, containerName };
+    } catch (error) {
+        logger.error(`Failed to create container for project ${projectId}:`);
+        logger.error(error);
+        throw error;
+    }
+}
+
 const DockerManager = {
     createDokitContainer,
     deleteDokitContainer,
@@ -930,6 +988,7 @@ const DockerManager = {
     renameNode,
     installTool,
     uninstallTool,
+    createDokitContainerFromGithub,
 };
 
 export default DockerManager;

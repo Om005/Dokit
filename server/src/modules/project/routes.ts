@@ -43,4 +43,11 @@ router.post(
     controllers.closeProject
 );
 
+router.post(
+    "/create-project-from-github",
+    validationMiddleware(validators.CreateProjectFromGithubSchema),
+    rateLimit({ limit: 3, windowMs: 60 * 60 * 1000, prefix: "create_project_from_github" }),
+    controllers.createProjectFromGitHub
+);
+
 export default router;

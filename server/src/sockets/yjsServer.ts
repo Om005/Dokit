@@ -12,7 +12,9 @@ export const yjsWss = new WebSocketServer({ noServer: true });
 const syncLocks = new Set<string>();
 
 yjsWss.on("connection", (ws, req) => {
-    const roomName = req.url?.slice(1) || "";
+    const rawUrl = req.url?.slice(1) || "";
+
+    const roomName = decodeURIComponent(rawUrl);
 
     setupWSConnection(ws, req, { docName: roomName });
 
