@@ -6,9 +6,9 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
 
 export function HeroSection() {
-    const { isAuthenticated, email, username } = useSelector((state: RootState) => state.auth);
+    const { isAuthenticated } = useSelector((state: RootState) => state.auth);
     return (
-        <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-24 hero-gradient">
+        <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-24 pb-24 hero-gradient">
             {/* Version Badge */}
             <div className="flex items-center gap-2 px-4 py-1.5 bg-card/80 backdrop-blur-sm border border-border/50 rounded-full mb-8 shadow-sm">
                 <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
@@ -48,6 +48,11 @@ export function HeroSection() {
                     <Link href="#demo">View Demo</Link>
                 </Button>
             </div>
+
+            <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-background"
+            />
         </section>
     );
 }

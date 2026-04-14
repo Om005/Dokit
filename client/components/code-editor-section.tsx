@@ -2,7 +2,7 @@
 
 export function CodeEditorSection() {
     return (
-        <section className="relative py-24 px-4 flex items-center justify-center bg-background">
+        <section className="relative py-24 px-4 flex items-center justify-center bg-gradient-to-b from-background via-background to-muted/30">
             <div className="w-full max-w-4xl">
                 <div className="bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
                     <div className="flex items-center justify-between px-4 py-3 bg-card border-b border-border">

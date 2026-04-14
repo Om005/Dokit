@@ -20,7 +20,7 @@ export const STACKS = [
         color: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
     },
     {
-        id: "GITHUB",
+        id: "BLANK",
         name: "GitHub",
         icon: Github,
         color: "bg-gray-500/10 text-gray-600 dark:text-gray-400",

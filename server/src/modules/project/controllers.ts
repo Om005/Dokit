@@ -858,7 +858,7 @@ const controllers = {
                     id: projectId,
                     name,
                     description,
-                    stack: "GITHUB",
+                    stack: "BLANK",
                     visibility: visibility as Visibility,
                     ownerId: userId,
                     isPasswordProtected,
