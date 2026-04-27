@@ -1,92 +1,76 @@
-# 🐳 Dokit | Containerized Real-Time Web IDE
+# Dokit
 
-![Next.js](https://img.shields.io/badge/Next.js-black?style=for-the-badge&logo=next.js)
-![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=node.js&logoColor=white)
-![Express.js](https://img.shields.io/badge/Express.js-000000?style=for-the-badge&logo=express&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-![Nginx](https://img.shields.io/badge/Nginx-009639?style=for-the-badge&logo=nginx&logoColor=white)
-![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
-![Socket.IO](https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socket.io)
+Dokit is a powerful, cloud-like infrastructure, browser-based development workspace engineered for real-time collaboration. It bridges the gap between local development and cloud convenience by combining a Next.js client, an Express backend, Docker-managed project runtimes, and bidirectional object storage synchronization.
 
-**Dokit** is a browser-based collaborative development environment. Moving beyond standard CRUD applications, Dokit acts as a full-fledged Remote Development Platform. It leverages local Docker orchestration to provide developers with isolated Node.js workspaces, bidirectional file synchronization, dynamic web previews, and real-time multiplayer code editing.
+## Core Capabilities
 
----
+- **Cloud Virtualization:** Programmatic provisioning, management, and teardown of isolated Linux environments via the Docker Engine API.
+- **Authentication Architecture:** Robust session management architecture utilizing short-lived JWT access tokens and securely rotating refresh tokens, enabling remote session revocation across devices.
+**Two-Factor Authentication (2FA):**: Platform is security by a comprehensive TOTP-based 2FA flow, featuring AES-encrypted secrets and backup recovery codes.
+- **Advanced Container Sandboxing:** Strict container security achieved by stepping down root privileges to a restricted 'dokituser' via gosu, paired with granular Role-Based Access Control (RBAC).
+- **Real-Time Collaboration:** Conflict-free concurrent editing using Yjs (CRDTs) and CodeMirror, featuring live cursors, file-wise and global presence tracking, and multiplayer synchronization over WebSockets.
+- **Bidirectional File Synchronization:** Real-time mirroring of container file system changes to the frontend via Linux inotify and Socket.IO, with persistent state backups to Cloudflare R2 managed by BullMQ.
+- **GitHub Imports:** End-to-end pipeline that instantly clones public repositories and provisions them into fully interactive, containerized development environments.
+- **Dynamic Environment Provisioning:** On-the-fly workspace tooling system allowing users to install backend runtimes (Python, Go, Rust, Java) and terminal utilities seamlessly.
+- **Dynamic Proxy & Access Control:** Nginx reverse proxy utilizing wildcard DNS (nip.io) to dynamically route WebSocket terminal sessions and HTTP preview traffic, secured by internal authorization sub-requests.
+- **API Security:** Backend infrastructure protected by a Redis-based sliding-window IP rate limiter and strict payload validation.
 
-## ✨ System Highlights
+## Architecture Diagrams
 
-### 🚀 Container Orchestration & Isolation
-* **Dynamic Provisioning**: Interacts directly with the Docker Engine API to programmatically spawn, pause, and teardown isolated containers for every unique project.
-* **Persistent Workspaces**: Mounts local volumes synced with **Cloudflare R2** to ensure container state is saved and restored seamlessly across sessions.
+### 1. Database Schema
 
-<!-- work in progress -->
-<!-- * **Secure Environments**: Drops root privileges inside the container (`runner` user) to prevent breakouts and secure the host infrastructure. -->
+Prisma data model for users, sessions, projects, collaborators, and access requests.
 
-### 🌐 Advanced Networking & Reverse Proxying
-* **Wildcard DNS Routing**: Utilizes `nip.io` combined with a custom **Nginx** reverse proxy to route traffic directly to dynamically assigned Docker container ports without polluting browser history.
-* **Multi-Protocol Support**: Seamlessly proxies both standard HTTP requests (for live web previews) and upgraded WebSocket connections (for interactive terminal sessions via `ttyd`/`xterm.js`).
+![Dokit Database Schema](./docs/diagrams/dokit_database_schema.png)
 
-### ⚡ Real-Time Collaboration & Synchronization
-* **Yjs & CRDTs**: Implements Conflict-Free Replicated Data Types to ensure multiple users can edit the exact same file in CodeMirror simultaneously without race conditions.
-* **OS-Level Event Watching**: Uses Linux `inotify` watchers on the backend to capture atomic file system changes (like `npm install` modifying `package.json`) and instantly broadcast them to the UI via **Socket.IO**.
+Source: ./docs/diagrams/dokit_database_schema.excalidraw
 
-### 🛡️ Security
-* **Custom Rate Limiter**: Built a highly optimized sliding-window rate limiter using **Redis** to prevent DDoS attacks and API abuse.
-* **Dual-Token Auth Flow**: Secures endpoints with short-lived access JWTs (15 mins) and rotating refresh JWTs (30 days), preventing session hijacking.
-* **Strict Data Validation**: Enforces rigorous request payload parsing and sanitization using **Zod**.
+### 2. Realtime Collaboration and Sync Flow
 
----
+Bidirectional synchronization across editors and container filesystem changes, including Yjs room updates and Socket.IO file tree events.
 
-## 🏗️ Architecture Deep Dives
+![Dokit Realtime Sync Flow](./docs/diagrams/dokit_realtime_sync_flow.png)
 
-### 1. The Synchronization Pipeline
-Keeping a web browser, R2 storage, and a Linux container filesystem perfectly in sync requires a bidirectional pipeline:
-* **Browser ➔ Container**: User types in the CodeMirror editor -> Yjs merges the state -> Sent via Socket.IO -> Backend writes to the Docker volume.
-* **Container ➔ Browser**: Terminal command modifies a file (e.g., `touch index.js`) -> Linux `inotify` catches the file event -> Backend reads the diff -> Broadcasts via Socket.IO -> Yjs updates the CodeMirror UI.
-* **Container ➔ R2 Storage**: Fixed time intervals or container teardown events trigger a backup -> Backend utilizes **rclone** to perform a differential file sync of the local Docker volume, filtering out heavy dependencies (e.g., `node_modules`, build caches) -> **BullMQ** (`syncToR2Queue`) offloads the network transfer -> The optimized workspace state is efficiently persisted to **Cloudflare R2**.
+Source: ./docs/diagrams/dokit_realtime_sync_flow.excalidraw
 
-<!-- work in progress -->
-<!-- ### 2. The Collaboration Access Module
-Dokit features a robust Role-Based Access Control (RBAC) system managed via **Prisma** and **PostgreSQL**:
-* **Direct Invitations**: Project owners can securely invite registered users via email, instantly bypassing request queues using atomic database transactions.
-* **Request Workflows**: Unauthenticated or unauthorized users can submit an `AccessRequest`. Owners can review, approve, or reject these requests through a dedicated UI, with database triggers automatically managing unique constraints. -->
-
-### 2. Background Job Processing
-To maintain API response times on the main Node.js thread, Dokit offloads heavy operations to **BullMQ** background workers backed by Redis:
-* `emailQueue`: Offloads transactional email delivery via SendGrid, for account creation OTPs, password resets, and welcome emails. 
-<!-- work in progress -->
-<!-- project invitations, and access request updates emails. -->
-
-* `syncToR2Queue`: Offloads the rclone synchronization of Docker volumes to Cloudflare R2, ensuring only changed files are uploaded while ignoring heavy caches.
-* `cleanContainersQueue`: Identifies and terminates idle or maximum-TTL containers, ensuring a final state sync to R2 storage is completed before cleanup.
-* `deleteProjectQueue`: Handles cascading teardowns of containers, volumes, and records in R2 storage.
-
----
-
-## 💻 Technology Stack
+## Technology Stack
 
 ### Frontend
-* **Framework**: Next.js, TypeScript
-* **State Management**: Redux Toolkit
-* **Editor & Sync**: CodeMirror, Yjs
-* **Styling**: Tailwind CSS
+
+- Next.js (React)
+- TypeScript
+- Redux Toolkit
+- CodeMirror
+- Yjs
 
 ### Backend
-* **Runtime**: Node.js, Express.js
-* **Database**: PostgreSQL (Prisma ORM)
-* **Real-Time**: Socket.IO, WebSockets
-* **Validation & Auth**: Zod, JSON Web Tokens
 
-### Infrastructure & DevOps
-* **Orchestration**: Docker Engine API
-* **Proxy & Routing**: Nginx
-* **Caching & Queues**: Redis, BullMQ
-* **Cloud Storage**: Cloudflare R2
+- Node.js
+- Express
+- Prisma ORM
+- Socket.IO
+- y-websocket
 
----
+### Infrastructure & Services
 
-## 👨‍💻 Author
+- Docker Engine API
+- Nginx
+- PostgreSQL
+- Redis
+- BullMQ
+- Cloudflare R2
+- Rclone
 
-**Om Chavda**
-* GitHub: [@Om005](https://github.com/Om005)
-* LinkedIn: [Om Chavda](http://linkedin.com/in/om-chavda-06a390302/)
+## Project Structure
+
+- **client:** Next.js application, collaborative editor UI, recursive file explorer, and terminal/preview panels.
+- **server:** API server, WebSocket servers, background queue workers, Docker orchestration, and R2 synchronization services.
+- **docs/diagrams:** Architecture diagram sources and PNG outputs.
+
+## Setup
+
+Use the existing setup instructions already present in this repository (in docs folder) for dependency installation, environment configuration, and run commands.
+
+- Main project overview: ./README.md
+- Server setup and scripts: ./server
+- Client setup and scripts: ./client
