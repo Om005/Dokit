@@ -4,7 +4,7 @@ import logger from "@utils/logger";
 import env from "@config/env";
 import queueActions from "@modules/queue/queueActions";
 import { prisma } from "@db/prisma";
-import { PassThrough } from "stream";
+import { PassThrough, Readable } from "stream";
 import { FileNode } from "types/express";
 import { syncDockerToYjs } from "sockets/yjsServer";
 import { io } from "index";
@@ -31,12 +31,12 @@ const syncLocks = new Set<string>();
 async function waitForContainerReady(containerId: string, timeoutMs = 60_000): Promise<void> {
     const container = docker.getContainer(containerId);
 
-    const logStream = await container.logs({
+    const logStream = (await container.logs({
         follow: true,
         stdout: true,
         stderr: true,
         timestamps: false,
-    });
+    })) as Readable;
 
     return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {

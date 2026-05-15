@@ -16,6 +16,7 @@ const STACK_BASE_PREFIX: Record<ProjectStack, string> = {
     NODE: "base/node",
     REACT_VITE: "base/react_vite",
     EXPRESS: "base/express",
+    BLANK: "base/blank",
 };
 
 const PROFILE_README_KEY = (userId: string) => `profile/${userId}/readme.md`;

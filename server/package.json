@@ -4,7 +4,7 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "build": "tsc && tsc-alias",
+        "build": "tsc && tsc-alias && cp -r src/generated dist/generated",
         "dev": "cross-env NODE_ENV=development tsx watch --clear-screen=false --watch src src/index.ts",
         "start": "cross-env NODE_ENV=production node dist/index.js",
         "prisma:generate": "cross-env NODE_ENV=development prisma generate",
@@ -15,6 +15,15 @@
         "script:templates:prod": "cross-env NODE_ENV=production tsx ./scripts/uploadBaseTemplates.ts",
         "script:images": "bash ./scripts/make_images.sh",
         "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "_moduleAliases": {
+        "@generated": "dist/generated",
+        "@config": "dist/config",
+        "@modules": "dist/modules",
+        "@db": "dist/db",
+        "@utils": "dist/utils",
+        "@middlewares": "dist/middlewares",
+        "@sockets": "dist/sockets"
     },
     "keywords": [],
     "author": "",
@@ -38,6 +47,7 @@
         "jsonwebtoken": "^9.0.3",
         "lodash": "^4.17.23",
         "maxmind": "^5.0.3",
+        "module-alias": "^2.3.4",
         "node-cron": "^4.2.1",
         "node-fetch": "^3.3.2",
         "otplib": "^13.4.0",
@@ -59,6 +69,7 @@
         "@types/fast-diff": "^1.2.2",
         "@types/jsonwebtoken": "^9.0.10",
         "@types/lodash": "^4.17.24",
+        "@types/module-alias": "^2.0.4",
         "@types/node": "^25.1.0",
         "@types/otplib": "^10.0.0",
         "@types/qrcode": "^1.5.6",

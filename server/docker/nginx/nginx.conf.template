@@ -8,7 +8,7 @@ http {
 
     server {
         listen 80;
-        server_name localhost;
+        server_name $DOMAIN;
 
         location /health {
             return 200 "OK";
@@ -44,7 +44,7 @@ http {
         location = /internal-terminal-check {
             internal; 
             
-            proxy_pass http://10.104.56.78:4000/api/project/access/verify-terminal;
+            proxy_pass $BACKEND_URL/api/project/access/verify-terminal;
             
             proxy_pass_request_body off;
             proxy_set_header Content-Length "";
@@ -61,10 +61,10 @@ http {
 
     server {
         listen 80;
-        server_name ~^(?<port>\d+)-(?<project_id>[a-zA-Z0-9-]+)\.[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\.nip\.io$;
+        server_name ~^(?<port>\d+)-(?<project_id>[a-zA-Z0-9-]+)\.[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\.$DOMAIN_ESCAPED$;
 
         location = /preview-auth {
-            proxy_pass http://10.104.56.78:4000/api/project/access/preview-auth;
+            proxy_pass $BACKEND_URL/api/project/access/preview-auth;
             proxy_set_header X-Original-Host $host;
             proxy_set_header Host $host;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -95,7 +95,7 @@ http {
 
         location = /internal-preview-check {
             internal;
-            proxy_pass http://10.104.56.78:4000/api/project/access/verify-preview;
+            proxy_pass $BACKEND_URL/api/project/access/verify-preview;
             proxy_pass_request_body off;
             proxy_set_header Content-Length "";
             proxy_set_header X-Original-Host $host;
