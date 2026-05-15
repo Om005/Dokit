@@ -1,0 +1,22 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const access_controller_1 = __importDefault(require("./access.controller"));
+const authenticate_1 = require("../../middlewares/authenticate");
+const validators_1 = __importDefault(require("./validators"));
+const validation_1 = __importDefault(require("../../middlewares/validation"));
+const rateLimiter_1 = __importDefault(require("../../middlewares/rateLimiter"));
+const router = express_1.default.Router();
+router.post("/request-access", authenticate_1.authenticate, (0, validation_1.default)(validators_1.default.requestAccessSchema), (0, rateLimiter_1.default)({ limit: 5, windowMs: 60 * 60 * 1000, prefix: "request_access" }), access_controller_1.default.requestAccess);
+router.post("/review-request", authenticate_1.authenticate, (0, validation_1.default)(validators_1.default.reviewAccessRequestSchema), (0, rateLimiter_1.default)({ limit: 30, windowMs: 60 * 60 * 1000, prefix: "review_request" }), access_controller_1.default.reviewAccessRequest);
+router.post("/get-pending-requests", authenticate_1.authenticate, (0, validation_1.default)(validators_1.default.getPendingAccessRequestsSchema), (0, rateLimiter_1.default)({ limit: 10, windowMs: 60 * 60 * 1000, prefix: "get_pending_requests" }), access_controller_1.default.getPendingAccessRequests);
+router.post("/invite-member", authenticate_1.authenticate, (0, validation_1.default)(validators_1.default.inviteMemberSchema), (0, rateLimiter_1.default)({ limit: 10, windowMs: 60 * 60 * 1000, prefix: "invite_member" }), access_controller_1.default.inviteMember);
+router.post("/change-member-access", authenticate_1.authenticate, (0, validation_1.default)(validators_1.default.changeMemberAccessLevelSchema), (0, rateLimiter_1.default)({ limit: 20, windowMs: 60 * 60 * 1000, prefix: "change_member_access" }), access_controller_1.default.changeMemberAccess);
+router.post("/remove-member", authenticate_1.authenticate, (0, validation_1.default)(validators_1.default.removeMemberSchema), (0, rateLimiter_1.default)({ limit: 20, windowMs: 60 * 60 * 1000, prefix: "remove_member" }), access_controller_1.default.removeMember);
+router.get("/verify-terminal", authenticate_1.authenticate, access_controller_1.default.verifyTeminalAccess);
+router.get("/verify-preview", access_controller_1.default.verifyPreviewAccess);
+router.get("/preview-auth", access_controller_1.default.previewAuth);
+exports.default = router;

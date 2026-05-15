@@ -1,0 +1,22 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const controllers_1 = __importDefault(require("./controllers"));
+const authenticate_1 = require("../../middlewares/authenticate");
+const validators_1 = __importDefault(require("./validators"));
+const validation_1 = __importDefault(require("../../middlewares/validation"));
+const rateLimiter_1 = __importDefault(require("../../middlewares/rateLimiter"));
+const router = express_1.default.Router();
+router.use(authenticate_1.authenticate);
+router.post("/create-project", (0, validation_1.default)(validators_1.default.CreateProjectSchema), (0, rateLimiter_1.default)({ limit: 3, windowMs: 60 * 60 * 1000, prefix: "create_project" }), controllers_1.default.createProject);
+router.post("/delete-project", (0, validation_1.default)(validators_1.default.DeleteProjectSchema), (0, rateLimiter_1.default)({ limit: 3, windowMs: 60 * 60 * 1000, prefix: "delete_project" }), controllers_1.default.deleteProject);
+router.get("/list-projects", controllers_1.default.listProjects);
+router.get("/project-details", controllers_1.default.getProjectDetails);
+router.post("/start-project", (0, validation_1.default)(validators_1.default.startProjectSchema), (0, rateLimiter_1.default)({ limit: 3, windowMs: 60 * 60 * 1000, prefix: "start_project" }), controllers_1.default.startProject);
+router.post("/change-settings", (0, validation_1.default)(validators_1.default.changeSettings), (0, rateLimiter_1.default)({ limit: 5, windowMs: 60 * 60 * 1000, prefix: "change_settings" }), controllers_1.default.changeProjectSettings);
+router.post("/close-project", (0, validation_1.default)(validators_1.default.closeProjectSchema), (0, rateLimiter_1.default)({ limit: 5, windowMs: 60 * 60 * 1000, prefix: "close_project" }), controllers_1.default.closeProject);
+router.post("/create-project-from-github", (0, validation_1.default)(validators_1.default.CreateProjectFromGithubSchema), (0, rateLimiter_1.default)({ limit: 3, windowMs: 60 * 60 * 1000, prefix: "create_project_from_github" }), controllers_1.default.createProjectFromGitHub);
+exports.default = router;
