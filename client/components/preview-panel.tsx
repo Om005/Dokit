@@ -1,8 +1,9 @@
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useMemo, FormEvent } from "react";
 import { RefreshCw, ExternalLink, Globe } from "lucide-react";
 import defaultPorts from "@/utils/defaultPorts";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
+import env from "@/config/env";
 
 interface PreviewPaneProps {
     projectId: string;
@@ -12,30 +13,32 @@ interface PreviewPaneProps {
 
 export function PreviewPane({ projectId, isRunning, token }: PreviewPaneProps) {
     const { currProject } = useSelector((state: RootState) => state.editor);
-    const [addressBar, setAddressBar] = useState("");
-
-    const [iframeSrc, setIframeSrc] = useState("");
+    const [addressBar, setAddressBar] = useState<string | null>(null);
+    const [iframeSrc, setIframeSrc] = useState<string | null>(null);
     const [iframeKey, setIframeKey] = useState(0);
+    const initialUrl = useMemo(() => {
+        if (!currProject || typeof window === "undefined") return "";
 
-    useEffect(() => {
-        const currentHost = window.location.hostname;
-        const ip = currentHost === "localhost" ? "127.0.0.1" : currentHost;
         const protocol = window.location.protocol === "https:" ? "https" : "http";
 
-        const initialUrl = `${protocol}://${defaultPorts[currProject!.stack.toLowerCase()]}-${projectId}.${ip}.nip.io/preview-auth?token=${encodeURIComponent(
+        const stackKey = currProject.stack.toLowerCase() as keyof typeof defaultPorts;
+        const port = defaultPorts[stackKey] ?? defaultPorts.react_vite;
+
+        return `${protocol}://${port}-${projectId}.${env.NEXT_PUBLIC_NGINX_HOST}/preview-auth?token=${encodeURIComponent(
             token
         )}`;
-        setAddressBar(initialUrl);
-        setIframeSrc(initialUrl);
-    }, [projectId, token]);
+    }, [currProject, projectId, token]);
+
+    const resolvedAddressBar = addressBar ?? initialUrl;
+    const resolvedIframeSrc = iframeSrc ?? initialUrl;
 
     const handleNavigation = (e: FormEvent) => {
         e.preventDefault();
 
-        let finalUrl = addressBar.trim();
+        let finalUrl = resolvedAddressBar.trim();
 
         if (!finalUrl.startsWith("http://") && !finalUrl.startsWith("https://")) {
-            finalUrl = `http://${finalUrl}`;
+            finalUrl = `https://${finalUrl}`;
             setAddressBar(finalUrl);
         }
 
@@ -47,7 +50,9 @@ export function PreviewPane({ projectId, isRunning, token }: PreviewPaneProps) {
     };
 
     const handleOpenInNewTab = () => {
-        window.open(iframeSrc, "_blank");
+        if (resolvedIframeSrc) {
+            window.open(resolvedIframeSrc, "_blank");
+        }
     };
 
     return (
@@ -68,7 +73,7 @@ export function PreviewPane({ projectId, isRunning, token }: PreviewPaneProps) {
                     <Globe size={12} className="text-muted-foreground mr-2 shrink-0" />
                     <input
                         type="text"
-                        value={addressBar}
+                        value={resolvedAddressBar}
                         onChange={(e) => setAddressBar(e.target.value)}
                         className="flex-1 bg-transparent text-foreground py-1 text-sm focus:outline-none w-full"
                         spellCheck={false}
@@ -94,10 +99,10 @@ export function PreviewPane({ projectId, isRunning, token }: PreviewPaneProps) {
                             </p>
                         </div>
                     </div>
-                ) : iframeSrc ? (
+                ) : resolvedIframeSrc ? (
                     <iframe
-                        key={`${iframeKey}-${iframeSrc}`}
-                        src={iframeSrc}
+                        key={`${iframeKey}-${resolvedIframeSrc}`}
+                        src={resolvedIframeSrc}
                         title="Project Preview"
                         className="w-full h-full border-none bg-background"
                         sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-same-origin allow-scripts"

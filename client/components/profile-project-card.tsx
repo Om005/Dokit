@@ -55,7 +55,7 @@ export function ProfileProjectCard({
             } else {
                 toast.error(payload?.message ?? "Failed to request access.");
             }
-        } catch (error) {
+        } catch {
             toast.error("Failed to request access.");
         }
     };

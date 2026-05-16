@@ -16,16 +16,15 @@ const Page = () => {
     const searchParams = useSearchParams();
     const dispatch = useDispatch<AppDispatch>();
     const { emergencyRevokeSessionLoading } = useSelector((state: RootState) => state.auth);
-    const [status, setStatus] = useState<RevokeStatus>("idle");
-    const [message, setMessage] = useState<string | null>(null);
     const token = searchParams.get("token");
+    const hasToken = Boolean(token);
+    const [status, setStatus] = useState<RevokeStatus>(() => (hasToken ? "idle" : "missing"));
+    const [message, setMessage] = useState<string | null>(() =>
+        hasToken ? null : "Missing token. Please check the link you used."
+    );
 
     useEffect(() => {
-        if (!token) {
-            setStatus("missing");
-            setMessage("Missing token. Please check the link you used.");
-            return;
-        }
+        if (!token) return;
 
         const run = async () => {
             const result = await dispatch(authActions.emergencyRevokeSession({ token }));

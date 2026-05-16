@@ -3,7 +3,6 @@
 import { useTheme } from "next-themes";
 import { Moon, Sun, User, LogOut } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store/store";
 import { authActions } from "@/store/authentication";
@@ -20,19 +19,15 @@ import {
 import { Payload } from "@/types/types";
 
 export function Navbar() {
-    const { theme, setTheme } = useTheme();
-    const [mounted, setMounted] = useState(false);
+    const { resolvedTheme, setTheme } = useTheme();
+    const isLight = resolvedTheme === "light";
     const dispatch = useDispatch<AppDispatch>();
     const { isAuthenticated, firstName, lastName, username } = useSelector(
         (state: RootState) => state.auth
     );
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
     const toggleTheme = () => {
-        setTheme(theme === "light" ? "dark" : "light");
+        setTheme(isLight ? "dark" : "light");
     };
 
     const handleLogout = async () => {
@@ -90,11 +85,7 @@ export function Navbar() {
                         className="rounded-full h-9 w-9 cursor-pointer"
                         aria-label="Toggle theme"
                     >
-                        {mounted && theme === "light" ? (
-                            <Moon className="h-4 w-4" />
-                        ) : (
-                            <Sun className="h-4 w-4" />
-                        )}
+                        {isLight ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
                     </Button>
 
                     {isAuthenticated ? (

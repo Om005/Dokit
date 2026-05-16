@@ -72,6 +72,10 @@ pnpm-lock.yaml
 *.mmdb
 *.mmdb.*
 
+# custom
 geoip/
 server/src/generated
 TODOS.txt
+state.md
+nginx.default.conf
+nginx.new.conf

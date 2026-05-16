@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { toast } from "sonner";
 
 const api = axios.create({
@@ -10,9 +10,16 @@ const api = axios.create({
 });
 
 let isRefreshing = false;
-let failedQueue: any[] = [];
+type FailedQueueItem = {
+    resolve: () => void;
+    reject: (error: unknown) => void;
+};
 
-const processQueue = (error: any) => {
+type RetriableRequestConfig = InternalAxiosRequestConfig & { _retry?: boolean };
+
+let failedQueue: FailedQueueItem[] = [];
+
+const processQueue = (error: unknown) => {
     failedQueue.forEach((prom) => {
         if (error) {
             prom.reject(error);
@@ -25,15 +32,19 @@ const processQueue = (error: any) => {
 
 api.interceptors.response.use(
     (response) => response,
-    async (error) => {
-        const originalRequest = error.config;
-        const statusCode = error?.response?.data?.statusCode;
+    async (error: AxiosError) => {
+        const originalRequest = error.config as RetriableRequestConfig | undefined;
+        const statusCode = (error.response?.data as { statusCode?: number })?.statusCode;
+
+        if (!originalRequest) {
+            return Promise.reject(error);
+        }
 
         if (statusCode !== 401) {
             return Promise.reject(error);
         }
 
-        const requestUrl = originalRequest?.url || "";
+        const requestUrl = originalRequest.url || "";
 
         if (requestUrl.includes("/refresh-session") || requestUrl.includes("/sign-out")) {
             return Promise.reject(error);
@@ -46,7 +57,7 @@ api.interceptors.response.use(
         originalRequest._retry = true;
 
         if (isRefreshing) {
-            return new Promise((resolve, reject) => {
+            return new Promise<void>((resolve, reject) => {
                 failedQueue.push({ resolve, reject });
             })
                 .then(() => api(originalRequest))
@@ -61,7 +72,7 @@ api.interceptors.response.use(
             processQueue(null);
 
             return api(originalRequest);
-        } catch (refreshError: any) {
+        } catch (refreshError: unknown) {
             processQueue(refreshError);
 
             // Dynamically import to avoid circular dependency
@@ -70,9 +81,11 @@ api.interceptors.response.use(
 
             store.dispatch(clearAuth());
 
-            toast.error(
-                refreshError?.response?.data?.message || "Session expired. Please sign in again."
-            );
+            const refreshMessage =
+                (refreshError as AxiosError<{ message?: string }>).response?.data?.message ||
+                "Session expired. Please sign in again.";
+
+            toast.error(refreshMessage);
 
             return Promise.reject(refreshError);
         } finally {

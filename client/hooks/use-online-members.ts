@@ -8,11 +8,20 @@ interface ActiveUser {
     color: string;
 }
 
-export function useOnlineMembers(projectId: string, userName: string, cursorColor: string) {
+interface AwarenessState {
+    user?: ActiveUser;
+}
+
+export function useOnlineMembers(
+    projectId: string,
+    userName: string,
+    cursorColor: string,
+    enabled = true
+) {
     const [projectUsers, setProjectUsers] = useState<ActiveUser[]>([]);
 
     useEffect(() => {
-        if (!projectId || !userName || !cursorColor) return;
+        if (!enabled || !projectId || !userName || !cursorColor) return;
 
         const globalDoc = new yjs.Doc();
 
@@ -30,8 +39,10 @@ export function useOnlineMembers(projectId: string, userName: string, cursorColo
         });
 
         const updateGlobalUsers = () => {
-            const states = Array.from(provider.awareness.getStates().values());
-            const users = states.map((state: any) => state.user).filter(Boolean);
+            const states = Array.from(provider.awareness.getStates().values()) as AwarenessState[];
+            const users = states
+                .map((state) => state.user)
+                .filter((user): user is ActiveUser => Boolean(user));
 
             const uniqueUsers = Array.from(new Map(users.map((u) => [u.name, u])).values());
 
@@ -46,7 +57,7 @@ export function useOnlineMembers(projectId: string, userName: string, cursorColo
             provider.destroy();
             globalDoc.destroy();
         };
-    }, [projectId, userName, cursorColor]);
+    }, [projectId, userName, cursorColor, enabled]);
 
     return projectUsers;
 }

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
 import { AppDispatch, RootState } from "@/store/store";
 import { accountActions } from "@/store/account";
 import { authActions } from "@/store/authentication";
@@ -93,12 +94,10 @@ export default function ProfilePage() {
         currentUsername.toLowerCase() === routeUsername.toLowerCase();
 
     const [activeTab, setActiveTab] = useState("overview");
-    const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-    const [signInEmailEnabled, setSignInEmailEnabled] = useState(false);
     const [oldPassword, setOldPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-    const [profileReadmeDraft, setProfileReadmeDraft] = useState("");
+    const [profileReadmeDraft, setProfileReadmeDraft] = useState<string | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [twoFactorSetup, setTwoFactorSetup] = useState<{
         qrCode: string;
@@ -112,6 +111,9 @@ export default function ProfilePage() {
     >(null);
 
     const profileData = isOwnProfile ? myProfile : publicProfile;
+    const twoFactorEnabled = myProfile?.user?.twoFactorEnabled ?? false;
+    const signInEmailEnabled = myProfile?.user?.signInEmailEnabled ?? false;
+    const profileReadmeValue = profileReadmeDraft ?? myProfile?.profileReadme ?? "";
     const isTwoFactorSetupPending = !!twoFactorSetup;
     const twoFactorSwitchChecked = twoFactorEnabled || isTwoFactorSetupPending;
 
@@ -126,22 +128,6 @@ export default function ProfilePage() {
             dispatch(accountActions.fetchPublicProfile({ username: routeUsername }));
         }
     }, [dispatch, routeUsername, isOwnProfile, isAuthLoading]);
-
-    useEffect(() => {
-        if (myProfile?.user) {
-            setTwoFactorEnabled(myProfile.user.twoFactorEnabled);
-            setSignInEmailEnabled(myProfile.user.signInEmailEnabled);
-        }
-    }, [myProfile]);
-
-    useEffect(() => {
-        if (myProfile?.profileReadme !== undefined && myProfile?.profileReadme !== null) {
-            setProfileReadmeDraft(myProfile.profileReadme);
-        }
-        if (myProfile?.profileReadme === null) {
-            setProfileReadmeDraft("");
-        }
-    }, [myProfile?.profileReadme]);
 
     const isLoadingProfile = isOwnProfile ? loadingMyProfile : loadingPublicProfile;
 
@@ -177,7 +163,9 @@ export default function ProfilePage() {
                 signInEmailEnabled: nextSigninEmail,
             })
         );
-        const payload = result.payload as Payload<{ settings: any }>;
+        const payload = result.payload as Payload<{
+            settings?: { twoFactorEnabled: boolean; signInEmailEnabled: boolean };
+        }>;
         if (payload.success) {
             toast.success("Settings updated");
         } else {
@@ -213,14 +201,13 @@ export default function ProfilePage() {
                     setTwoFactorSetup(null);
                     setBackupCodes([]);
                     setTwoFactorToken("");
-                    setTwoFactorEnabled(false);
                     toast.success("Two-factor authentication disabled.");
                 }
                 dispatch(accountActions.fetchMyProfile());
             } else {
                 toast.error(payload.message || "Failed to update 2FA settings");
             }
-        } catch (error) {
+        } catch {
             toast.error("Failed to update 2FA settings");
         }
     };
@@ -238,13 +225,12 @@ export default function ProfilePage() {
                 setBackupCodes(payload.data?.backupCodes || []);
                 setTwoFactorSetup(null);
                 setTwoFactorToken("");
-                setTwoFactorEnabled(true);
                 dispatch(accountActions.fetchMyProfile());
                 toast.success("Two-factor authentication enabled.");
             } else {
                 toast.error(payload.message || "Failed to verify 2FA setup");
             }
-        } catch (error) {
+        } catch {
             toast.error("Failed to verify 2FA setup");
         }
     };
@@ -264,7 +250,7 @@ export default function ProfilePage() {
             } else {
                 toast.error(payload.message || "Failed to regenerate backup codes");
             }
-        } catch (error) {
+        } catch {
             toast.error("Failed to regenerate backup codes");
         }
     };
@@ -323,7 +309,7 @@ export default function ProfilePage() {
 
     const handleSaveReadme = async () => {
         const result = await dispatch(
-            accountActions.updateProfileReadme({ content: profileReadmeDraft })
+            accountActions.updateProfileReadme({ content: profileReadmeValue })
         );
         const payload = result.payload as Payload<{ profileReadme: string | null }>;
         if (payload.success) {
@@ -671,10 +657,13 @@ export default function ProfilePage() {
                                                     </div>
                                                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                                                         <div className="rounded-lg border border-border/60 bg-background p-3 shadow-xs">
-                                                            <img
+                                                            <Image
                                                                 src={twoFactorSetup.qrCode}
                                                                 alt="2FA QR code"
+                                                                width={160}
+                                                                height={160}
                                                                 className="h-40 w-40"
+                                                                unoptimized
                                                             />
                                                         </div>
                                                         <div className="space-y-2 flex-1">
@@ -914,7 +903,6 @@ export default function ProfilePage() {
                                                 <Switch
                                                     checked={signInEmailEnabled}
                                                     onCheckedChange={(checked) => {
-                                                        setSignInEmailEnabled(checked);
                                                         handleUpdateSettings(checked);
                                                     }}
                                                     disabled={updatingSettings}
@@ -1315,7 +1303,7 @@ export default function ProfilePage() {
                                                 </Label>
                                                 <textarea
                                                     id="profile-readme"
-                                                    value={profileReadmeDraft}
+                                                    value={profileReadmeValue}
                                                     onChange={(event) =>
                                                         setProfileReadmeDraft(event.target.value)
                                                     }
@@ -1587,8 +1575,10 @@ const MarkdownPreview = ({ content, className = "" }: { content: string; classNa
                     },
 
                     img: ({ ...props }) => (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img
                             {...props}
+                            alt={props.alt ?? ""}
                             style={{
                                 display: "inline-block",
                                 maxWidth: "100%",

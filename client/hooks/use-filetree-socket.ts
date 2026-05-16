@@ -19,7 +19,7 @@ function useFileTreeSocket(
     const socketRef = useRef<ReturnType<typeof io>>(null);
     const id = useSelector((state: RootState) => state.auth.id);
     const currProject = useSelector((state: RootState) => state.editor.currProject);
-    const syncLocks = new Set<string>();
+    const syncLocks = useRef(new Set<string>());
     useEffect(() => {
         if (!projectId) return;
 
@@ -45,14 +45,14 @@ function useFileTreeSocket(
             } else if (action === "RENAME") {
                 const { fromPath, toPath, isDir } = event;
                 if (!fromPath || !toPath) return;
-                if (syncLocks.has(`${projectId}-${fromPath}-${toPath}-${isDir}`)) {
+                if (syncLocks.current.has(`${projectId}-${fromPath}-${toPath}-${isDir}`)) {
                     return;
                 }
-                syncLocks.add(`${projectId}-${fromPath}-${toPath}-${isDir}`);
+                syncLocks.current.add(`${projectId}-${fromPath}-${toPath}-${isDir}`);
                 onRenameNode(fromPath, toPath, isDir);
                 await new Promise((resolve) =>
                     setTimeout(() => {
-                        syncLocks.delete(`${projectId}-${fromPath}-${toPath}-${isDir}`);
+                        syncLocks.current.delete(`${projectId}-${fromPath}-${toPath}-${isDir}`);
                         resolve(null);
                     }, 1000)
                 );
@@ -122,7 +122,16 @@ function useFileTreeSocket(
         return () => {
             socket.disconnect();
         };
-    }, [projectId]);
+    }, [
+        projectId,
+        onNodeCreation,
+        onNodeDeletion,
+        onRenameNode,
+        id,
+        currProject,
+        dispatch,
+        router,
+    ]);
 }
 
 export default useFileTreeSocket;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -34,7 +34,12 @@ interface NodeActionDialogProps {
     onConfirm: (value?: string) => void;
 }
 
-export function NodeActionDialog({
+export function NodeActionDialog(props: NodeActionDialogProps) {
+    const dialogKey = `${props.open}-${props.action ?? "none"}-${props.initialValue ?? ""}`;
+    return <NodeActionDialogBody key={dialogKey} {...props} />;
+}
+
+function NodeActionDialogBody({
     open,
     action,
     nodeType,
@@ -44,16 +49,7 @@ export function NodeActionDialog({
     onOpenChange,
     onConfirm,
 }: NodeActionDialogProps) {
-    const [inputValue, setInputValue] = useState("");
-
-    useEffect(() => {
-        if (open) {
-            setInputValue(initialValue ?? "");
-        } else {
-            setInputValue("");
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open]);
+    const [inputValue, setInputValue] = useState(open ? (initialValue ?? "") : "");
 
     const handleOpenChange = (newOpen: boolean) => {
         if (!isLoading) {

@@ -7,7 +7,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useTheme } from "next-themes";
 
 import { RootState, AppDispatch } from "@/store/store";
-import { FileNode, Payload, TreeNode } from "@/types/types";
+import { FileNode, Payload } from "@/types/types";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
     Sidebar,
@@ -22,8 +22,7 @@ import {
     SidebarMenuSub,
     SidebarRail,
 } from "@/components/ui/sidebar";
-import { addNode, deleteNode, editorActions, openTab, setActiveTab } from "@/store/editor";
-import useFileTreeSocket from "@/hooks/use-filetree-socket";
+import { editorActions, openTab, setActiveTab } from "@/store/editor";
 import { FileNodeContextMenu } from "@/components/file-node-context-menu";
 import { NodeActionDialog } from "@/components/node-action-dialog";
 import { toast } from "sonner";

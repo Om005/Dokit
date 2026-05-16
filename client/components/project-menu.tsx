@@ -12,10 +12,9 @@ import {
 
 interface ProjectMenuProps {
     projectId: string;
-    projectName: string;
 }
 
-export function ProjectMenu({ projectId, projectName }: ProjectMenuProps) {
+export function ProjectMenu({ projectId }: ProjectMenuProps) {
     const router = useRouter();
 
     const handleSettings = () => {

@@ -6,7 +6,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store/store";
 import TerminalLoader from "@/components/terminal-loader";
-import { Fragment, use, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { Editor } from "@/components/editor";
 import {
     addNode,
@@ -38,9 +38,6 @@ import {
     Monitor,
     MonitorOff,
     RefreshCw,
-    GitPullRequestCreate,
-    GitPullRequestDraft,
-    UserCheck,
     UserCog,
     Inbox,
     Users,
@@ -71,6 +68,7 @@ import { PreviewPane } from "@/components/preview-panel";
 import defaultPorts from "@/utils/defaultPorts";
 import { useOnlineMembers } from "@/hooks/use-online-members";
 import { ALLOWED_TOOL_KEYS } from "@/utils/allowedTools";
+import { setCursorColor } from "@/store/editor";
 
 interface Props {
     projectId: string;
@@ -102,7 +100,7 @@ export default function ProjectPage({ projectId, token }: Props) {
     const toolStatusByName = useSelector((state: RootState) => state.editor.toolStatusByName);
     const apiProjectId = `${projectId.slice(0, 8)}-${projectId.slice(8, 12)}-${projectId.slice(12, 16)}-${projectId.slice(16, 20)}-${projectId.slice(20)}`;
     const username = useSelector((state: RootState) => state.auth.username) || "Anonymous";
-    const cursorColor = useSelector((state: RootState) => state.editor.cursorColor) || "#000000";
+    const cursorColor = useSelector((state: RootState) => state.editor.cursorColor);
     const [isBooting, setIsBooting] = useState(true);
     const [bootError, setBootError] = useState<string | null>(null);
     const hasBoot = useRef(false);
@@ -131,6 +129,19 @@ export default function ProjectPage({ projectId, token }: Props) {
     const startPos = useRef(0);
     const startSize = useRef(0);
     const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const generateRandomColor = () => {
+        const hue = Math.floor(Math.random() * 360);
+        const saturation = 70;
+        const lightness = 55;
+        return `hsl(${hue} ${saturation}% ${lightness}%)`;
+    };
+
+    useEffect(() => {
+        if (!cursorColor) {
+            dispatch(setCursorColor(generateRandomColor()));
+        }
+    }, [cursorColor, dispatch]);
 
     const onNodeCreation = useCallback(
         (parentPath: string, newNode: TreeNode) => {
@@ -256,7 +267,7 @@ export default function ProjectPage({ projectId, token }: Props) {
         [previewHeight]
     );
 
-    const runBoot = async () => {
+    const runBoot = useCallback(async () => {
         try {
             const result = await dispatch(
                 projectActions.startProject({
@@ -293,22 +304,18 @@ export default function ProjectPage({ projectId, token }: Props) {
             setBootError("Failed to boot project. Please try again.");
             setIsBooting(false);
         }
-    };
+    }, [apiProjectId, dispatch, pendingPassword]);
 
     useEffect(() => {
         if (hasBoot.current) return;
         hasBoot.current = true;
 
         runBoot();
-    }, []);
+    }, [runBoot]);
 
     const isProjectPublic = currProject?.visibility === "PUBLIC";
-
-    useEffect(() => {
-        if (!isProjectPublic && accessPanelTab === "requests") {
-            setAccessPanelTab("members");
-        }
-    }, [accessPanelTab, isProjectPublic]);
+    const effectiveAccessPanelTab =
+        !isProjectPublic && accessPanelTab === "requests" ? "members" : accessPanelTab;
 
     useEffect(() => {
         if (statusTimeoutRef.current) {
@@ -392,10 +399,15 @@ export default function ProjectPage({ projectId, token }: Props) {
     const canManageTools = isOwner || currProject?.currentUserAccess === "WRITE";
     const canTogglePreview = isPreviewSupported && canUseTerminal;
     const shouldShowPreview = isPreviewSupported && (canUseTerminal ? showPreview : true);
-    const onlineUsers = useOnlineMembers(apiProjectId, username, cursorColor);
+    const onlineUsers = useOnlineMembers(
+        apiProjectId,
+        username,
+        cursorColor!,
+        Boolean(currProject) && !bootError && !showPasswordForm
+    );
     const installedTools = new Set(currProject?.tools ?? []);
 
-    const wsUrl = `ws://${process.env.NEXT_PUBLIC_NGINX_HOST}/terminal/${projectId}/ws`;
+    const wsUrl = `wss://${process.env.NEXT_PUBLIC_NGINX_HOST}/terminal/${projectId}/ws`;
 
     if (showPasswordForm) {
         return (
@@ -829,7 +841,7 @@ export default function ProjectPage({ projectId, token }: Props) {
                             </Button>
                         </div>
                         <Tabs
-                            value={accessPanelTab}
+                            value={effectiveAccessPanelTab}
                             onValueChange={(value) =>
                                 setAccessPanelTab(value as "members" | "requests" | "invite")
                             }

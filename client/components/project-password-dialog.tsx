@@ -42,7 +42,7 @@ export function ProjectPasswordDialog({
         try {
             await onSubmit(password);
             setPassword("");
-        } catch (error) {}
+        } catch {}
     };
 
     return (

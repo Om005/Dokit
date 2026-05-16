@@ -14,7 +14,7 @@ Install these first:
 
 Ports used locally:
 
-- 80 (Nginx)
+- 8080 (Nginx)
 - 3000 (Next.js client)
 - 4000 (Express + Socket server)
 - 5432 (PostgreSQL)

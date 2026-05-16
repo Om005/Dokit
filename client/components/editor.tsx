@@ -1,6 +1,5 @@
 import CodeMirror from "@uiw/react-codemirror";
 import { oneDark } from "@codemirror/theme-one-dark";
-// import { dracula } from "@uiw/codemirror-theme-dracula";
 import * as yjs from "yjs";
 import { WebsocketProvider } from "y-websocket";
 import { yCollab } from "y-codemirror.next";
@@ -8,17 +7,10 @@ import { getLanguageExtension } from "@/utils/getLanguageExtension";
 import { useEffect, useState } from "react";
 import env from "@/config/env";
 import { EditorView } from "@codemirror/view";
+import { Extension } from "@codemirror/state";
 import { useTheme } from "next-themes";
-import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState } from "@/store/store";
-import { setCursorColor } from "@/store/editor";
-
-const generateRandomColor = () => {
-    const hue = Math.floor(Math.random() * 360);
-    const saturation = 70;
-    const lightness = 55;
-    return `hsl(${hue} ${saturation}% ${lightness}%)`;
-};
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
 
 const toLightColor = (color: string) => {
     if (color.startsWith("hsl(")) {
@@ -43,28 +35,48 @@ interface EditorProps {
     className?: string;
 }
 
-export function Editor({ filePath, projectId, readOnly = false, className = "" }: EditorProps) {
-    const [yjsExtension, setYjsExtension] = useState<any[]>([]);
-    const [activeUsers, setActiveUsers] = useState<any[]>([]);
-    const dispatch = useDispatch<AppDispatch>();
+interface AwarenessUser {
+    name: string;
+    color: string;
+    colorLight: string;
+}
+
+interface AwarenessState {
+    user?: AwarenessUser;
+}
+
+interface CollabResources {
+    ydoc: yjs.Doc;
+    provider: WebsocketProvider;
+    extension: Extension;
+}
+
+export function Editor(props: EditorProps) {
+    const key = `${props.projectId}-${props.filePath}`;
+    return <EditorBody key={key} {...props} />;
+}
+
+function EditorBody({ filePath, projectId, readOnly = false, className = "" }: EditorProps) {
+    const [activeUsers, setActiveUsers] = useState<AwarenessUser[]>([]);
+    const [collab] = useState<CollabResources | null>(() => {
+        if (!projectId || !filePath) return null;
+
+        const ydoc = new yjs.Doc();
+        const roomName = `${projectId}-${filePath}`;
+        const provider = new WebsocketProvider(env.NEXT_PUBLIC_EDITOR_SOCKET_URL!, roomName, ydoc);
+        const ytext = ydoc.getText("codemirror");
+        const extension = yCollab(ytext, provider.awareness);
+
+        return { ydoc, provider, extension };
+    });
     const lineWrapping = useSelector((state: RootState) => state.editor.lineWrapping);
     const cursorColor = useSelector((state: RootState) => state.editor.cursorColor);
     const userName = useSelector((state: RootState) => state.auth.username) || "Anonymous";
 
     useEffect(() => {
-        if (!cursorColor) {
-            dispatch(setCursorColor(generateRandomColor()));
-        }
-    }, [cursorColor, dispatch]);
+        if (!collab || !cursorColor) return;
 
-    useEffect(() => {
-        if (!projectId || !filePath || !cursorColor) return;
-
-        const ydoc = new yjs.Doc();
-        const roomName = `${projectId}-${filePath}`;
-
-        const provider = new WebsocketProvider(env.NEXT_PUBLIC_EDITOR_SOCKET_URL!, roomName, ydoc);
-        const ytext = ydoc.getText("codemirror");
+        const { provider, ydoc } = collab;
 
         provider.awareness.setLocalStateField("user", {
             name: userName,
@@ -72,13 +84,11 @@ export function Editor({ filePath, projectId, readOnly = false, className = "" }
             colorLight: toLightColor(cursorColor),
         });
 
-        const collabExtension = yCollab(ytext, provider.awareness);
-
-        setYjsExtension([collabExtension]);
-
         const updateUsers = () => {
-            const states = Array.from(provider.awareness.getStates().values());
-            const users = states.map((state: any) => state.user).filter(Boolean);
+            const states = Array.from(provider.awareness.getStates().values()) as AwarenessState[];
+            const users = states
+                .map((state) => state.user)
+                .filter((user): user is AwarenessUser => Boolean(user));
 
             const uniqueUsers = Array.from(new Map(users.map((u) => [u.name, u])).values());
 
@@ -89,22 +99,24 @@ export function Editor({ filePath, projectId, readOnly = false, className = "" }
         updateUsers();
 
         return () => {
+            provider.awareness.off("update", updateUsers);
             provider.destroy();
             ydoc.destroy();
-            setYjsExtension([]);
         };
-    }, [projectId, filePath, userName, cursorColor]);
+    }, [collab, userName, cursorColor]);
 
     const filename = filePath.split("/").pop() || "untitled.txt";
     const language = getLanguageExtension(filename!);
 
+    const collabExtension = collab?.extension;
+    const collabExtensions = collabExtension ? [collabExtension] : [];
     const extensions = lineWrapping
         ? language
-            ? [language, EditorView.lineWrapping, ...yjsExtension]
-            : [EditorView.lineWrapping, ...yjsExtension]
+            ? [language, EditorView.lineWrapping, ...collabExtensions]
+            : [EditorView.lineWrapping, ...collabExtensions]
         : language
-          ? [language, ...yjsExtension]
-          : [...yjsExtension];
+          ? [language, ...collabExtensions]
+          : [...collabExtensions];
 
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme !== "light";

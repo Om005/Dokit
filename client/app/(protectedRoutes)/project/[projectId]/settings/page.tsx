@@ -102,31 +102,15 @@ export default function ProjectSettings() {
         fetchProject();
     }, [projectId, dispatch]);
 
-    useEffect(() => {
-        if (project && !isEditing) {
-            setName(project.name);
-            setDescription(project.description || "");
-            setVisibility(project.visibility || "PRIVATE");
-            setIsPasswordProtected(project.isPasswordProtected || false);
-            setNewPassword("");
-            setIsOwner(project.isOwner || false);
-        }
-    }, [project, isEditing]);
-
     const isProjectPublic = project?.visibility === "PUBLIC";
+    const effectiveAccessTab = !isProjectPublic && accessTab === "requests" ? "members" : accessTab;
 
     useEffect(() => {
-        if (!isProjectPublic && accessTab === "requests") {
-            setAccessTab("members");
-        }
-    }, [accessTab, isProjectPublic]);
-
-    useEffect(() => {
-        if (!isProjectPublic || accessTab !== "requests") return;
+        if (!isProjectPublic || effectiveAccessTab !== "requests") return;
         if (hasFetchedRequests.current) return;
         hasFetchedRequests.current = true;
         dispatch(projectActions.getPendingAccessRequests({ projectId }));
-    }, [accessTab, dispatch, isProjectPublic, projectId]);
+    }, [dispatch, effectiveAccessTab, isProjectPublic, projectId]);
 
     if (!project || gettingProjectDetails) {
         if (projectLoadError && !gettingProjectDetails) {
@@ -212,7 +196,7 @@ export default function ProjectSettings() {
             } else {
                 toast.error(payload?.message || "Failed to update settings");
             }
-        } catch (error) {
+        } catch {
             toast.error("An error occurred while updating settings");
         }
     };
@@ -234,7 +218,7 @@ export default function ProjectSettings() {
             } else {
                 toast.error(payload?.message || "Failed to delete project");
             }
-        } catch (error) {
+        } catch {
             toast.error("An error occurred while deleting the project");
         }
     };
@@ -584,7 +568,7 @@ export default function ProjectSettings() {
                         </div>
                         {isOwner ? (
                             <Tabs
-                                value={accessTab}
+                                value={effectiveAccessTab}
                                 onValueChange={(value) =>
                                     setAccessTab(value as "members" | "invite" | "requests")
                                 }

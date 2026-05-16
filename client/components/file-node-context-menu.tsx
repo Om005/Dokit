@@ -27,7 +27,6 @@ export function FileNodeContextMenu({
     onRename,
     onDelete,
 }: FileNodeContextMenuProps) {
-    const isFile = node.type === "file";
     const isFolder = node.type === "directory";
 
     return (

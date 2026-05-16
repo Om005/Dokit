@@ -14,8 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Loader2, ArrowLeft, ArrowRight } from "lucide-react";
-import GuestRoute from "@/components/guest-route";
-import { Navbar } from "@/components/navbar";
 import { Payload } from "@/types/types";
 
 export default function VerifyPage() {
