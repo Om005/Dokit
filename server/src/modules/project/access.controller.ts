@@ -645,9 +645,9 @@ const controllers = {
             const projectId = pathParts[2];
 
             const token = url.searchParams.get("token");
-            let userId = req.meta.user?.id;
+            let userId;
 
-            if (!userId && token) {
+            if (token) {
                 const tokenUserId = await redisClient.get(`terminal-token:${token}`);
                 if (!tokenUserId) return res.sendStatus(StatusCodes.UNAUTHORIZED);
                 await redisClient.del(`terminal-token:${token}`);
