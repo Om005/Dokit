@@ -134,6 +134,10 @@ const editorActions = {
             "post"
         )
     ),
+    terminalToken: createAsyncThunk<ApiResponse, void, { rejectValue: ApiResponse }>(
+        "editor/terminalToken",
+        createApiHandler<void>("/api/project/access/terminal-token", "get")
+    ),
 };
 
 const initialState: initialEditorState = {

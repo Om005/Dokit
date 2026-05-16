@@ -55,7 +55,8 @@ router.post(
     controllers.removeMember
 );
 
-router.get("/verify-terminal", authenticate, controllers.verifyTeminalAccess);
+router.get("/verify-terminal", authenticate, controllers.verifyTerminalAccess);
+router.get("/terminal-token", authenticate, controllers.terminalToken);
 router.get("/verify-preview", controllers.verifyPreviewAccess);
 router.get("/preview-auth", controllers.previewAuth);
 export default router;

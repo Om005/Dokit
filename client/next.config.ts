@@ -4,11 +4,11 @@ const nextConfig: NextConfig = {
     /* config options here */
     async rewrites() {
         return [
-        {
-            source: '/api/:path*',
-            destination: 'https://dokit.backends.live/api/:path*',
-        },
-        ]
+            {
+                source: "/api/:path*",
+                destination: "https://dokit.backends.live/api/:path*",
+            },
+        ];
     },
     reactStrictMode: false,
 };

@@ -10,6 +10,8 @@ import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { io } from "index";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+
 const controllers = {
     requestAccess: async (req: Request, res: Response) => {
         const { projectId } = req.body;
@@ -610,14 +612,47 @@ const controllers = {
         }
     },
 
-    verifyTeminalAccess: async (req: Request, res: Response) => {
+    terminalToken: async (req: Request, res: Response) => {
+        const userId = req.meta.user?.id;
+        if (!userId) return res.sendStatus(StatusCodes.UNAUTHORIZED);
+        try {
+            const token = crypto.randomBytes(32).toString("hex");
+            await redisClient.set(`terminal-token:${token}`, userId, { EX: 30 });
+            return sendResponse(res, {
+                success: true,
+                message: "Terminal token generated successfully",
+                statusCode: StatusCodes.OK,
+                data: { token },
+            });
+        } catch (error) {
+            logger.error("Error in terminalToken controller:");
+            logger.error(error);
+            return sendResponse(res, {
+                success: false,
+                message: "An error occurred while generating terminal token",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    },
+
+    verifyTerminalAccess: async (req: Request, res: Response) => {
         try {
             const originalUri = req.headers["x-original-uri"] as string;
             if (!originalUri) return res.sendStatus(StatusCodes.BAD_REQUEST);
+
             const url = new URL(originalUri, `http://${req.headers.host}`);
             const pathParts = url.pathname.split("/");
             const projectId = pathParts[2];
-            const userId = req.meta.user?.id;
+
+            const token = url.searchParams.get("token");
+            let userId = req.meta.user?.id;
+
+            if (!userId && token) {
+                const tokenUserId = await redisClient.get(`terminal-token:${token}`);
+                if (!tokenUserId) return res.sendStatus(StatusCodes.UNAUTHORIZED);
+                await redisClient.del(`terminal-token:${token}`);
+                userId = tokenUserId;
+            }
             if (!userId) return res.sendStatus(StatusCodes.UNAUTHORIZED);
 
             const correctProjectId = projectId.replace(

@@ -6,6 +6,11 @@ import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
 import { useTheme } from "next-themes";
+import { useDispatch } from "react-redux";
+import { editorActions } from "@/store/editor";
+import { Payload } from "@/types/types";
+import { toast } from "sonner";
+import { AppDispatch } from "@/store/store";
 
 interface TerminalProps {
     wsUrl: string;
@@ -68,6 +73,7 @@ function TerminalCore({
 }: TerminalProps & { forceRemount: () => void; isDark: boolean }) {
     const xtermTheme = isDark ? DARK_THEME : LIGHT_THEME;
     const terminalRef = useRef<HTMLDivElement>(null);
+    const dispatch = useDispatch<AppDispatch>();
     const [status, setStatus] = useState<ConnectionStatus>("connecting");
 
     const xtermRef = useRef<Terminal | null>(null);
@@ -134,7 +140,7 @@ function TerminalCore({
             }
         });
 
-        const connectWS = () => {
+        const connectWS = async () => {
             if (isDestroyed) return;
 
             if (wsRef.current) {
@@ -152,7 +158,22 @@ function TerminalCore({
                 wsRef.current = null;
             }
 
-            const ws = new WebSocket(wsUrl, ["tty"]);
+            let token;
+            try {
+                const terminalToken = await dispatch(editorActions.terminalToken());
+                const payload = terminalToken.payload as Payload<{ token: string }>;
+                if (!payload.success || !payload.data) {
+                    toast.error("Failed to connect to terminal");
+                    setStatus("failed");
+                    return;
+                }
+                token = payload.data!.token;
+            } catch {
+                toast.error("Failed to connect to terminal");
+                return;
+            }
+            const newwsUrl = `${wsUrl}?token=${token}`;
+            const ws = new WebSocket(newwsUrl, ["tty"]);
             ws.binaryType = "arraybuffer";
             wsRef.current = ws;
 
