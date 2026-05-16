@@ -8,7 +8,6 @@
         "start": "next start",
         "lint": "eslint"
     },
-    "packageManager": "pnpm@10.25.0",
     "pnpm": {
         "onlyBuiltDependencies": [
             "sharp",

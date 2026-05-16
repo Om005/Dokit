@@ -1628,8 +1628,11 @@ const MarkdownPreview = ({ content, className = "" }: { content: string; classNa
                         </td>
                     ),
 
-                    code: ({ inline, className, children, ...props }) => {
-                        if (inline) {
+                    code: ({ className, children, ...props }) => {
+                        const textContent = React.Children.toArray(children).join("");
+                        const isInline = !className && !textContent.includes("\n");
+
+                        if (isInline) {
                             return (
                                 <code
                                     style={{
@@ -1640,6 +1643,7 @@ const MarkdownPreview = ({ content, className = "" }: { content: string; classNa
                                         fontFamily: "monospace",
                                         border: "1px solid #e1e4e8",
                                     }}
+                                    className={className}
                                     {...props}
                                 >
                                     {children}

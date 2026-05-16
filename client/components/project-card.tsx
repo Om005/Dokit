@@ -85,7 +85,7 @@ export function ProjectCard({
                             {isPasswordProtected && (
                                 <Lock className="size-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
                             )}
-                            <ProjectMenu projectId={id} projectName={name} />
+                            <ProjectMenu projectId={id} />
                         </div>
                     </div>
 
