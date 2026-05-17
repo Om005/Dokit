@@ -1,0 +1,25 @@
+name: Deploy Backend to EC2
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'server/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            export PATH=$PATH:/home/ubuntu/.nvm/versions/node/v24.15.0/bin
+            
+            cd /home/ubuntu/Dokit/server
+            chmod +x deploy.sh
+            ./deploy.sh

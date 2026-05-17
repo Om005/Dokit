@@ -6,7 +6,7 @@ export default defineConfig({
     plugins: [react()],
     server: {
         host: "0.0.0.0",
-        allowedHosts: [".nip.io"],
+        allowedHosts: [".dokit.backends.live"],
         port: 5173,
         strictPort: true,
     },
