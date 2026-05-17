@@ -525,6 +525,10 @@ export default function ProfilePage() {
                                                         <ProfileProjectCard
                                                             key={project.id}
                                                             {...project}
+                                                            isOwnProfile={isOwnProfile}
+                                                            visibility="PUBLIC"
+                                                            onTogglePin={handlePinProject}
+                                                            pinLoading={updatingPin}
                                                         />
                                                     ))}
                                                 </div>
@@ -560,6 +564,10 @@ export default function ProfilePage() {
                                                         <ProfileProjectCard
                                                             key={project.id}
                                                             {...project}
+                                                            isOwnProfile={isOwnProfile}
+                                                            visibility="PUBLIC"
+                                                            onTogglePin={handlePinProject}
+                                                            pinLoading={updatingPin}
                                                         />
                                                     ))}
                                                 </div>
@@ -595,6 +603,10 @@ export default function ProfilePage() {
                                                         <ProfileProjectCard
                                                             key={project.id}
                                                             {...project}
+                                                            isOwnProfile={isOwnProfile}
+                                                            visibility="PRIVATE"
+                                                            onTogglePin={handlePinProject}
+                                                            pinLoading={updatingPin}
                                                         />
                                                     ))}
                                                 </div>

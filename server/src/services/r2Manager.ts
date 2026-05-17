@@ -19,6 +19,16 @@ const STACK_BASE_PREFIX: Record<ProjectStack, string> = {
     BLANK: "base/blank",
 };
 
+interface FileSystemItem {
+    content: string;
+    path: string;
+    name: string;
+    type: "file" | "directory";
+    children: string[];
+    isExpanded: boolean;
+    isLoaded: boolean;
+}
+
 const PROFILE_README_KEY = (userId: string) => `profile/${userId}/readme.md`;
 
 const streamToString = async (stream: NodeJS.ReadableStream) => {
@@ -187,12 +197,106 @@ async function deleteProfileReadme(userId: string) {
     }
 }
 
+async function getFolderContent(
+    projectId: string,
+    folderPath: string
+): Promise<Record<string, FileSystemItem>> {
+    try {
+        const normalizedPath = folderPath.replace(/^\/+/, "").replace(/\/+$/, "");
+
+        const prefix = normalizedPath
+            ? `code/${projectId}/${normalizedPath}/`
+            : `code/${projectId}/`;
+
+        const listCommand = new ListObjectsV2Command({
+            Bucket: BUCKET_NAME,
+            Prefix: prefix,
+            Delimiter: "/",
+        });
+
+        const response = await r2Client.send(listCommand);
+
+        const items: Record<string, FileSystemItem> = {};
+
+        for (const cp of response.CommonPrefixes ?? []) {
+            const fullPath = cp.Prefix!;
+
+            const relativePath = fullPath.slice(`code/${projectId}/`.length).replace(/\/$/, "");
+
+            const name = relativePath.split("/").pop()!;
+
+            items[relativePath] = {
+                content: "",
+                path: relativePath,
+                name,
+                type: "directory",
+                children: [],
+                isExpanded: false,
+                isLoaded: false,
+            };
+        }
+
+        for (const obj of response.Contents ?? []) {
+            const key = obj.Key!;
+
+            if (key === prefix) continue;
+
+            const relativePath = key.slice(`code/${projectId}/`.length);
+
+            const name = relativePath.split("/").pop()!;
+
+            items[relativePath] = {
+                content: "",
+                path: relativePath,
+                name,
+                type: "file",
+                children: [],
+                isExpanded: false,
+                isLoaded: false,
+            };
+        }
+
+        return items;
+    } catch (error) {
+        logger.error(
+            `Error listing folder content for project ${projectId} at path ${folderPath}:`
+        );
+        logger.error(error);
+        return {};
+    }
+}
+
+async function getFileContent(projectId: string, filePath: string) {
+    try {
+        const key = `code/${projectId}/${filePath.replace(/^\//, "")}`;
+        const getCommand = new GetObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: key,
+        });
+        const response = await r2Client.send(getCommand);
+        if (!response.Body) {
+            return null;
+        }
+        return await streamToString(response.Body as NodeJS.ReadableStream);
+    } catch (error) {
+        const errorName = (error as { name?: string }).name || "";
+        if (errorName === "NoSuchKey" || errorName === "NotFound") {
+            return null;
+        }
+        logger.error(`Error getting file content for project ${projectId} at path ${filePath}:`);
+        logger.error(error);
+        return "";
+    }
+}
+
 const R2Manager = {
     copyBaseToProject,
     deleteProject,
     getProfileReadme,
     putProfileReadme,
     deleteProfileReadme,
+    getFolderContent,
+    getFileContent,
 };
 
 export default R2Manager;

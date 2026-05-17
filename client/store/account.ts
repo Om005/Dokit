@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import createApiHandler from "@/utils/apiHandler";
-import { ApiResponse } from "@/types/types";
+import { ApiResponse, Payload, ViewFileNode } from "@/types/types";
 
 export interface PublicProject {
     id: string;
@@ -9,6 +9,15 @@ export interface PublicProject {
     stack: string;
     createdAt: string;
     pinned: boolean;
+}
+
+export interface viewProject {
+    id: string;
+    name: string;
+    description?: string;
+    stack: string;
+    createdAt: string;
+    filetree: Record<string, ViewFileNode>;
 }
 
 export interface ProfileProject extends PublicProject {
@@ -74,6 +83,9 @@ interface AccountState {
     loggingOutOtherSessions: boolean;
     updatingProfileReadme: boolean;
     updatingPin: boolean;
+    viewProject: viewProject | null;
+    gettingFolderContent: boolean;
+    gettingFileContent: boolean;
 }
 
 const accountActions = {
@@ -160,6 +172,39 @@ const accountActions = {
         "account/pinProject",
         createApiHandler<{ projectId: string; pinned: boolean }>("/api/account/pin-project", "post")
     ),
+
+    getViewProjectDetails: createAsyncThunk<
+        ApiResponse,
+        { projectId: string },
+        { rejectValue: ApiResponse }
+    >(
+        "account/getViewProjectDetails",
+        createApiHandler<{ projectId: string }>("/api/account/get-view-project", "post")
+    ),
+
+    getViewFolderContent: createAsyncThunk<
+        ApiResponse,
+        { projectId: string; folderPath: string },
+        { rejectValue: ApiResponse }
+    >(
+        "account/getViewFolderContent",
+        createApiHandler<{ projectId: string; folderPath: string }>(
+            "/api/account/get-folder-content",
+            "post"
+        )
+    ),
+
+    getViewFileContent: createAsyncThunk<
+        ApiResponse,
+        { projectId: string; filePath: string },
+        { rejectValue: ApiResponse }
+    >(
+        "account/getViewFileContent",
+        createApiHandler<{ projectId: string; filePath: string }>(
+            "/api/account/get-file-content",
+            "post"
+        )
+    ),
 };
 
 const initialState: AccountState = {
@@ -176,6 +221,9 @@ const initialState: AccountState = {
     loggingOutOtherSessions: false,
     updatingProfileReadme: false,
     updatingPin: false,
+    viewProject: {} as viewProject,
+    gettingFolderContent: false,
+    gettingFileContent: false,
 };
 
 const accountSlice = createSlice({
@@ -186,6 +234,7 @@ const accountSlice = createSlice({
             state.publicProfile = null;
             state.myProfile = null;
             state.sessions = [];
+            state.viewProject = null;
         },
     },
     extraReducers: (builder) => {
@@ -347,6 +396,58 @@ const accountSlice = createSlice({
             })
             .addCase(accountActions.pinProject.rejected, (state) => {
                 state.updatingPin = false;
+            })
+            .addCase(accountActions.getViewFolderContent.pending, (state) => {
+                state.gettingFolderContent = true;
+            })
+            .addCase(accountActions.getViewFolderContent.fulfilled, (state, action) => {
+                state.gettingFolderContent = false;
+                const payload = action.payload as Payload<{
+                    content: Record<string, ViewFileNode>;
+                }>;
+                if (payload.success && payload.data?.content !== undefined && state.viewProject) {
+                    state.viewProject.filetree = {
+                        ...state.viewProject.filetree,
+                        ...payload.data.content,
+                    };
+                    if (state.viewProject.filetree) {
+                        const folderPath = action.meta.arg.folderPath;
+                        if (state.viewProject.filetree[folderPath]) {
+                            state.viewProject.filetree[folderPath].children = Object.keys(
+                                payload.data.content
+                            );
+                            state.viewProject.filetree[folderPath].isLoaded = true;
+                        }
+                    }
+                }
+            })
+            .addCase(accountActions.getViewFolderContent.rejected, (state) => {
+                state.gettingFolderContent = false;
+            })
+            .addCase(accountActions.getViewFileContent.pending, (state) => {
+                state.gettingFileContent = true;
+            })
+            .addCase(accountActions.getViewFileContent.fulfilled, (state, action) => {
+                state.gettingFileContent = false;
+                const payload = action.payload as Payload<{ content: string }>;
+                if (payload.success && payload.data?.content && state.viewProject) {
+                    const filePath = action.meta.arg.filePath;
+                    if (state.viewProject.filetree[filePath]) {
+                        state.viewProject.filetree[filePath].content = payload.data.content;
+                        state.viewProject.filetree[filePath].isLoaded = true;
+                    }
+                }
+            })
+            .addCase(accountActions.getViewFileContent.rejected, (state) => {
+                state.gettingFileContent = false;
+            })
+            .addCase(accountActions.getViewProjectDetails.fulfilled, (state, action) => {
+                const payload = action.payload as ApiResponse & {
+                    data?: { project: viewProject };
+                };
+                if (payload.success && payload.data?.project) {
+                    state.viewProject = payload.data.project;
+                }
             });
     },
 });

@@ -408,7 +408,7 @@ export default function ProjectPage({ projectId, token }: Props) {
     );
     const installedTools = new Set(currProject?.tools ?? []);
 
-    const wsUrl = `${env.NEXT_PUBLIC_EDITOR_SOCKET_URL}/terminal/${projectId}/ws`;
+    const wsUrl = `wss://${env.NEXT_PUBLIC_NGINX_HOST}/terminal/${projectId}/ws`;
 
     if (showPasswordForm) {
         return (

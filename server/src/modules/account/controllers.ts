@@ -647,6 +647,116 @@ const controllers = {
             });
         }
     },
+    getViewFolderContent: async (req: Request, res: Response) => {
+        try {
+            const { projectId, folderPath } = req.body;
+            const project = await prisma.project.findUnique({
+                where: { id: projectId },
+                select: { id: true, visibility: true },
+            });
+            if (!project || project.visibility !== "PUBLIC") {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Project not found or not public.",
+                    statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+            const content = await R2Manager.getFolderContent(projectId, folderPath);
+            return sendResponse(res, {
+                success: true,
+                message: "Folder content retrieved successfully.",
+                statusCode: StatusCodes.OK,
+                data: { content },
+            });
+        } catch (error) {
+            logger.error("Error in getViewFolderContent controller:");
+            logger.error(error);
+            return sendResponse(res, {
+                success: false,
+                message: "Failed to get folder content.",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    },
+
+    getViewFileContent: async (req: Request, res: Response) => {
+        try {
+            const { projectId, filePath } = req.body;
+            const project = await prisma.project.findUnique({
+                where: { id: projectId },
+                select: { id: true, visibility: true },
+            });
+            if (!project || project.visibility !== "PUBLIC") {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Project not found or not public.",
+                    statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+            const content = await R2Manager.getFileContent(projectId, filePath);
+            if (content === null) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "File not found.",
+                    statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+            return sendResponse(res, {
+                success: true,
+                message: "File content retrieved successfully.",
+                statusCode: StatusCodes.OK,
+                data: { content },
+            });
+        } catch (error) {
+            logger.error("Error in getViewFileContent controller:");
+            logger.error(error);
+            return sendResponse(res, {
+                success: false,
+                message: "Failed to get file content.",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    },
+
+    getViewProjectDetails: async (req: Request, res: Response) => {
+        try {
+            const { projectId } = req.body;
+            const project = await prisma.project.findUnique({
+                where: { id: projectId },
+                select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    stack: true,
+                    createdAt: true,
+                    visibility: true,
+                },
+            });
+            if (!project || project.visibility !== "PUBLIC") {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Project not found or not public.",
+                    statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+
+            const filetree = await R2Manager.getFolderContent(projectId, "/");
+            return sendResponse(res, {
+                success: true,
+                message: "Project details retrieved successfully.",
+                statusCode: StatusCodes.OK,
+                data: { project: { ...project, filetree } },
+            });
+        } catch (error) {
+            logger.error("Error in getViewProjectDetails controller:");
+            logger.error(error);
+            return sendResponse(res, {
+                success: false,
+                message: "Failed to get project details.",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    },
 };
 
 export default controllers;

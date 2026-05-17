@@ -1,6 +1,7 @@
 "use client";
 
-import { Calendar, MoreVertical, Lock, Pin, UserPlus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Calendar, MoreVertical, Lock, Pin, Settings, UserPlus } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store/store";
 import { projectActions } from "@/store/project";
@@ -17,7 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { formatDistanceToNow } from "date-fns";
 import { getStackIcon } from "@/components/stack-logos";
-
+import Link from "next/link";
 interface ProfileProjectCardProps {
     id: string;
     name: string;
@@ -26,7 +27,10 @@ interface ProfileProjectCardProps {
     isPasswordProtected?: boolean;
     createdAt: string;
     pinned?: boolean;
-    onView?: (projectId: string) => void;
+    visibility?: "PUBLIC" | "PRIVATE";
+    isOwnProfile?: boolean;
+    onTogglePin?: (projectId: string, nextPinned: boolean) => void;
+    pinLoading?: boolean;
 }
 
 export function ProfileProjectCard({
@@ -37,8 +41,12 @@ export function ProfileProjectCard({
     isPasswordProtected = false,
     createdAt,
     pinned = false,
-    onView,
+    visibility = "PUBLIC",
+    isOwnProfile = false,
+    onTogglePin,
+    pinLoading = false,
 }: ProfileProjectCardProps) {
+    const router = useRouter();
     const dispatch = useDispatch<AppDispatch>();
     const requestingAccess = useSelector((state: RootState) => state.project.requestingAccess);
     const stackInfo = getStackIcon(stack);
@@ -59,6 +67,16 @@ export function ProfileProjectCard({
             toast.error("Failed to request access.");
         }
     };
+
+    const handleOpenSettings = () => {
+        router.push(`/project/${id}/settings`);
+    };
+
+    const handleTogglePin = () => {
+        onTogglePin?.(id, !pinned);
+    };
+
+    const isPublicProject = visibility !== "PRIVATE";
 
     return (
         <Card className="overflow-hidden transition-all duration-300 hover:shadow-xl dark:hover:shadow-xl/20 border-border/50 bg-gradient-to-br from-card to-card/80 group">
@@ -104,14 +122,36 @@ export function ProfileProjectCard({
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuItem
-                                    onClick={handleRequestAccess}
-                                    className="cursor-pointer"
-                                    disabled={requestingAccess}
-                                >
-                                    <UserPlus className="mr-2 size-4" />
-                                    {requestingAccess ? "Requesting..." : "Request to Join"}
-                                </DropdownMenuItem>
+                                {isOwnProfile ? (
+                                    <>
+                                        {isPublicProject && (
+                                            <DropdownMenuItem
+                                                onClick={handleTogglePin}
+                                                className="cursor-pointer"
+                                                disabled={pinLoading}
+                                            >
+                                                <Pin className="mr-2 size-4" />
+                                                {pinned ? "Unpin" : "Pin"}
+                                            </DropdownMenuItem>
+                                        )}
+                                        <DropdownMenuItem
+                                            onClick={handleOpenSettings}
+                                            className="cursor-pointer"
+                                        >
+                                            <Settings className="mr-2 size-4" />
+                                            Settings
+                                        </DropdownMenuItem>
+                                    </>
+                                ) : (
+                                    <DropdownMenuItem
+                                        onClick={handleRequestAccess}
+                                        className="cursor-pointer"
+                                        disabled={requestingAccess}
+                                    >
+                                        <UserPlus className="mr-2 size-4" />
+                                        {requestingAccess ? "Requesting..." : "Request to Join"}
+                                    </DropdownMenuItem>
+                                )}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
@@ -140,14 +180,15 @@ export function ProfileProjectCard({
 
                 {/* Action Button */}
                 <div className="p-5 pt-4 mt-auto">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full h-10 rounded-lg border-border/50 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200"
-                        onClick={() => onView?.(id)}
-                    >
-                        View Project
-                    </Button>
+                    <Link href={`/project/view/${id}`} className="w-full">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full h-10 rounded-lg border-border/50 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all duration-200"
+                        >
+                            View Project
+                        </Button>
+                    </Link>
                 </div>
             </div>
         </Card>

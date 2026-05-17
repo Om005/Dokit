@@ -33,6 +33,7 @@ export interface Project {
     }[];
     currentUserAccess: "READ" | "WRITE" | "OWNER";
 }
+
 export interface FileNode {
     path: string;
     name: string;
@@ -40,6 +41,10 @@ export interface FileNode {
     children: string[];
     isExpanded: boolean;
     isLoaded: boolean;
+}
+
+export interface ViewFileNode extends FileNode {
+    content: string;
 }
 
 export interface FileSystemEvent {

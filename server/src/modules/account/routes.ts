@@ -77,4 +77,22 @@ router.post(
     controllers.pinProject
 );
 
+router.post(
+    "/get-folder-content",
+    validationMiddleware(validators.getViewFolderContent),
+    controllers.getViewFolderContent
+);
+
+router.post(
+    "/get-file-content",
+    validationMiddleware(validators.getViewFileContent),
+    controllers.getViewFileContent
+);
+
+router.post(
+    "/get-view-project",
+    validationMiddleware(validators.getViewProject),
+    controllers.getViewProjectDetails
+);
+
 export default router;

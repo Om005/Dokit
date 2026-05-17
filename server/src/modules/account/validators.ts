@@ -49,6 +49,20 @@ const validators = {
         projectId: z.string().uuid("Invalid project ID format"),
         pinned: z.boolean(),
     }),
+
+    getViewFolderContent: z.object({
+        projectId: z.string().uuid("Invalid project ID format"),
+        folderPath: z.string().min(1, "Folder path is required"),
+    }),
+
+    getViewFileContent: z.object({
+        projectId: z.string().uuid("Invalid project ID format"),
+        filePath: z.string().min(1, "File path is required"),
+    }),
+
+    getViewProject: z.object({
+        projectId: z.string().uuid("Invalid project ID format"),
+    }),
 };
 
 export default validators;
