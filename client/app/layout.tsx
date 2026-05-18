@@ -20,7 +20,10 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-    title: "Dokit - Collaborative Code Editor",
+    title: {
+        default: "Dokit",
+        template: "%s | Dokit",
+    },
     description: "Real-time collaborative code editor",
 };
 

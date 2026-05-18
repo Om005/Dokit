@@ -58,22 +58,28 @@ export function Navbar() {
 
                 <div className="hidden md:flex items-center gap-1">
                     <Link
-                        href="#features"
+                        href="/features"
                         className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full hover:bg-secondary/50"
                     >
                         Features
                     </Link>
                     <Link
-                        href="#pricing"
+                        href="/about"
                         className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full hover:bg-secondary/50"
                     >
-                        Pricing
+                        About
                     </Link>
                     <Link
-                        href="#docs"
+                        href="/dashboard/projects"
                         className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full hover:bg-secondary/50"
                     >
-                        Docs
+                        Projects
+                    </Link>
+                    <Link
+                        href="/contact-us"
+                        className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full hover:bg-secondary/50"
+                    >
+                        Contact
                     </Link>
                 </div>
 

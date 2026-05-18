@@ -1,35 +1,41 @@
 "use client";
 
 import Link from "next/link";
-import { Github, Twitter, Linkedin } from "lucide-react";
+import { Github, Linkedin, Mail } from "lucide-react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store/store";
 
 const footerLinks = {
-    product: [
-        { name: "Features", href: "#features" },
-        { name: "Pricing", href: "#pricing" },
-        { name: "Documentation", href: "/docs" },
-        { name: "Changelog", href: "/changelog" },
-    ],
-    resources: [
-        { name: "Blog", href: "/blog" },
-        { name: "Community", href: "/community" },
-        { name: "Support", href: "/support" },
-        { name: "Status", href: "/status" },
+    quick_links: [
+        { name: "Home", href: "/" },
+        { name: "Features", href: "/features" },
+        { name: "About", href: "/about" },
+        { name: "Sign In", href: "/signin" },
     ],
     legal: [
-        { name: "Privacy Policy", href: "/privacy" },
-        { name: "Terms of Service", href: "/terms" },
-        { name: "Cookie Policy", href: "/cookies" },
+        { name: "Privacy Policy", href: "/privacy-policy" },
+        { name: "Terms of Service", href: "/terms-of-service" },
+        { name: "Contact Us", href: "/contact-us" },
+    ],
+    connect: [
+        { name: "GitHub", href: "https://github.com/Om005", icon: Github },
+        {
+            name: "LinkedIn",
+            href: "https://www.linkedin.com/in/om-chavda-06a390302/",
+            icon: Linkedin,
+        },
+        { name: "Email", href: "mailto:chavdaom84@gmail.com", icon: Mail },
     ],
 };
 
 const socialLinks = [
     { name: "GitHub", icon: Github, href: "https://github.com/Om005" },
-    { name: "Twitter", icon: Twitter, href: "https://twitter.com" },
     { name: "LinkedIn", icon: Linkedin, href: "https://www.linkedin.com/in/om-chavda-06a390302/" },
+    { name: "Email", icon: Mail, href: "mailto:chavdaom84@gmail.com" },
 ];
 
 export function Footer() {
+    const { isAuthenticated } = useSelector((state: RootState) => state.auth);
     return (
         <footer className="relative py-16 px-4 bg-card border-t border-border/50">
             <div className="max-w-6xl mx-auto">
@@ -59,31 +65,21 @@ export function Footer() {
                     </div>
 
                     <div>
-                        <h4 className="text-sm font-semibold text-foreground mb-4">Product</h4>
+                        <h4 className="text-sm font-semibold text-foreground mb-4">Quick Links</h4>
                         <ul className="space-y-3">
-                            {footerLinks.product.map((link) => (
+                            {footerLinks.quick_links.map((link) => (
                                 <li key={link.name}>
                                     <Link
-                                        href={link.href}
+                                        href={
+                                            link.href == "/signin" && isAuthenticated
+                                                ? "/dashboard/projects"
+                                                : link.href
+                                        }
                                         className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                                     >
-                                        {link.name}
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h4 className="text-sm font-semibold text-foreground mb-4">Resources</h4>
-                        <ul className="space-y-3">
-                            {footerLinks.resources.map((link) => (
-                                <li key={link.name}>
-                                    <Link
-                                        href={link.href}
-                                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                                    >
-                                        {link.name}
+                                        {link.name == "Sign In" && isAuthenticated
+                                            ? "Dashboard"
+                                            : link.name}
                                     </Link>
                                 </li>
                             ))}
@@ -105,17 +101,32 @@ export function Footer() {
                             ))}
                         </ul>
                     </div>
+
+                    <div>
+                        <h4 className="text-sm font-semibold text-foreground mb-4">Connect</h4>
+                        <ul className="space-y-3 flex gap-4">
+                            {footerLinks.connect.map((link) => (
+                                <li key={link.name}>
+                                    <a
+                                        href={link.href}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                        {link.icon && (
+                                            <link.icon className="w-4 h-4 inline-block mr-1" />
+                                        )}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-12 mt-12 border-t border-border/50">
                     <p className="text-sm text-muted-foreground">
                         &copy; {new Date().getFullYear()} Dokit. All rights reserved.
                     </p>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <span>Built with</span>
-                        <span className="text-rose-500">&#9829;</span>
-                        <span>for developers</span>
-                    </div>
                 </div>
             </div>
         </footer>

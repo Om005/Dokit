@@ -12,7 +12,7 @@ export function HeroSection() {
             {/* Version Badge */}
             <div className="flex items-center gap-2 px-4 py-1.5 bg-card/80 backdrop-blur-sm border border-border/50 rounded-full mb-8 shadow-sm">
                 <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-                <span className="text-sm text-muted-foreground">v1.0 is now live</span>
+                <span className="text-sm text-muted-foreground">Dokit is now live</span>
             </div>
 
             {/* Title with gradient shade */}
@@ -45,7 +45,7 @@ export function HeroSection() {
                     size="lg"
                     className="rounded-lg px-8 h-12 text-base bg-transparent"
                 >
-                    <Link href="#demo">View Demo</Link>
+                    <Link href="/features">Explore Features</Link>
                 </Button>
             </div>
 

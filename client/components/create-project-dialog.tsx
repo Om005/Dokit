@@ -159,6 +159,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                             </SelectTrigger>
                             <SelectContent>
                                 {STACKS.map((stack) => {
+                                    if (stack.id === "BLANK") return null;
                                     const Icon = stack.icon;
                                     return (
                                         <SelectItem key={stack.id} value={stack.id}>
