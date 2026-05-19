@@ -29,7 +29,6 @@ import {
     FileIcon,
     AlertCircle,
     Lock,
-    Play,
     ChevronRight,
     PanelBottom,
     PanelRight,
@@ -636,10 +635,10 @@ export default function ProjectPage({ projectId, token }: Props) {
                         {currProject?.name ?? "Project"}
                     </span>
                     <div className="flex-1 flex justify-center">
-                        <Button size="sm" variant="secondary" className="gap-1.5">
+                        {/* <Button size="sm" variant="secondary" className="gap-1.5">
                             <Play className="size-3.5" />
                             Run
-                        </Button>
+                        </Button> */}
                     </div>
                     <div className="flex items-center gap-2">
                         {onlineUsers.length > 0 && (

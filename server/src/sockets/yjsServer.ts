@@ -1,6 +1,6 @@
 import { WebSocketServer } from "ws";
-// @ts-expect-error - y-websocket utils are missing type declarations.
-import { docs, setupWSConnection } from "y-websocket/bin/utils";
+// @ts-expect-error - y-websocket/bin/utils does not ship proper TS types
+import * as yUtils from "y-websocket/bin/utils";
 import * as Y from "yjs";
 import { debounce } from "lodash";
 import DockerManager from "services/dockerManager";
@@ -10,67 +10,75 @@ import diff from "fast-diff";
 export const yjsWss = new WebSocketServer({ noServer: true });
 
 const syncLocks = new Set<string>();
-type YDocWithInit = Y.Doc & { isInitialized?: boolean };
+const initializedDocs = new Set<string>();
+
+function toCorrectProjectId(projectId: string) {
+    return projectId.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, "$1-$2-$3-$4-$5");
+}
 
 yjsWss.on("connection", (ws, req) => {
     const rawUrl = req.url?.slice(1) || "";
-
     const roomName = decodeURIComponent(rawUrl);
 
-    setupWSConnection(ws, req, { docName: roomName });
+    yUtils.setupWSConnection(ws, req, { docName: roomName });
 
     const match = roomName.match(/^([^-]+)-(.*)$/);
     if (!match) return;
+
     const [, projectId, filePath] = match;
-    const correctProjectId = projectId.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, "$1-$2-$3-$4-$5");
-    const ydoc = docs.get(roomName) as YDocWithInit | undefined;
-    if (!ydoc) {
-        return;
+    const correctProjectId = toCorrectProjectId(projectId);
+
+    const ydoc = yUtils.docs.get(roomName) as Y.Doc | undefined;
+    if (!ydoc) return;
+
+    const ytext = ydoc.getText("codemirror");
+
+    if (!initializedDocs.has(roomName)) {
+        initializedDocs.add(roomName);
+
+        DockerManager.getFileContent(correctProjectId, filePath)
+            .then((initialContent) => {
+                if (ytext.length === 0 && initialContent) {
+                    ytext.insert(0, initialContent);
+                }
+            })
+            .catch((err) => logger.error(`Failed to load initial file: ${filePath}`, err));
     }
 
-    if (ydoc) {
-        const ytext = ydoc.getText("codemirror");
-        if (!ydoc.isInitialized) {
-            ydoc.isInitialized = true;
+    const saveToDocker = debounce(async () => {
+        const currentText = ytext.toString();
 
-            DockerManager.getFileContent(correctProjectId, filePath)
-                .then((initialContent) => {
-                    if (ytext.length === 0 && initialContent) {
-                        ytext.insert(0, initialContent);
-                    }
-                })
-                .catch((err) => logger.error(`Failed to load initial file: ${filePath}`, err));
+        try {
+            await DockerManager.writeFileToContainer(correctProjectId, filePath, currentText);
+        } catch (err) {
+            logger.error(`Docker write failed for ${filePath}`);
+            logger.error(err);
         }
-        const saveToDocker = debounce(async () => {
-            const currentText = ytext.toString();
-            try {
-                await DockerManager.writeFileToContainer(correctProjectId, filePath, currentText);
-            } catch (err) {
-                logger.error(`Docker write failed for ${filePath}`);
-                logger.error(err);
-            }
-        }, 1000);
+    }, 1000);
 
-        ydoc.on("update", (_update: Uint8Array, origin: unknown) => {
-            if (origin === "backend-sync") {
-                return;
-            }
-            saveToDocker();
-        });
-    }
+    ydoc.on("update", (_update: Uint8Array, origin: unknown) => {
+        if (origin === "backend-sync") {
+            return;
+        }
+        saveToDocker();
+    });
 });
 
 export async function syncDockerToYjs(projectId: string, filePath: string) {
-    const correctProjectId = projectId.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, "$1-$2-$3-$4-$5");
+    const correctProjectId = toCorrectProjectId(projectId);
     const roomName = `${projectId}-${filePath}`;
 
     if (syncLocks.has(roomName)) {
         return;
     }
-    syncLocks.add(roomName);
-    const ydoc = docs.get(roomName) as YDocWithInit | undefined;
 
-    if (!ydoc) return;
+    syncLocks.add(roomName);
+
+    const ydoc = yUtils.docs.get(roomName) as Y.Doc | undefined;
+    if (!ydoc) {
+        syncLocks.delete(roomName);
+        return;
+    }
 
     const ytext = ydoc.getText("codemirror");
     const oldContent = ytext.toString();
@@ -78,9 +86,10 @@ export async function syncDockerToYjs(projectId: string, filePath: string) {
     try {
         const containerFileContent = await DockerManager.getFileContent(correctProjectId, filePath);
         if (containerFileContent === null) return;
+
         const newContent = containerFileContent.replace(/\r/g, "");
 
-        if (oldContent == newContent) {
+        if (oldContent === newContent) {
             return;
         }
 
@@ -88,7 +97,7 @@ export async function syncDockerToYjs(projectId: string, filePath: string) {
         let index = 0;
 
         ydoc.transact(() => {
-            changes.forEach(([action, text]) => {
+            for (const [action, text] of changes) {
                 if (action === diff.EQUAL) {
                     index += text.length;
                 } else if (action === diff.DELETE) {
@@ -97,7 +106,7 @@ export async function syncDockerToYjs(projectId: string, filePath: string) {
                     ytext.insert(index, text);
                     index += text.length;
                 }
-            });
+            }
         }, "backend-sync");
     } catch (error) {
         logger.error(`Failed to sync Docker content for ${filePath}`);
