@@ -81,7 +81,7 @@ const uaParserMiddleware = (req: Request, res: Response, next: NextFunction) => 
         }
         req.meta.uaInfo = uaData;
         next();
-    } catch (error) {
+    } catch {
         req.meta.uaInfo = {
             browser: { name: "unknown", version: "unknown" },
             os: { name: "unknown", version: "unknown" },

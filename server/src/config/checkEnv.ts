@@ -29,7 +29,7 @@ export const EnvSchema = z
 
 export const checkEnv = () => {
     try {
-        const validatedEnv = EnvSchema.parse(env);
+        EnvSchema.parse(env);
     } catch (err) {
         console.error("Invalid environment configuration");
         if (err instanceof z.ZodError) {

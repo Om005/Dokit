@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { transporter, MailerOptions } from "@config/mailer";
+import { MailerOptions } from "@config/mailer";
 import env from "@config/env";
 import { prisma } from "@db/prisma";
 import sendResponse from "@utils/sendResponse";
@@ -1113,7 +1113,7 @@ const controllers = {
                     id: string;
                     isPreAuth: boolean;
                 };
-            } catch (error) {
+            } catch {
                 return sendResponse(res, {
                     success: false,
                     message:
@@ -1282,7 +1282,7 @@ const controllers = {
                     sessionId: string;
                     purpose: string;
                 };
-            } catch (error) {
+            } catch {
                 return sendResponse(res, {
                     success: false,
                     message: "This link is invalid or has expired.",
@@ -1303,7 +1303,7 @@ const controllers = {
                     prisma.session.delete({ where: { id: decoded.sessionId } }),
                     redisClient.del(`session:${decoded.sessionId}`),
                 ]);
-            } catch (error) {
+            } catch {
                 return sendResponse(res, {
                     success: false,
                     message: "Session already revoked or does not exist.",

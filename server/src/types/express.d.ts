@@ -1,5 +1,3 @@
-import { Request } from "express";
-
 interface RequestData {
     clientIp?: string;
     geoInfo?: {

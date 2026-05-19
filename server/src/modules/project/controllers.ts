@@ -1,7 +1,4 @@
 import type { Request, Response } from "express";
-import { S3Client, ListObjectsV2Command, CopyObjectCommand } from "@aws-sdk/client-s3";
-import r2Client from "@config/r2";
-import env from "@config/env";
 import { ProjectStack, Visibility } from "@generated/prisma";
 import logger from "@utils/logger";
 import sendResponse from "@utils/sendResponse";
@@ -867,11 +864,8 @@ const controllers = {
             });
 
             try {
-                const containerInfo = await DockerManager.createDokitContainerFromGithub(
-                    projectId,
-                    githubRepoUrl
-                );
-            } catch (error) {
+                await DockerManager.createDokitContainerFromGithub(projectId, githubRepoUrl);
+            } catch {
                 await prisma.project.delete({
                     where: { id: projectId },
                 });

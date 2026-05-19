@@ -88,11 +88,15 @@ export class BloomFilter {
         expansionRate: number;
     }> {
         try {
-            const info = (await redisClient.sendCommand(["BF.INFO", this.key])) as any[];
+            const info = (await redisClient.sendCommand(["BF.INFO", this.key])) as Array<
+                string | number
+            >;
 
-            const infoObj: any = {};
+            const infoObj: Record<string, number> = {};
             for (let i = 0; i < info.length; i += 2) {
-                infoObj[info[i]] = info[i + 1];
+                const key = String(info[i]);
+                const value = Number(info[i + 1]);
+                infoObj[key] = Number.isNaN(value) ? 0 : value;
             }
 
             return {
@@ -138,7 +142,7 @@ export class BloomFilter {
                 if (users.length === 0) break;
 
                 const usernames = users.map((user) => user.username);
-                const addResults = await this.addMultipleUsernames(usernames);
+                await this.addMultipleUsernames(usernames);
                 totalAdded += users.length;
 
                 cursor = users[users.length - 1].id;

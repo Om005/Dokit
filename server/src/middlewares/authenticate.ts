@@ -81,8 +81,8 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
         }
 
         next();
-    } catch (error: any) {
-        if (error.name === "TokenExpiredError") {
+    } catch (error: unknown) {
+        if (error instanceof Error && error.name === "TokenExpiredError") {
             return res.status(StatusCodes.UNAUTHORIZED).json({
                 success: false,
                 message: "Session has expired. Please log in again.",

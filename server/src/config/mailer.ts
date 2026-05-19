@@ -41,7 +41,7 @@ const transporter = {
         try {
             await brevoClient.get("/account");
             return true;
-        } catch (error) {
+        } catch {
             return false;
         }
     },

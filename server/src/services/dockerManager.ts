@@ -360,7 +360,7 @@ async function getFolderContent(
             stream.on("error", reject);
         });
 
-        let nodes: Record<string, FileNode> = {};
+        const nodes: Record<string, FileNode> = {};
         const lines = output.trim().split("\n");
 
         for (const line of lines) {
@@ -563,7 +563,7 @@ async function startFileSystemWatcher(projectId: string): Promise<void> {
                     if (action.includes("MOVED_FROM")) {
                         pendingEvent = event;
                     } else if (action.includes("MOVED_TO") && pendingEvent) {
-                        const [fromAction, fromPath] = pendingEvent.split("|");
+                        const [, fromPath] = pendingEvent.split("|");
                         pendingEvent = null;
                         const fromPathRelative = fromPath.replace("/workspace", "");
                         const isDir = action.includes("ISDIR");

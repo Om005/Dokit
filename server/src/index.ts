@@ -1,7 +1,8 @@
 if (process.env.NODE_ENV === "production") {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     require("module-alias/register");
 }
-import express, { Request, Response } from "express";
+import express from "express";
 import env from "@config/env";
 import { checkEnv } from "@config/checkEnv";
 import cookieParser from "cookie-parser";

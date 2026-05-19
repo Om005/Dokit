@@ -52,7 +52,7 @@ export const getGeoInfo = (ip: string): LocationData | null => {
             region: response.subdivisions?.[0]?.names?.en || "unknown",
             country: response.country?.names?.en || "unknown",
         };
-    } catch (error) {
+    } catch {
         return null;
     }
 };

@@ -1,8 +1,5 @@
 import { Worker } from "bullmq";
-import { transporter } from "@config/mailer";
 import redisConfig from "@config/redisQueue";
-import { MailerOptions } from "@config/mailer";
-import logger from "@utils/logger";
 import queues from "./queueNames";
 import workers from "./workerActions";
 
@@ -44,6 +41,15 @@ const initiatWorkers = () => {
         connection: redisConfig,
         concurrency: 5,
     });
+
+    return [
+        emailWorker,
+        cleanContainersWorker,
+        deleteProjectWorker,
+        updateProjectLastAccessedWorker,
+        syncToR2Worker,
+        removeRequestWorker,
+    ];
 };
 
 export default initiatWorkers;

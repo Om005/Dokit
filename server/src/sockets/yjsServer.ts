@@ -1,6 +1,6 @@
 import { WebSocketServer } from "ws";
-// @ts-ignore
-import { setupWSConnection } from "y-websocket/bin/utils";
+// @ts-expect-error - y-websocket utils are missing type declarations.
+import { docs, setupWSConnection } from "y-websocket/bin/utils";
 import * as Y from "yjs";
 import { debounce } from "lodash";
 import DockerManager from "services/dockerManager";
@@ -10,6 +10,7 @@ import diff from "fast-diff";
 export const yjsWss = new WebSocketServer({ noServer: true });
 
 const syncLocks = new Set<string>();
+type YDocWithInit = Y.Doc & { isInitialized?: boolean };
 
 yjsWss.on("connection", (ws, req) => {
     const rawUrl = req.url?.slice(1) || "";
@@ -20,18 +21,17 @@ yjsWss.on("connection", (ws, req) => {
 
     const match = roomName.match(/^([^-]+)-(.*)$/);
     if (!match) return;
-    const [_, projectId, filePath] = match;
+    const [, projectId, filePath] = match;
     const correctProjectId = projectId.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, "$1-$2-$3-$4-$5");
-    const docs = require("y-websocket/bin/utils").docs;
-    const ydoc: Y.Doc = docs.get(roomName);
+    const ydoc = docs.get(roomName) as YDocWithInit | undefined;
     if (!ydoc) {
         return;
     }
 
     if (ydoc) {
         const ytext = ydoc.getText("codemirror");
-        if (!(ydoc as any).isInitialized) {
-            (ydoc as any).isInitialized = true;
+        if (!ydoc.isInitialized) {
+            ydoc.isInitialized = true;
 
             DockerManager.getFileContent(correctProjectId, filePath)
                 .then((initialContent) => {
@@ -51,7 +51,7 @@ yjsWss.on("connection", (ws, req) => {
             }
         }, 1000);
 
-        ydoc.on("update", (update: Uint8Array, origin: any) => {
+        ydoc.on("update", (_update: Uint8Array, origin: unknown) => {
             if (origin === "backend-sync") {
                 return;
             }
@@ -68,8 +68,7 @@ export async function syncDockerToYjs(projectId: string, filePath: string) {
         return;
     }
     syncLocks.add(roomName);
-    const docs = require("y-websocket/bin/utils").docs;
-    const ydoc: Y.Doc = docs.get(roomName);
+    const ydoc = docs.get(roomName) as YDocWithInit | undefined;
 
     if (!ydoc) return;
 

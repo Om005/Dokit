@@ -4,6 +4,7 @@ import pinoHttp from "pino-http";
 const httpLogger = pinoHttp({
     logger,
     customLogLevel: (req, res, err) => {
+        void req;
         if (err || res.statusCode >= 500) return "error";
         if (res.statusCode >= 400) return "warn";
         return "info";
@@ -17,7 +18,7 @@ const httpLogger = pinoHttp({
         `${req.method} ${req.url} ${res.statusCode} - ${err?.message || "Unknown error"}`,
 
     serializers: {
-        req: (req) => undefined,
+        req: () => undefined,
         res: (res) => ({
             statusCode: res.statusCode,
         }),

@@ -247,7 +247,11 @@ export default function CompletePage() {
                                         value={userName}
                                         maxLength={20}
                                         onChange={(e) =>
-                                            setUserName(e.target.value.replace(/\s/g, ""))
+                                            setUserName(
+                                                e.target.value
+                                                    .replace(/\s/g, "")
+                                                    .replace(/[^a-zA-Z0-9]/g, "")
+                                            )
                                         }
                                         className={`pl-10 pr-10 transition-colors ${
                                             userName.length >= 3 && !usernameAvailability.loading
