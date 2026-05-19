@@ -6,16 +6,27 @@
     "scripts": {
         "format": "prettier --write \"**/*.{js,ts,tsx,json,css}\"",
         "format:check": "prettier --check \"**/*.{js,ts,tsx,json,css}\"",
+        "lint": "eslint \"client/**/*.{js,jsx,ts,tsx}\" \"server/**/*.{js,jsx,ts,tsx}\"",
         "test": "echo \"Error: no test specified\" && exit 1",
         "docker:up": "docker compose -f server/docker-compose.yaml up -d",
         "dev": "pnpm run docker:up && pnpm --parallel --filter ./server --filter ./client dev",
-        "down": "docker compose -f server/docker-compose.yaml down"
+        "down": "docker compose -f server/docker-compose.yaml down",
+        "prepare": "husky"
     },
     "keywords": [],
     "author": "",
     "license": "ISC",
     "packageManager": "pnpm@10.25.0",
     "devDependencies": {
-        "prettier": "^3.8.1"
+        "@eslint/js": "^9.0.0",
+        "eslint": "^9.0.0",
+        "eslint-config-next": "16.1.6",
+        "globals": "^15.0.0",
+        "husky": "^9.1.7",
+        "jiti": "^2.7.0",
+        "next": "16.1.6",
+        "prettier": "^3.8.1",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.0.0"
     }
 }

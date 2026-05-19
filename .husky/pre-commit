@@ -1,0 +1,19 @@
+printf '%s\n' '[husky][pre-commit] Running: pnpm format'
+
+if ! pnpm format; then
+    status=$?
+    printf '%s\n' '[husky][pre-commit] Code formatting failed. commit blocked.'
+    exit $status
+fi
+
+printf '%s\n' '[husky][pre-commit] Code formatted successfully.'
+
+printf '%s\n' '[husky][pre-commit] Running: pnpm lint'
+
+if ! pnpm lint; then
+    status=$?
+    printf '%s\n' '[husky][pre-commit] Linting failed. commit blocked.'
+    exit $status
+fi
+
+printf '%s\n' '[husky][pre-commit] Linting passed successfully. Proceeding with commit.'
