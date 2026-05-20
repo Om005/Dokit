@@ -10,6 +10,12 @@ import {
 } from "@aws-sdk/client-s3";
 import logger from "@utils/logger";
 import { DeleteObjectsCommand } from "@aws-sdk/client-s3";
+import ignore from "ignore";
+import sendResponse from "@utils/sendResponse";
+import { Response } from "express";
+import { StatusCodes } from "http-status-codes";
+import { ZipArchive } from "archiver";
+import { Readable } from "stream";
 
 const BUCKET_NAME = env.R2_BUCKET_NAME!;
 const STACK_BASE_PREFIX: Record<ProjectStack, string> = {
@@ -208,6 +214,22 @@ async function getFolderContent(
             ? `code/${projectId}/${normalizedPath}/`
             : `code/${projectId}/`;
 
+        const ig = ignore();
+
+        try {
+            const ignoreCommand = new GetObjectCommand({
+                Bucket: BUCKET_NAME,
+                Key: `code/${projectId}/.dokitignore`,
+            });
+            const ignoreResponse = await r2Client.send(ignoreCommand);
+            const ignoreContent = (await ignoreResponse.Body?.transformToString()) || "";
+
+            ig.add(ignoreContent);
+        } catch {
+            logger.error(`Failed to fetch .dokitignore for ${projectId}:`);
+            ig.add([".env", "*.env"]);
+        }
+
         const listCommand = new ListObjectsV2Command({
             Bucket: BUCKET_NAME,
             Prefix: prefix,
@@ -256,7 +278,15 @@ async function getFolderContent(
             };
         }
 
-        return items;
+        const filteredItems: Record<string, FileSystemItem> = {};
+        for (const [path, item] of Object.entries(items)) {
+            const pathForIgnore = item.type === "directory" ? `${path}/` : path;
+            if (!ig.ignores(pathForIgnore)) {
+                filteredItems[path] = item;
+            }
+        }
+
+        return filteredItems;
     } catch (error) {
         logger.error(
             `Error listing folder content for project ${projectId} at path ${folderPath}:`
@@ -289,6 +319,99 @@ async function getFileContent(projectId: string, filePath: string) {
     }
 }
 
+async function downloadProjectAsZip(projectId: string, name: string, res: Response) {
+    try {
+        const ig = ignore();
+        const prefix = `code/${projectId}/`;
+        try {
+            const ignoreCommand = new GetObjectCommand({
+                Bucket: BUCKET_NAME,
+                Key: `code/${projectId}/.dokitignore`,
+            });
+            const ignoreResponse = await r2Client.send(ignoreCommand);
+            const ignoreContent = (await ignoreResponse.Body?.transformToString()) || "";
+            ig.add(ignoreContent);
+        } catch {
+            logger.error(`Failed to fetch .dokitignore for ${projectId}:`);
+            ig.add([".env", "*.env"]);
+        }
+
+        const listCommand = new ListObjectsV2Command({
+            Bucket: BUCKET_NAME,
+            Prefix: prefix,
+        });
+
+        const listResponse = await r2Client.send(listCommand);
+
+        if (!listResponse.Contents || listResponse.Contents.length === 0) {
+            return sendResponse(res, {
+                message: "Project not found or empty",
+                success: false,
+                statusCode: StatusCodes.NOT_FOUND,
+            });
+        }
+        res.setHeader("Content-Type", "application/zip");
+        res.setHeader("Content-Disposition", `attachment; filename="project-${name}.zip"`);
+
+        const archive = new ZipArchive({
+            zlib: { level: 5 },
+        });
+
+        archive.on("error", (err) => {
+            logger.error("Archiver error:");
+            logger.error(err);
+            if (!res.headersSent) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Error creating zip archive",
+                    statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+                });
+            }
+            res.end();
+        });
+
+        archive.pipe(res);
+
+        for (const file of listResponse.Contents) {
+            const relativePath = file.Key!.replace(prefix, "");
+
+            if (relativePath === "") continue;
+
+            if (ig.ignores(relativePath)) {
+                continue;
+            }
+
+            if (file.Key!.endsWith("/")) {
+                archive.append("", { name: relativePath });
+                continue;
+            }
+
+            const getObjectCommand = new GetObjectCommand({
+                Bucket: BUCKET_NAME,
+                Key: file.Key,
+            });
+
+            const fileResponse = await r2Client.send(getObjectCommand);
+            const fileStream = fileResponse.Body as Readable;
+
+            archive.append(fileStream, { name: relativePath });
+        }
+        await archive.finalize();
+    } catch (error) {
+        logger.error(`Error downloading project ${projectId} as zip:`);
+        logger.error(error);
+        if (!res.headersSent) {
+            return sendResponse(res, {
+                success: false,
+                message: "Internal server error during download",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        } else {
+            res.end();
+        }
+    }
+}
+
 const R2Manager = {
     copyBaseToProject,
     deleteProject,
@@ -297,6 +420,7 @@ const R2Manager = {
     deleteProfileReadme,
     getFolderContent,
     getFileContent,
+    downloadProjectAsZip,
 };
 
 export default R2Manager;

@@ -97,6 +97,10 @@ const validators = {
             .max(50, "Password must be at most 50 characters")
             .optional(),
     }),
+
+    downloadProjectSchema: z.object({
+        projectId: z.string().uuid("Invalid project ID format").min(1, "Project ID is required"),
+    }),
 };
 
 export default validators;

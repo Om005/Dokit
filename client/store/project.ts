@@ -1,5 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { AxiosError } from "axios";
 import createApiHandler from "@/utils/apiHandler";
+import api from "@/utils/api";
 import { ApiResponse } from "@/types/types";
 import { persistReducer } from "redux-persist";
 import storage from "redux-persist/lib/storage";
@@ -24,6 +26,7 @@ interface intialProjectState {
     changingMemberAccess: boolean;
     removingMember: boolean;
     creatingProjectFromGithub: boolean;
+    downloadingProject: boolean;
 }
 
 const projectActions = {
@@ -199,6 +202,65 @@ const projectActions = {
             password?: string;
         }>("/api/project/create-project-from-github", "post")
     ),
+
+    downloadProject: createAsyncThunk<
+        { filename: string },
+        { projectId: string; name: string },
+        { rejectValue: ApiResponse }
+    >("project/downloadProject", async ({ projectId, name }, { rejectWithValue }) => {
+        try {
+            const response = await api.post(
+                "/api/project/download-project",
+                { projectId },
+                {
+                    responseType: "blob",
+                }
+            );
+
+            const contentDisposition = response.headers["content-disposition"] as
+                | string
+                | undefined;
+            const filenameMatch = contentDisposition?.match(
+                /filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i
+            );
+            const rawFilename = filenameMatch?.[1] || filenameMatch?.[2];
+            const filename = rawFilename ? decodeURIComponent(rawFilename) : `project-${name}.zip`;
+
+            const blob = response.data as Blob;
+
+            if (typeof window !== "undefined") {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+            }
+
+            return { filename };
+        } catch (error) {
+            const err = error as AxiosError<ApiResponse>;
+            const data = err.response?.data;
+
+            if (data instanceof Blob) {
+                try {
+                    const text = await data.text();
+                    const parsed = JSON.parse(text) as ApiResponse;
+                    return rejectWithValue(parsed);
+                } catch {}
+            } else if (data) {
+                return rejectWithValue(data);
+            }
+
+            return rejectWithValue({
+                success: false,
+                statusCode: 500,
+                message: "Failed to download project.",
+            });
+        }
+    }),
 };
 
 const initialState: intialProjectState = {
@@ -220,6 +282,7 @@ const initialState: intialProjectState = {
     changingMemberAccess: false,
     removingMember: false,
     creatingProjectFromGithub: false,
+    downloadingProject: false,
 };
 
 const projectSlice = createSlice({
@@ -421,6 +484,17 @@ const projectSlice = createSlice({
 
             .addCase(projectActions.createProjectFromGithub.rejected, (state) => {
                 state.creatingProjectFromGithub = false;
+            })
+            .addCase(projectActions.downloadProject.pending, (state) => {
+                state.downloadingProject = true;
+            })
+
+            .addCase(projectActions.downloadProject.fulfilled, (state) => {
+                state.downloadingProject = false;
+            })
+
+            .addCase(projectActions.downloadProject.rejected, (state) => {
+                state.downloadingProject = false;
             });
     },
 });

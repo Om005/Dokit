@@ -7,6 +7,14 @@ import rateLimit from "@middlewares/rateLimiter";
 
 const router = express.Router();
 
+router.post(
+    "/download-project",
+    validationMiddleware(validators.downloadProjectSchema),
+    rateLimit({ limit: 3, windowMs: 60 * 1000, prefix: "download_project" }),
+    controllers.downloadProject
+);
+
+
 router.use(authenticate);
 
 router.post(

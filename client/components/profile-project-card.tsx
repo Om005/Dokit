@@ -1,12 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Calendar, MoreVertical, Lock, Pin, Settings, UserPlus } from "lucide-react";
+import {
+    Calendar,
+    MoreVertical,
+    Lock,
+    Pin,
+    Settings,
+    UserPlus,
+    Download,
+    Loader2,
+} from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store/store";
 import { projectActions } from "@/store/project";
 import { toast } from "sonner";
-import { Payload } from "@/types/types";
+import { ApiResponse, Payload } from "@/types/types";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +28,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { getStackIcon } from "@/components/stack-logos";
 import Link from "next/link";
+
 interface ProfileProjectCardProps {
     id: string;
     name: string;
@@ -49,6 +59,7 @@ export function ProfileProjectCard({
     const router = useRouter();
     const dispatch = useDispatch<AppDispatch>();
     const requestingAccess = useSelector((state: RootState) => state.project.requestingAccess);
+    const downloadingProject = useSelector((state: RootState) => state.project.downloadingProject);
     const stackInfo = getStackIcon(stack);
 
     const formattedDate = new Date(createdAt);
@@ -74,6 +85,24 @@ export function ProfileProjectCard({
 
     const handleTogglePin = () => {
         onTogglePin?.(id, !pinned);
+    };
+
+    const handleDownloadProject = async () => {
+        await toast.promise(
+            dispatch(projectActions.downloadProject({ projectId: id, name: name })),
+            {
+                loading: "Preparing project download...",
+                success: (result) => {
+                    if (projectActions.downloadProject.fulfilled.match(result)) {
+                        return "Ready to download project.";
+                    }
+
+                    const payload = result.payload as ApiResponse | undefined;
+                    throw new Error(payload?.message ?? "Failed to download project.");
+                },
+                error: (err) => err.message || "Failed to download project.",
+            }
+        );
     };
 
     const isPublicProject = visibility !== "PRIVATE";
@@ -141,16 +170,52 @@ export function ProfileProjectCard({
                                             <Settings className="mr-2 size-4" />
                                             Settings
                                         </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={handleDownloadProject}
+                                            className="cursor-pointer"
+                                            disabled={downloadingProject}
+                                        >
+                                            {downloadingProject ? (
+                                                <>
+                                                    <Loader2 className="size-4 animate-spin mr-2" />
+                                                    Please wait...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Download className="mr-2 size-4" />
+                                                    Download
+                                                </>
+                                            )}
+                                        </DropdownMenuItem>
                                     </>
                                 ) : (
-                                    <DropdownMenuItem
-                                        onClick={handleRequestAccess}
-                                        className="cursor-pointer"
-                                        disabled={requestingAccess}
-                                    >
-                                        <UserPlus className="mr-2 size-4" />
-                                        {requestingAccess ? "Requesting..." : "Request to Join"}
-                                    </DropdownMenuItem>
+                                    <>
+                                        <DropdownMenuItem
+                                            onClick={handleRequestAccess}
+                                            className="cursor-pointer"
+                                            disabled={requestingAccess}
+                                        >
+                                            <UserPlus className="mr-2 size-4" />
+                                            {requestingAccess ? "Requesting..." : "Request to Join"}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={handleDownloadProject}
+                                            className="cursor-pointer"
+                                            disabled={downloadingProject}
+                                        >
+                                            {downloadingProject ? (
+                                                <>
+                                                    <Loader2 className="size-4 animate-spin mr-2" />
+                                                    Please wait...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Download className="mr-2 size-4" />
+                                                    Download
+                                                </>
+                                            )}
+                                        </DropdownMenuItem>
+                                    </>
                                 )}
                             </DropdownMenuContent>
                         </DropdownMenu>

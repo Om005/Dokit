@@ -908,6 +908,35 @@ const controllers = {
             });
         }
     },
+
+    downloadProject: async (req: Request, res: Response) => {
+        const { projectId } = req.body;
+        const userId = req.meta.user?.id;
+        try {
+            const project = await prisma.project.findUnique({
+                where: { id: projectId },
+                select: { id: true, name: true, visibility: true, ownerId: true },
+            });
+
+            if (!project || (project.visibility !== "PUBLIC" && project.ownerId !== userId)) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "Project not found or is not public.",
+                    statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
+
+            await R2Manager.downloadProjectAsZip(projectId, project.name, res);
+        } catch (error) {
+            logger.error("Error in downloadProject controller:");
+            logger.error(error);
+            return sendResponse(res, {
+                success: false,
+                message: "Failed to download project.",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
+        }
+    },
 };
 
 export default controllers;
