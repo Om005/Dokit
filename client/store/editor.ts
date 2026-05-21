@@ -46,6 +46,7 @@ interface initialEditorState {
         message: string | null;
     };
     toolStatusByName: Record<string, "installing" | "uninstalling">;
+    gitStatus: Record<string, string>;
 }
 
 const editorActions = {
@@ -159,6 +160,7 @@ const initialState: initialEditorState = {
         message: null,
     },
     toolStatusByName: {},
+    gitStatus: {},
 };
 
 const editorSlice = createSlice({
@@ -412,6 +414,9 @@ const editorSlice = createSlice({
 
             delete state.toolStatusByName[toolName];
         },
+        setGitStatus(state, action: PayloadAction<Record<string, string>>) {
+            state.gitStatus = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -637,6 +642,7 @@ export const {
     setWorkspaceStatus,
     clearWorkspaceStatus,
     setToolStatus,
+    setGitStatus,
 } = editorSlice.actions;
 
 const persistedEditorReducer = persistReducer(editorPersistConfig, editorSlice.reducer);

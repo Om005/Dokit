@@ -33,6 +33,7 @@ RUN chmod 700 /root
 
 RUN mkdir -p /workspace && chown -R dokituser:dokituser /workspace
 WORKDIR /workspace
+RUN git config --global --add safe.directory /workspace
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

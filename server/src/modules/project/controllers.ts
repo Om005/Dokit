@@ -553,6 +553,11 @@ const controllers = {
                     currentUserAccess: currentUserAccess,
                 };
 
+                DockerManager.getGitStatus(project.id).catch((error) => {
+                    logger.error(`Failed to get git status for project ${project.id}:`);
+                    logger.error(error);
+                });
+
                 return sendResponse(res, {
                     success: true,
                     message: "Project started successfully.",

@@ -39,7 +39,7 @@ services:
 
   dokit-nginx:
     image: dokit-nginx:latest
-    container_name: dokit-nginx
+    container_name: nginx-dokit
     ports:
       - '8080:80'
     environment:

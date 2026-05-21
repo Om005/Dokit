@@ -27,6 +27,21 @@ import { FileNodeContextMenu } from "@/components/file-node-context-menu";
 import { NodeActionDialog } from "@/components/node-action-dialog";
 import { toast } from "sonner";
 
+function getGitStatusStyle(status?: string) {
+    switch (status) {
+        case "U":
+            return "text-green-500 dark:text-green-400"; // Untracked
+        case "M":
+            return "text-yellow-600 dark:text-yellow-500"; // Modified
+        case "A":
+            return "text-green-600 dark:text-green-400"; // Added
+        case "D":
+            return "text-red-500 dark:text-red-400"; // Deleted
+        default:
+            return "";
+    }
+}
+
 function getFileIconId(name: string): string {
     const lower = name.toLowerCase();
 
@@ -483,6 +498,10 @@ function FileTreeNode({
     const deletingNode = useSelector((state: RootState) => state.editor.deletingNode);
     const renamingNode = useSelector((state: RootState) => state.editor.renamingNode);
 
+    const gitStatusMap = useSelector((state: RootState) => state.editor.gitStatus) || {};
+    const status = gitStatusMap[node.path];
+    const statusColor = getGitStatusStyle(status);
+
     const [isOpen, setIsOpen] = React.useState(node.isExpanded);
     const [dialogOpen, setDialogOpen] = React.useState(false);
     const [dialogAction, setDialogAction] = React.useState<"create" | "rename" | "delete" | null>(
@@ -586,9 +605,16 @@ function FileTreeNode({
                                     icon={getFileIconId(node.name)}
                                     width={16}
                                     height={16}
-                                    className="shrink-0"
+                                    className={`shrink-0 ${statusColor}`}
                                 />
-                                <span className="truncate">{node.name}</span>
+                                <span className={`truncate ${statusColor}`}>{node.name}</span>
+                                {status && (
+                                    <span
+                                        className={`ml-auto text-[10px] font-bold ${statusColor}`}
+                                    >
+                                        {status}
+                                    </span>
+                                )}
                             </SidebarMenuButton>
                         </FileNodeContextMenu>
                     ) : (
@@ -609,7 +635,12 @@ function FileTreeNode({
                                 height={16}
                                 className="shrink-0"
                             />
-                            <span className="truncate">{node.name}</span>
+                            <span className={`truncate ${statusColor}`}>{node.name}</span>
+                            {status && (
+                                <span className={`ml-auto text-[10px] font-bold ${statusColor}`}>
+                                    {status}
+                                </span>
+                            )}
                         </SidebarMenuButton>
                     )}
                 </SidebarMenuItem>
@@ -661,7 +692,14 @@ function FileTreeNode({
                                         height={16}
                                         className="shrink-0"
                                     />
-                                    <span className="truncate">{node.name}</span>
+                                    <span className={`truncate ${statusColor}`}>{node.name}</span>
+                                    {status && (
+                                        <span
+                                            className={`ml-auto text-[10px] font-bold ${statusColor}`}
+                                        >
+                                            {status}
+                                        </span>
+                                    )}
                                 </SidebarMenuButton>
                             </CollapsibleTrigger>
                         </FileNodeContextMenu>
@@ -675,7 +713,14 @@ function FileTreeNode({
                                     height={16}
                                     className="shrink-0"
                                 />
-                                <span className="truncate">{node.name}</span>
+                                <span className={`truncate ${statusColor}`}>{node.name}</span>
+                                {status && (
+                                    <span
+                                        className={`ml-auto text-[10px] font-bold ${statusColor}`}
+                                    >
+                                        {status}
+                                    </span>
+                                )}
                             </SidebarMenuButton>
                         </CollapsibleTrigger>
                     )}

@@ -4,13 +4,14 @@ import logger from "@utils/logger";
 import env from "@config/env";
 import queueActions from "@modules/queue/queueActions";
 import { prisma } from "@db/prisma";
-import { PassThrough, Readable } from "stream";
+import { PassThrough, Readable, Writable } from "stream";
 import { FileNode } from "types/express";
 import { syncDockerToYjs } from "sockets/yjsServer";
 import { io } from "index";
 import { ALLOWED_TOOLS } from "constants/tools";
 
 const docker = new Docker();
+
 
 const NETWORK = "dokit-network";
 
@@ -27,6 +28,7 @@ interface DokitContainer {
 }
 
 const syncLocks = new Set<string>();
+const systemGitLocks = new Set<string>();
 
 async function waitForContainerReady(containerId: string, timeoutMs = 60_000): Promise<void> {
     const container = docker.getContainer(containerId);
@@ -491,6 +493,20 @@ async function startFileSystemWatcher(projectId: string): Promise<void> {
         "obj",
         ".gradle",
     ];
+
+    let gitStatusTimeout: NodeJS.Timeout | null = null;
+
+    const triggerGitStatusUpdate = () => {
+        if (gitStatusTimeout) clearTimeout(gitStatusTimeout);
+        gitStatusTimeout = setTimeout(() => {
+            systemGitLocks.add(projectId);
+            getGitStatus(projectId).catch((err) => {
+                logger.error(`Error updating git status in watcher for ${projectId}:`);
+                logger.error(err);
+            });
+            setTimeout(() => systemGitLocks.delete(projectId), 500);
+        }, 1000);
+    };
     try {
         const container = await docker.getContainer(containerName);
         const command =
@@ -511,15 +527,42 @@ async function startFileSystemWatcher(projectId: string): Promise<void> {
 
         stdout.on("data", (chunk) => {
             const output = chunk.toString().trim();
+            if (!output) return;
             const events = output.split("\n");
             let pendingEvent: string | null = null;
             events.forEach(async (event: string) => {
                 const [action, filePath] = event.split("|");
                 if (!filePath.startsWith("/workspace/")) return;
-                if (excluded.some((ex) => filePath.startsWith(`${ex}/`))) return;
-                if (excluded.some((ex) => filePath.includes(`/${ex}`))) return;
+                if (excluded.some((ex) => filePath.startsWith(`${ex}/`))) {
+                    if (filePath.startsWith("/workspace/.git/")) {
+                        if (
+                            (filePath === "/workspace/.git/index" ||
+                                filePath === "/workspace/.git/HEAD" ||
+                                filePath.includes("/workspace/.git/logs/")) &&
+                            !systemGitLocks.has(projectId)
+                        ) {
+                            triggerGitStatusUpdate();
+                        }
+                    }
+                    return;
+                }
+                if (excluded.some((ex) => filePath.includes(`/${ex}`))) {
+                    if (filePath.startsWith("/workspace/.git/")) {
+                        if (
+                            (filePath === "/workspace/.git/index" ||
+                                filePath === "/workspace/.git/HEAD" ||
+                                filePath.includes("/workspace/.git/logs/")) &&
+                            !systemGitLocks.has(projectId)
+                        ) {
+                            triggerGitStatusUpdate();
+                        }
+                    }
+                    return;
+                }
                 const relativePath = filePath.replace("/workspace", "");
                 const isDir = action.includes("ISDIR");
+
+                triggerGitStatusUpdate();
 
                 if (action.includes("CLOSE_WRITE") || action.includes("MODIFY")) {
                     if (!isDir) {
@@ -972,6 +1015,94 @@ async function createDokitContainerFromGithub(
     }
 }
 
+async function getGitStatus(projectId: string): Promise<void> {
+    const containerProjectId = projectId.replaceAll("-", "");
+    const containerName = `dokit-${containerProjectId}`;
+
+    try {
+        const container = docker.getContainer(containerName);
+        const command = `cd /workspace && git status --porcelain -uall`;
+
+        const exec = await container.exec({
+            Cmd: ["bash", "-c", command],
+            AttachStdout: true,
+            AttachStderr: true,
+        });
+
+        const stream = await exec.start({ hijack: true, stdin: false });
+
+        const result = await new Promise<string>((resolve, reject) => {
+            let stdoutData = "";
+            let stderrData = "";
+
+            const outStream = new Writable({
+                write(chunk, _enc, next) {
+                    stdoutData += chunk.toString();
+                    next();
+                },
+            });
+
+            const errStream = new Writable({
+                write(chunk, _enc, next) {
+                    stderrData += chunk.toString();
+                    next();
+                },
+            });
+
+            container.modem.demuxStream(stream, outStream, errStream);
+
+            stream.on("end", () => {
+                if (stderrData.includes("fatal:")) {
+                    reject(new Error(`Git error: ${stderrData}`));
+                } else {
+                    resolve(stdoutData);
+                }
+            });
+            stream.on("error", reject);
+        });
+
+        const gitStatus: Record<string, string> = {};
+
+        result.split("\n").forEach((line) => {
+            if (line.trim().length > 3) {
+                const statusCode = line.substring(0, 2);
+                const filePath = line.substring(3).trim();
+
+                let mappedStatus = "";
+                if (statusCode === "??") mappedStatus = "U";
+                else if (statusCode.includes("M")) mappedStatus = "M";
+                else if (statusCode.includes("A")) mappedStatus = "A";
+                else if (statusCode.includes("D")) mappedStatus = "D";
+
+                if (mappedStatus) {
+                    gitStatus[filePath.startsWith("/") ? filePath : `/${filePath}`] = mappedStatus;
+
+                    const parts = filePath.split("/");
+                    let currentParentPath = "";
+
+                    for (let i = 0; i < parts.length - 1; i++) {
+                        currentParentPath += "/" + parts[i];
+
+                        if (!gitStatus[currentParentPath]) {
+                            gitStatus[currentParentPath] = mappedStatus;
+                        } else if (gitStatus[currentParentPath] === "U" && mappedStatus === "M") {
+                            gitStatus[currentParentPath] = "M";
+                        }
+                    }
+                }
+            }
+        });
+
+        io.to(projectId).emit("git-status-update", { gitStatus });
+        return;
+    } catch (error) {
+        logger.error(`Failed to get Git status for project ${projectId}:`);
+        logger.error(error);
+        io.to(projectId).emit("git-status-update", {});
+        return;
+    }
+}
+
 const DockerManager = {
     createDokitContainer,
     deleteDokitContainer,
@@ -989,6 +1120,7 @@ const DockerManager = {
     installTool,
     uninstallTool,
     createDokitContainerFromGithub,
+    getGitStatus,
 };
 
 export default DockerManager;

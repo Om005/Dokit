@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/store/store";
-import { setCurrProject, setToolStatus, setWorkspaceStatus } from "@/store/editor";
+import { setCurrProject, setGitStatus, setToolStatus, setWorkspaceStatus } from "@/store/editor";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -119,6 +119,15 @@ function useFileTreeSocket(
                 toast.info("You have been removed from the project by the owner.");
             }
         });
+
+        socket.on("git-status-update", async (data: { gitStatus: Record<string, string> }) => {
+            try {
+                await dispatch(setGitStatus(data.gitStatus));
+            } catch (error) {
+                console.error("Error updating git status:", error);
+            }
+        });
+
         return () => {
             socket.disconnect();
         };

@@ -25,7 +25,6 @@ const authUtils = {
 
     encryptSecret: (plainTextSecret: string): string => {
         const iv = crypto.randomBytes(16);
-        console.log(ENCRYPTION_KEY);
         const cipher = crypto.createCipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY, "hex"), iv);
 
         let encrypted = cipher.update(plainTextSecret, "utf8", "hex");

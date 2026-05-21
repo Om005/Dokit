@@ -36,6 +36,7 @@ WORKDIR /workspace
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+RUN git config --global --add safe.directory /workspace
 
 EXPOSE 7681
 EXPOSE 3000
