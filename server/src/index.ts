@@ -56,6 +56,10 @@ app.use("/api/project/access", projectAccessRoutes);
 app.use("/api/project", projectRoutes);
 app.use("/api/editor", editorRoutes);
 
+app.get("/health", (req, res) => {
+    res.status(200).json({ status: "ok" });
+});
+
 const httpServer = createServer(app);
 
 export const io = new Server(httpServer, {
