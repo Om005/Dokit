@@ -37,6 +37,7 @@ interface EnvConfig {
     R2_BUCKET_NAME: string;
     NGINX_HOST: string;
     TWO_FACTOR_ENCRYPTION_KEY: string;
+    DOKIT_PROJECT_NETWORK: string;
 }
 
 const env: EnvConfig = {
@@ -61,6 +62,7 @@ const env: EnvConfig = {
     R2_BUCKET_NAME: process.env.R2_BUCKET_NAME as string,
     NGINX_HOST: process.env.NGINX_HOST as string,
     TWO_FACTOR_ENCRYPTION_KEY: process.env.TWO_FACTOR_ENCRYPTION_KEY as string,
+    DOKIT_PROJECT_NETWORK: process.env.DOKIT_PROJECT_NETWORK as string,
 };
 
 export default env;

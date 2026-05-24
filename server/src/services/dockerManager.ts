@@ -12,7 +12,7 @@ import { ALLOWED_TOOLS } from "constants/tools";
 
 const docker = new Docker();
 
-const NETWORK = "dokit-network";
+const NETWORK = env.DOKIT_PROJECT_NETWORK;
 
 interface DockerError extends Error {
     statusCode?: number;

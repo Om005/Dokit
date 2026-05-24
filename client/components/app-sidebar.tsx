@@ -26,6 +26,7 @@ import { editorActions, openTab, setActiveTab } from "@/store/editor";
 import { FileNodeContextMenu } from "@/components/file-node-context-menu";
 import { NodeActionDialog } from "@/components/node-action-dialog";
 import { toast } from "sonner";
+import Image from "next/image";
 
 function getGitStatusStyle(status?: string) {
     switch (status) {
@@ -601,12 +602,22 @@ function FileTreeNode({
                                 }}
                                 className="data-[active=true]:bg-transparent"
                             >
-                                <Icon
-                                    icon={getFileIconId(node.name)}
-                                    width={16}
-                                    height={16}
-                                    className={`shrink-0 ${statusColor}`}
-                                />
+                                {node.name != ".dokitignore" ? (
+                                    <Icon
+                                        icon={getFileIconId(node.name)}
+                                        width={16}
+                                        height={16}
+                                        className={`shrink-0 ${statusColor}`}
+                                    />
+                                ) : (
+                                    <Image
+                                        src="/dokit.svg"
+                                        alt="dokitignore"
+                                        width={18}
+                                        height={18}
+                                        className="shrink-0"
+                                    />
+                                )}
                                 <span className={`truncate ${statusColor}`}>{node.name}</span>
                                 {status && (
                                     <span
@@ -629,12 +640,22 @@ function FileTreeNode({
                             }}
                             className="data-[active=true]:bg-transparent"
                         >
-                            <Icon
-                                icon={getFileIconId(node.name)}
-                                width={16}
-                                height={16}
-                                className="shrink-0"
-                            />
+                            {node.name != ".dokitignore" ? (
+                                <Icon
+                                    icon={getFileIconId(node.name)}
+                                    width={16}
+                                    height={16}
+                                    className="shrink-0"
+                                />
+                            ) : (
+                                <Image
+                                    src="/dokit.svg"
+                                    alt="dokitignore"
+                                    width={18}
+                                    height={18}
+                                    className="shrink-0"
+                                />
+                            )}
                             <span className={`truncate ${statusColor}`}>{node.name}</span>
                             {status && (
                                 <span className={`ml-auto text-[10px] font-bold ${statusColor}`}>

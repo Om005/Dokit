@@ -48,6 +48,7 @@ services:
       - DOMAIN_ESCAPED=dokit\.backends\.live
     networks: 
       - dokit-network
+      - dokit-project-network
     restart: unless-stopped
 
 volumes:
@@ -58,3 +59,5 @@ volumes:
 networks:
   dokit-network:
     external: true 
+  dokit-project-network:
+    external: true

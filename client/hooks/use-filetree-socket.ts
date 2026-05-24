@@ -128,6 +128,14 @@ function useFileTreeSocket(
             }
         });
 
+        socket.on("project-closed", async (data: { projectId: string }) => {
+            if (data.projectId === projectId) {
+                await dispatch(setCurrProject(null));
+                router.replace("/dashboard/projects");
+                toast.info("The project has been closed.");
+            }
+        });
+
         return () => {
             socket.disconnect();
         };

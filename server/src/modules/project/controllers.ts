@@ -10,6 +10,7 @@ import validators from "./validators";
 import queueActions from "@modules/queue/queueActions";
 import argon2 from "argon2";
 import { FileNode } from "types/express";
+import { io } from "index";
 
 const controllers = {
     createProject: async (req: Request, res: Response) => {
@@ -783,6 +784,7 @@ const controllers = {
 
             try {
                 await queueActions.addContainerCleanupJob(projectId);
+                io.to(projectId).emit("project-closed", { projectId });
             } catch (error) {
                 logger.error("Error stopping container in closeProject controller:");
                 logger.error(error);

@@ -57,7 +57,7 @@ app.use("/api/project", projectRoutes);
 app.use("/api/editor", editorRoutes);
 
 app.get("/health", (req, res) => {
-    res.status(500).json({ status: "Not ok" });
+    res.status(200).json({ status: "Not ok" });
 });
 
 const httpServer = createServer(app);

@@ -24,6 +24,7 @@ export const EnvSchema = z
         R2_BUCKET_NAME: z.string().min(1),
         NGINX_HOST: z.string().min(1),
         TWO_FACTOR_ENCRYPTION_KEY: z.string().min(1),
+        DOKIT_PROJECT_NETWORK: z.string().min(1),
     })
     .strict();
 
