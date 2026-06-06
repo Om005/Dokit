@@ -87,6 +87,11 @@ const controllers = {
                     },
                 });
 
+                queueActions.addUpdateEmbeddingsJob(projectId).catch((error) => {
+                    logger.error(`Failed to add update embeddings job for project ${projectId}:`);
+                    logger.error(error);
+                });
+
                 return sendResponse(res, {
                     success: true,
                     message: "Project created successfully.",
