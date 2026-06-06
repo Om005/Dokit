@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: postgres_db
     restart: always
     ports:
@@ -11,6 +11,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: mydb
+    networks: 
+      - dokit-network
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -23,6 +25,8 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
+    networks: 
+      - dokit-network
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     depends_on:
@@ -33,9 +37,22 @@ services:
     container_name: my-redis
     ports:
       - '127.0.0.1:6379:6379'
+    networks: 
+      - dokit-network
     volumes:
       - redis-data:/data
     restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:11434:11434'
+    networks: 
+      - dokit-network
+    volumes:
+      - ollama_data:/root/.ollama
 
   dokit-nginx:
     image: dokit-nginx:latest
@@ -55,7 +72,7 @@ volumes:
   postgres_data:
   pgadmin_data:
   redis-data:
-
+  ollama_data:
 networks:
   dokit-network:
     external: true 
