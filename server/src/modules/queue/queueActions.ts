@@ -144,6 +144,6 @@ const queueActions = {
             logger.error(error);
             throw error;
         }
-    }
+    },
 };
 export default queueActions;

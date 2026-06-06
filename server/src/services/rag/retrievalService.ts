@@ -18,7 +18,9 @@ interface RetrieveOptions {
 }
 
 function cosineSimilarity(a: number[], b: number[]): number {
-    let dot = 0, normA = 0, normB = 0;
+    let dot = 0,
+        normA = 0,
+        normB = 0;
     for (let i = 0; i < a.length; i++) {
         dot += a[i] * b[i];
         normA += a[i] * a[i];
@@ -47,7 +49,11 @@ function mmrRerank(
             const redundancy =
                 selected.length === 0
                     ? 0
-                    : Math.max(...selected.map((s) => cosineSimilarity(remaining[i].embedding, s.embedding)));
+                    : Math.max(
+                          ...selected.map((s) =>
+                              cosineSimilarity(remaining[i].embedding, s.embedding)
+                          )
+                      );
 
             const mmrScore = lambda * relevance - (1 - lambda) * redundancy;
 
@@ -69,21 +75,14 @@ export async function retrieveContext(
     projectId: string,
     options: RetrieveOptions = {}
 ): Promise<RetrievedChunk[]> {
-    const {
-        topK = 5,
-        minSimilarity = 0.3,
-        mmr = true,
-        mmrLambda = 0.6,
-    } = options;
+    const { topK = 5, minSimilarity = 0.3, mmr = true, mmrLambda = 0.6 } = options;
 
     const queryEmbedding = await generateEmbedding(query);
 
     const candidateLimit = mmr ? topK * 4 : topK;
     const vectorLiteral = `[${queryEmbedding.join(",")}]`;
 
-    const rows = await prisma.$queryRaw<
-        Array<RetrievedChunk & { embedding: string }>
-    >`
+    const rows = await prisma.$queryRaw<Array<RetrievedChunk & { embedding: string }>>`
         SELECT
             "filePath",
             "content",
@@ -118,7 +117,9 @@ export async function retrieveContext(
     }));
 
     const results = mmrRerank(queryEmbedding, candidates, topK, mmrLambda);
-    logger.info(`[RAG] Retrieved ${results.length} chunks (MMR=${mmrLambda}) for project ${projectId}`);
+    logger.info(
+        `[RAG] Retrieved ${results.length} chunks (MMR=${mmrLambda}) for project ${projectId}`
+    );
 
     return results;
 }

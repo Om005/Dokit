@@ -21,7 +21,6 @@ export async function ingestProjectFiles(projectId: string, files: FileInput[]):
                 AND "filePath" = ${file.filePath}
             `;
 
-            
             for (const chunk of chunks) {
                 const embedding = await generateEmbedding(chunk.content);
 

@@ -29,6 +29,18 @@ const withServerFiles = (files: string[]) => (config: Record<string, unknown>) =
     },
 });
 
+const unusedVarsRule = {
+    "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+            argsIgnorePattern: "^_",
+            varsIgnorePattern: "^_",
+            caughtErrorsIgnorePattern: "^_",
+            ignoreRestSiblings: true,
+        },
+    ],
+} as const;
+
 export default defineConfig([
     globalIgnores([
         "**/node_modules/**",
@@ -55,5 +67,11 @@ export default defineConfig([
         },
     },
     withServerFiles(serverJsFiles)(js.configs.recommended),
-    ...tseslint.configs.recommended.map(withServerFiles(serverTsFiles)),
+    ...tseslint.configs.recommended.map((config) => ({
+        ...withServerFiles(serverTsFiles)(config),
+        rules: {
+            ...(config as { rules?: Record<string, unknown> }).rules,
+            ...unusedVarsRule,
+        },
+    })),
 ]);
