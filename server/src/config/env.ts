@@ -38,6 +38,8 @@ interface EnvConfig {
     NGINX_HOST: string;
     TWO_FACTOR_ENCRYPTION_KEY: string;
     DOKIT_PROJECT_NETWORK: string;
+    GEMINI_API_KEY: string;
+    OLLAMA_URL: string;
 }
 
 const env: EnvConfig = {
@@ -63,6 +65,8 @@ const env: EnvConfig = {
     NGINX_HOST: process.env.NGINX_HOST as string,
     TWO_FACTOR_ENCRYPTION_KEY: process.env.TWO_FACTOR_ENCRYPTION_KEY as string,
     DOKIT_PROJECT_NETWORK: process.env.DOKIT_PROJECT_NETWORK as string,
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY as string,
+    OLLAMA_URL: process.env.OLLAMA_URL as string,
 };
 
 export default env;

@@ -7,11 +7,13 @@
 generator client {
   provider = "prisma-client-js"
   output   = "../src/generated/prisma"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  extensions = [vector]
 }
 
 
@@ -32,6 +34,8 @@ model User {
   projects        Project[]
   collaborations    ProjectCollaborator[]
   accessRequests    AccessRequest[]
+  chatThreads    ChatThread[]
+  chatMessages   ChatMessage[]
 }
 
 model Session {
@@ -70,6 +74,9 @@ model Project {
   lastAccessedAt DateTime      @default(now())
   pinned         Boolean       @default(false)
 
+  CodeChunk       CodeChunk[]
+  chats           ChatThread[]
+
   @@index([ownerId])
 }
 
@@ -100,6 +107,55 @@ model AccessRequest {
   @@unique([projectId, userId])
 }
 
+model ChatThread {
+  id            String      @id @default(uuid())
+  projectId     String
+  createdById   String
+  title         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  lastMessageAt DateTime    @default(now())
+
+  project       Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy     User        @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  messages      ChatMessage[]
+
+  @@index([projectId])
+  @@index([createdById])
+}
+
+model ChatMessage {
+  id        String    @id @default(uuid())
+  chatId    String
+  role      ChatRole
+  content   String
+  userId    String?
+  createdAt DateTime  @default(now())
+  metadata  Json?
+
+  chat      ChatThread @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([chatId])
+  @@index([userId])
+}
+
+model CodeChunk {
+  id          String   @id @default(cuid())
+  projectId   String   
+  filePath    String
+  language    String
+  entityType  String   
+  content     String   
+  metadata    Json     
+  
+  embedding   Unsupported("vector(768)") 
+  
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  @@index([projectId])
+}
+
 enum ProjectStack {
   NODE
   REACT_VITE
@@ -121,4 +177,10 @@ enum RequestStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+  SYSTEM
 }
