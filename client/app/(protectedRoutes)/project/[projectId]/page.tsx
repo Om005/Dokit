@@ -7,5 +7,9 @@ export default async function Page({ params }: { params: Promise<{ projectId: st
     const cookieStore = await cookies();
     const token = cookieStore.get("accessToken")?.value;
 
-    return <ProjectPage projectId={projectId} token={token || ""} />;
+    return (
+        <>
+            <ProjectPage projectId={projectId} token={token || ""} />
+        </>
+    );
 }

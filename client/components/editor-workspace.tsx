@@ -44,6 +44,7 @@ import {
     XCircle,
     Wrench,
     Package,
+    Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -69,6 +70,7 @@ import { useOnlineMembers } from "@/hooks/use-online-members";
 import { ALLOWED_TOOL_KEYS } from "@/utils/allowedTools";
 import { setCursorColor } from "@/store/editor";
 import env from "@/config/env";
+import Link from "next/link";
 
 interface Props {
     projectId: string;
@@ -711,6 +713,15 @@ export default function ProjectPage({ projectId, token }: Props) {
                                 className="data-[orientation=vertical]:h-5"
                             />
                         )}
+
+                        <Link
+                            className="h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5 hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-purple-500/20 transition-colors hover:cursor-pointer flex justify-center items-center"
+                            title="Ask AI"
+                            target="_blank"
+                            href={`/ai-assistant/${projectId}`}
+                        >
+                            <Sparkles className="w-4 h-4" />
+                        </Link>
                         {isOwner && (
                             <Button
                                 size="sm"

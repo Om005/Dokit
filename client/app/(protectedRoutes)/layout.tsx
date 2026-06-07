@@ -8,7 +8,11 @@ import { usePathname } from "next/navigation";
 const Layout = ({ children }: { children: React.ReactNode }) => {
     const pathname = usePathname();
     const noNavbarPaths = ["/projects/"];
-    const showNavbar = !(noNavbarPaths.includes(pathname) || pathname.startsWith("/project/"));
+    const showNavbar = !(
+        noNavbarPaths.includes(pathname) ||
+        pathname.startsWith("/project/") ||
+        pathname.startsWith("/ai-assistant/")
+    );
     return (
         <div>
             <ProtectedRoute>

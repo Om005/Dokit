@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "tw-animate-css";
+@import "react-markdown-editor-lite/lib/index.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -50,6 +51,8 @@
 :root {
     /* Light Mode - Warm & Colorful Palette */
     --background: oklch(0.98 0.008 85); /* Soft warm off-white */
+    --userbackground: #cfd2d5;
+    --usertext: #1a1a1a;
     --foreground: oklch(0.25 0.015 270); /* Rich dark blue-gray */
     --muted: oklch(0.94 0.012 75); /* Warm light beige */
     --muted-foreground: oklch(0.5 0.02 265); /* Medium blue-gray */
@@ -96,6 +99,8 @@
 .dark {
     /* Dark Mode - Rich Deep Palette with Blue-Purple Tones */
     --background: oklch(0.17 0.015 265); /* Deep blue-gray */
+    --userbackground: #1f2937;
+    --usertext: #f3f4f6;
     --foreground: oklch(0.95 0.01 90); /* Warm off-white */
     --muted: oklch(0.28 0.02 260); /* Rich muted blue-gray */
     --muted-foreground: oklch(0.68 0.025 265); /* Light blue-gray */
@@ -141,6 +146,8 @@
 @theme inline {
     --color-background: var(--background);
     --color-foreground: var(--foreground);
+    --color-userbackground: var(--userbackground);
+    --color-usertext: var(--usertext);
     --color-muted: var(--muted);
     --color-muted-foreground: var(--muted-foreground);
     --color-card: var(--card);
