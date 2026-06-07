@@ -4,6 +4,7 @@ import createApiHandler from "@/utils/apiHandler";
 import { ApiResponse } from "@/types/types";
 import { persistReducer } from "redux-persist";
 import storage from "redux-persist/lib/storage";
+import api from "@/utils/api";
 
 export type ChatRole = "USER" | "ASSISTANT" | "SYSTEM";
 
@@ -138,144 +139,34 @@ const chatActions = {
         ProjectChatResult,
         { projectId: string; message: string; chatId?: string },
         { rejectValue: ApiResponse }
-    >("chat/projectChat", async ({ projectId, message, chatId }, { rejectWithValue, signal }) => {
+    >("chat/projectChat", async (inputData, { rejectWithValue }) => {
         try {
-            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-            if (!backendUrl) {
-                return rejectWithValue({
-                    success: false,
-                    statusCode: 500,
-                    message: "NEXT_PUBLIC_BACKEND_URL is not set",
-                });
-            }
-
-            const response = await fetch(`${backendUrl}/api/chat/project-chat`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                credentials: "include",
-                body: JSON.stringify({ projectId, message, chatId }),
-                signal,
+            const response = await api.request<ApiResponse>({
+                url: "/api/chat/project-chat",
+                method: "post",
+                data: inputData,
             });
 
-            if (!response.ok) {
-                let fallbackMessage = "Failed to start chat.";
-                try {
-                    const data = (await response.json()) as ApiResponse;
-                    if (data?.message) fallbackMessage = data.message;
-                    return rejectWithValue(
-                        data ?? {
-                            success: false,
-                            statusCode: response.status,
-                            message: fallbackMessage,
-                        }
-                    );
-                } catch {
-                    return rejectWithValue({
-                        success: false,
-                        statusCode: response.status,
-                        message: fallbackMessage,
-                    });
-                }
-            }
-
-            if (!response.body) {
-                return rejectWithValue({
-                    success: false,
-                    statusCode: 500,
-                    message: "Failed to read chat stream.",
-                });
-            }
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder("utf-8");
-            let buffer = "";
-            let assistantText = "";
-            let activeChatId = (chatId ?? "").trim();
-            let activeChatTitle: string | null = null;
-            let streamDone = false;
-            let streamError: string | null = null;
-
-            while (!streamDone) {
-                const { value, done } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-
-                let eventBoundary = buffer.indexOf("\n\n");
-                while (eventBoundary !== -1) {
-                    const rawEvent = buffer.slice(0, eventBoundary);
-                    buffer = buffer.slice(eventBoundary + 2);
-
-                    const dataLine = rawEvent.split("\n").find((line) => line.startsWith("data: "));
-
-                    if (!dataLine) {
-                        eventBoundary = buffer.indexOf("\n\n");
-                        continue;
-                    }
-
-                    const data = dataLine.slice(6).trim();
-                    if (data === "[DONE]") {
-                        streamDone = true;
-                        break;
-                    }
-
-                    try {
-                        const parsed = JSON.parse(data) as {
-                            text?: string;
-                            chatId?: string;
-                            chatTitle?: string;
-                            type?: string;
-                            error?: string;
-                        };
-
-                        if (parsed.type === "chat-start" && parsed.chatId) {
-                            activeChatId = parsed.chatId;
-                        }
-
-                        if (parsed.type === "chat-start" && parsed.chatTitle) {
-                            activeChatTitle = parsed.chatTitle;
-                        }
-
-                        if (parsed.text) {
-                            assistantText += parsed.text;
-                        }
-
-                        if (parsed.error) {
-                            streamError = parsed.error;
-                        }
-                    } catch {
-                        // Ignore malformed chunk
-                    }
-
-                    eventBoundary = buffer.indexOf("\n\n");
-                }
-            }
-
-            if (streamError) {
-                return rejectWithValue({
-                    success: false,
-                    statusCode: 500,
-                    message: streamError,
-                });
-            }
+            const { chatId, chatTitle, reply } = response.data.data as {
+                chatId: string;
+                chatTitle?: string | null;
+                reply: string;
+            };
 
             return {
-                chatId: activeChatId,
-                assistantMessage: assistantText,
-                chatTitle: activeChatTitle,
+                chatId,
+                assistantMessage: reply,
+                chatTitle: chatTitle ?? null,
             };
         } catch (error) {
             const err = error as AxiosError<ApiResponse>;
-            if (err.response && err.response.data) {
+            if (err.response?.data) {
                 return rejectWithValue(err.response.data);
             }
-
             return rejectWithValue({
                 success: false,
                 statusCode: 500,
-                message: "Failed to stream chat response.",
+                message: "Failed to get chat response.",
             });
         }
     }),

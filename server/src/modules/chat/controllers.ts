@@ -162,7 +162,7 @@ const controllers = {
 
             const take = clampLimit(Number(limit ?? DEFAULT_CHAT_LIMIT), 1, MAX_CHAT_LIMIT);
             const chats = await prisma.chatThread.findMany({
-                where: { projectId: normalizedProjectId },
+                where: { projectId: normalizedProjectId, createdById: userId },
                 orderBy: { lastMessageAt: "desc" },
                 take,
                 select: {
@@ -417,7 +417,6 @@ const controllers = {
         }
 
         const normalizedProjectId = normalizeProjectId(projectId);
-        let aborted = false;
 
         try {
             const access = await ensureProjectAccess(normalizedProjectId, userId);
@@ -431,11 +430,12 @@ const controllers = {
 
             let activeChatId = typeof chatId === "string" ? chatId.trim() : "";
             let activeChatTitle: string | null = null;
+            let existingSummary: string | null = null;
 
             if (activeChatId) {
                 const existingChat = await prisma.chatThread.findUnique({
                     where: { id: activeChatId },
-                    select: { id: true, projectId: true },
+                    select: { id: true, projectId: true, summary: true },
                 });
                 if (!existingChat) {
                     return sendResponse(res, {
@@ -451,6 +451,7 @@ const controllers = {
                         statusCode: StatusCodes.BAD_REQUEST,
                     });
                 }
+                existingSummary = existingChat.summary;
             } else {
                 const generatedTitle = await generateChatTitle(trimmedMessage);
                 const newChat = await prisma.chatThread.create({
@@ -474,11 +475,6 @@ const controllers = {
                 },
             });
 
-            await prisma.chatThread.update({
-                where: { id: activeChatId },
-                data: { lastMessageAt: new Date() },
-            });
-
             const contextChunks = await retrieveContext(trimmedMessage, normalizedProjectId);
             const sources = contextChunks.map((chunk) => ({
                 filePath: chunk.filePath,
@@ -487,118 +483,106 @@ const controllers = {
                 similarity: chunk.similarity,
             }));
 
-            let contextString = "Codebase Context:\n\n";
+            let contextString = "";
             contextChunks.forEach((chunk) => {
                 contextString += `--- File: ${chunk.filePath} (${chunk.entityType}) ---\n`;
                 contextString += `${chunk.content}\n\n`;
             });
 
-            const prompt = `You are ASTra, an elite AI pair programmer native to the Dokit cloud IDE brought to life by om chavda. You have deeply internalized this entire codebase. You know the architecture, the design patterns, and the specific implementations as if you wrote them yourself.
+            const memorySection = existingSummary
+                ? `### Conversation Memory (what has been discussed so far)\n${existingSummary}\n`
+                : "";
 
-Your memory of the codebase is provided below. Treat this as your organic knowledge.
+            const prompt = `You are ASTra, an AI pair programmer living inside the Dokit cloud IDE, built by om chavda. You have read every file in this codebase and internalized it completely — the architecture, the patterns, the quirks, all of it.
 
-### CRITICAL RULES:
-1. **Total Immersion:** NEVER break character. You are strictly forbidden from using phrases like "based on the context provided", "according to the snippets", "the code shows", or "from what I can see". Speak directly to the code.
-2. **Tone & Style:** Be direct, authoritative, and highly technical. Speak engineer-to-engineer.
-3. **Precision Formatting:** Always use Markdown code blocks with the correct language tag. Keep explanations concise.
-4. **Handling Unknowns:** If a request requires knowledge outside your current memory, do not apologize or claim ignorance. Instead, assert your senior engineering judgment to recommend the optimal architectural pattern (e.g., "We should handle that by implementing...").
+You are a brilliant friend. You explain things clearly, push back when something is a bad idea, and aren't afraid to say "honestly, I'd do it differently." You care about the code quality and the person asking.
 
---- INTERNALIZED MEMORY ---
-${contextString}
---- END MEMORY ---
+### RULES:
+1. **Be human:** Never say "based on the context", "according to the snippets", "the code shows". You know this code - just talk about it naturally.
+2. **Be direct but warm:** Technical and precise, but not cold. You're a colleague, not a documentation page.
+3. **Format well:** Use Markdown code blocks with correct language tags.
+4. **No fake humility:** If you don't know something, give your best engineering judgment confidently - the way a senior dev says "I'd probably approach it like this" rather than "I don't have that information".
 
+${memorySection}
+### Codebase Context (relevant to this query)
+${contextString || "No specific code chunks retrieved for this query."}
+
+### User Message
 ${trimmedMessage}
-`;
+
+---
+
+### RESPONSE FORMAT
+Respond with ONLY a valid JSON object. No text before or after. No markdown fences wrapping it.
+
+{
+  "reply": "<your response here — be helpful, clear, and a little human>",
+  "summary": "<updated summary: take the existing summary above and append 1-2 sentences about what was discussed or decided in THIS exchange. If no existing summary, write 1-2 sentences for this exchange only. Focus on technical decisions, patterns, and solutions.>"
+}`;
 
             const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            const result = await model.generateContent(prompt);
+            const rawText = result.response.text();
 
-            res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
-            res.setHeader("Cache-Control", "no-cache, no-transform");
-            res.setHeader("Connection", "keep-alive");
-            res.setHeader("X-Accel-Buffering", "no");
+            let replyText = "";
+            let updatedSummary: string | null = null;
 
-            if (typeof res.flushHeaders === "function") {
-                res.flushHeaders();
+            try {
+                const cleaned = rawText
+                    .trim()
+                    .replace(/^```json\s*/i, "")
+                    .replace(/^```\s*/i, "")
+                    .replace(/```\s*$/i, "")
+                    .trim();
+
+                const parsed = JSON.parse(cleaned);
+                replyText = typeof parsed.reply === "string" ? parsed.reply : rawText;
+                updatedSummary = typeof parsed.summary === "string" ? parsed.summary : null;
+            } catch {
+                logger.warn(`[Chat] Failed to parse structured JSON for chat ${activeChatId}`);
+                replyText = rawText;
             }
 
-            const chatStartPayload: {
-                text: string;
-                chatId: string;
-                type: string;
-                chatTitle?: string;
-            } = {
-                text: "",
-                chatId: activeChatId,
-                type: "chat-start",
-            };
-            if (activeChatTitle) {
-                chatStartPayload.chatTitle = activeChatTitle;
+            const trimmedReply = replyText.trim();
+
+            if (trimmedReply) {
+                await prisma.chatMessage.create({
+                    data: {
+                        chatId: activeChatId,
+                        role: ChatRole.ASSISTANT,
+                        content: trimmedReply,
+                        metadata: { model: "gemini-2.5-flash", sources },
+                    },
+                });
+
+                await prisma.chatThread.update({
+                    where: { id: activeChatId },
+                    data: {
+                        lastMessageAt: new Date(),
+                        ...(updatedSummary && { summary: updatedSummary }),
+                    },
+                });
             }
 
-            res.write(`data: ${JSON.stringify(chatStartPayload)}\n\n`);
-
-            req.on("close", () => {
-                aborted = true;
-                logger.info(
-                    `Client disconnected from chat stream for project: ${normalizedProjectId}`
-                );
+            return sendResponse(res, {
+                success: true,
+                message: "Chat response generated.",
+                statusCode: StatusCodes.OK,
+                data: {
+                    chatId: activeChatId,
+                    ...(activeChatTitle && { chatTitle: activeChatTitle }),
+                    reply: trimmedReply,
+                },
             });
-
-            const result = await model.generateContentStream(prompt);
-            let assistantText = "";
-
-            for await (const chunk of result.stream) {
-                if (aborted) break;
-
-                const chunkText = chunk.text();
-
-                if (chunkText) {
-                    assistantText += chunkText;
-                    res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
-                }
-            }
-
-            if (!aborted) {
-                const trimmedAssistant = assistantText.trim();
-                if (trimmedAssistant) {
-                    await prisma.chatMessage.create({
-                        data: {
-                            chatId: activeChatId,
-                            role: ChatRole.ASSISTANT,
-                            content: assistantText,
-                            metadata: {
-                                model: "gemini-2.5-flash",
-                                sources,
-                            },
-                        },
-                    });
-
-                    await prisma.chatThread.update({
-                        where: { id: activeChatId },
-                        data: { lastMessageAt: new Date() },
-                    });
-                }
-
-                res.write("data: [DONE]\n\n");
-                res.end();
-            }
         } catch (error) {
             logger.error(
                 `Chat generation failed: ${error instanceof Error ? error.message : String(error)}`
             );
-
-            if (!res.headersSent) {
-                return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-                    error: "Internal server error during chat generation",
-                });
-            }
-
-            if (!aborted) {
-                res.write(
-                    `data: ${JSON.stringify({ error: "Stream interrupted due to server error" })}\n\n`
-                );
-                res.end();
-            }
+            return sendResponse(res, {
+                success: false,
+                message: "Internal server error during chat generation.",
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            });
         }
     },
 };

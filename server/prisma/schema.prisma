@@ -119,7 +119,7 @@ model ChatThread {
   project       Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdBy     User        @relation(fields: [createdById], references: [id], onDelete: Cascade)
   messages      ChatMessage[]
-
+  summary       String?
   @@index([projectId])
   @@index([createdById])
 }
