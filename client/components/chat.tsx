@@ -36,6 +36,7 @@ import {
     PanelLeft,
     ArrowLeft,
 } from "lucide-react";
+import { Payload } from "@/types/types";
 
 interface AiAssistantProps {
     projectId: string;
@@ -556,7 +557,10 @@ export const AiAssistant = ({ projectId }: AiAssistantProps) => {
                 chatActions.createChat({ projectId, title: buildChatTitle(trimmed) })
             );
             if (chatActions.createChat.fulfilled.match(createResponse)) {
-                chatId = createResponse.payload.data?.chat?.id ?? null;
+                const payload = createResponse.payload as Payload<{
+                    chat: { id: string };
+                }>;
+                chatId = payload.data?.chat?.id ?? null;
             }
         }
         if (!chatId) {
