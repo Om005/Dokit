@@ -264,11 +264,16 @@ export default function FeaturesPage() {
 
                 <section className="w-full max-w-6xl mx-auto container px-4 py-16">
                     <div className="mx-auto max-w-6xl">
-                        <div className="mb-12">
-                            <h2 className="mb-4 text-3xl font-bold">Instant Environments</h2>
-                            <p className="text-lg text-muted-foreground leading-relaxed">
-                                Provision, launch, and run code without local setup.
-                            </p>
+                        <div className="mb-12 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <h2 className="text-3xl font-bold">Instant Environments</h2>
+                                <p className="text-lg text-muted-foreground leading-relaxed">
+                                    Provision, launch, and run code without local setup.
+                                </p>
+                            </div>
+                            <Button asChild className="rounded-lg px-4 py-2">
+                                <Link href="/dashboard/projects">Start a project</Link>
+                            </Button>
                         </div>
                         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                             {coreFeatures.map((feature) => (
@@ -390,9 +395,6 @@ export default function FeaturesPage() {
                                         Fast routing, secure terminals, and reliable previews.
                                     </p>
                                 </div>
-                                <Button asChild className="rounded-lg px-4 py-2">
-                                    <Link href="/dashboard/projects">Start a project</Link>
-                                </Button>
                             </div>
                             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                                 {runtimeFeatures.map((feature) => (
