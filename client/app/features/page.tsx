@@ -21,6 +21,10 @@ import {
     Terminal,
     Users,
     Wrench,
+    Brain,
+    MessageSquare,
+    Zap,
+    Sparkles,
 } from "lucide-react";
 
 import { Navbar } from "@/components/navbar";
@@ -99,6 +103,29 @@ const securityFeatures: FeatureItem[] = [
         icon: Lock,
         title: "API protection",
         description: "Redis-backed rate limiting shields your API endpoints.",
+    },
+];
+
+const aiAssistantFeatures: FeatureItem[] = [
+    {
+        icon: Brain,
+        title: "Project-aware intelligence",
+        description: "ASTra understands your entire project codebase and context.",
+    },
+    {
+        icon: MessageSquare,
+        title: "Natural code questions",
+        description: "Ask anything about your project and get instant, contextual answers.",
+    },
+    {
+        icon: Zap,
+        title: "Real-time assistance",
+        description: "Get help with debugging, documentation, and architectural decisions.",
+    },
+    {
+        icon: Sparkles,
+        title: "Smart suggestions",
+        description: "Powered by RAG — answers grounded in your actual code, not generic guesses.",
     },
 ];
 
@@ -191,6 +218,22 @@ const faqs = [
         question: "How do previews work?",
         answer: "Dokit routes preview traffic through Nginx with secure access checks.",
     },
+    {
+        question: "What is ASTra?",
+        answer: "ASTra is your project-aware AI assistant. It has full access to your codebase and can answer questions, help with debugging, suggest improvements, and assist with architectural decisions.",
+    },
+    {
+        question: "Can ASTra understand my entire project?",
+        answer: "Yes. ASTra analyzes your complete codebase, dependencies, and structure to provide contextual, accurate assistance tailored to your project.",
+    },
+    {
+        question: "What can I ask ASTra?",
+        answer: "You can ask anything related to your project—from code explanations and debugging help to best practices, refactoring suggestions, and implementation guidance.",
+    },
+    {
+        question: "How does ASTra access my project files?",
+        answer: "ASTra has secure, read-only access to your project workspace. It analyzes files only when you ask a question and respects your project's privacy.",
+    },
 ];
 
 export default function FeaturesPage() {
@@ -276,6 +319,40 @@ export default function FeaturesPage() {
                 </section>
 
                 <section className="w-full max-w-6xl mx-auto container px-4 py-16">
+                    {/* <section className="w-full max-w-6xl mx-auto border-y border-border bg-gradient-to-br from-primary/5 via-background to-primary/5 py-16"> */}
+                    <div className="container px-4">
+                        <div className="mx-auto max-w-6xl">
+                            <div className="mb-12 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                <div>
+                                    <h2 className="text-3xl font-bold">AI-Powered Assistance</h2>
+                                    <p className="text-lg text-muted-foreground leading-relaxed">
+                                        Meet ASTra—your intelligent project assistant with full
+                                        codebase access.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+                                {aiAssistantFeatures.map((feature) => (
+                                    <div
+                                        key={feature.title}
+                                        className="rounded-xl border border-border/50 bg-card/90 p-5 shadow-sm"
+                                    >
+                                        <feature.icon className="mb-3 h-8 w-8 text-primary" />
+                                        <h3 className="text-base font-semibold leading-snug">
+                                            {feature.title}
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            {feature.description}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* <section className="w-full max-w-6xl mx-auto container px-4 py-16"> */}
+                <section className="w-full max-w-6xl mx-auto border-y border-border bg-gradient-to-br from-primary/5 via-background to-primary/5 py-16">
                     <div className="mx-auto max-w-6xl">
                         <div className="mb-12">
                             <h2 className="mb-4 text-3xl font-bold">Security and Access</h2>
@@ -302,7 +379,8 @@ export default function FeaturesPage() {
                     </div>
                 </section>
 
-                <section className="w-full max-w-6xl mx-auto border-y border-border bg-gradient-to-br from-primary/5 via-background to-primary/5 py-16">
+                {/* <section className="w-full max-w-6xl mx-auto border-y border-border bg-gradient-to-br from-primary/5 via-background to-primary/5 py-16"> */}
+                <section className="w-full max-w-6xl mx-auto container px-4 py-16">
                     <div className="container px-4">
                         <div className="mx-auto max-w-6xl">
                             <div className="mb-12 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -336,7 +414,8 @@ export default function FeaturesPage() {
                     </div>
                 </section>
 
-                <section className="w-full max-w-6xl mx-auto container px-4 py-16">
+                {/* <section className="w-full max-w-6xl mx-auto container px-4 py-16"> */}
+                <section className="w-full max-w-6xl mx-auto border-y border-border bg-gradient-to-br from-primary/5 via-background to-primary/5 py-16">
                     <div className="mx-auto max-w-6xl">
                         <div className="mb-12">
                             <h2 className="mb-4 text-3xl font-bold">Automation and Ops</h2>
@@ -363,7 +442,8 @@ export default function FeaturesPage() {
                     </div>
                 </section>
 
-                <section className="w-full max-w-6xl mx-auto border-y border-border bg-gradient-to-br from-primary/5 via-background to-primary/5 py-16">
+                {/* <section className="w-full max-w-6xl mx-auto border-y border-border bg-gradient-to-br from-primary/5 via-background to-primary/5 py-16"> */}
+                <section className="w-full max-w-6xl mx-auto container px-4 py-16">
                     <div className="container px-4">
                         <div className="mx-auto max-w-6xl">
                             <div className="mb-12 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
