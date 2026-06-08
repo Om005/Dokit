@@ -108,7 +108,7 @@ const emailTemplates = {
       <p>Our goal is to help you streamline your document workflow with ease. To help you get started, jump straight into your dashboard below:</p>
       
       <div class="button-container">
-        <a href="https://dokit.com/dashboard" class="btn">Go to Dashboard</a>
+        <a href="https://dokit-ide.vercel.app" class="btn">Go to Dashboard</a>
       </div>
 
       <p style="font-size: 14px; color: #718096; margin-top: 30px;">
@@ -217,7 +217,7 @@ const emailTemplates = {
       <p>To review and manage this access request, please visit your project dashboard:</p>
       
       <div class="button-container">
-        <a href="${env.FRONTEND_URL}/project/${projectId}" class="btn">Review Access Request</a>
+        <a href="${env.FRONTEND_URL}/project/${projectId.replaceAll("-", "")}" class="btn">Review Access Request</a>
       </div>
 
       <p style="font-size: 14px; color: #718096; margin-top: 30px;">
@@ -275,7 +275,7 @@ const emailTemplates = {
           isApproved
               ? `<p>You can now access the project in your dashboard:</p>
       <div class="button-container">
-        <a href="${env.FRONTEND_URL}/project/${projectId.replaceAll(" ", "-")}" class="btn">Go to Project</a>
+        <a href="${env.FRONTEND_URL}/project/${projectId.replaceAll("-", "")}" class="btn">Go to Project</a>
       </div>`
               : `<p>If you have any questions about this decision, please contact the project owner.</p>`
       }
@@ -332,7 +332,7 @@ const emailTemplates = {
       <p>To view the project and start collaborating, please click the button below:</p>
       
       <div class="button-container">
-        <a href="${env.FRONTEND_URL}/project/${projectId.replaceAll(" ", "-")}" class="btn">View Project</a>
+        <a href="${env.FRONTEND_URL}/project/${projectId.replaceAll("-", "")}" class="btn">View Project</a>
       </div>
 
       <p style="font-size: 14px; color: #718096; margin-top: 30px;">

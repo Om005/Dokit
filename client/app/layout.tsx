@@ -6,6 +6,7 @@ import { AuthProvider } from "@/components/auth-provider";
 import { Toaster } from "@/components/ui/sonner";
 import StoreProvider from "@/components/store-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import ServiceWorker from "@/components/service-worker";
 
 const outfit = Outfit({
     subsets: ["latin"],
@@ -43,7 +44,10 @@ export default function RootLayout({
                 >
                     <StoreProvider>
                         <AuthProvider>
-                            <TooltipProvider>{children}</TooltipProvider>
+                            <TooltipProvider>
+                                <ServiceWorker />
+                                {children}
+                            </TooltipProvider>
                             <Toaster position="top-right" richColors={true} />
                         </AuthProvider>
                     </StoreProvider>

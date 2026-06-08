@@ -140,8 +140,6 @@
 │   │   ├── dokit.svg
 │   │   ├── file.svg
 │   │   ├── globe.svg
-│   │   ├── next.svg
-│   │   ├── vercel.svg
 │   │   └── window.svg
 │   ├── README.md
 │   ├── store

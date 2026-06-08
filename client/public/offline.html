@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Offline</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #09090b;
+            color: white;
+            font-family: Inter, system-ui, sans-serif;
+            padding: 24px;
+            user-select: none;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 320px;
+        }
+
+        .icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 24px;
+            border-radius: 9999px;
+            background: #27272a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #a1a1aa;
+        }
+
+        .title {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0 0 12px;
+        }
+
+        .description {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #a1a1aa;
+            margin: 0 0 32px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        button {
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 6px;
+            transition: 0.2s;
+        }
+
+        .retry {
+            background: white;
+            color: #18181b;
+            padding: 10px 16px;
+        }
+
+        .retry:hover {
+            background: #f4f4f5;
+        }
+
+        .retry:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .back {
+            background: transparent;
+            border: 1px solid #3f3f46;
+            color: #d4d4d8;
+            padding: 10px 16px;
+        }
+
+        .back:hover {
+            background: #27272a;
+            color: white;
+        }
+
+        .toast {
+            display: none;
+            margin-top: 32px;
+            padding: 10px 16px;
+            border-radius: 9999px;
+            background: #27272a;
+            color: #d4d4d8;
+            font-size: 14px;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 9999px;
+            background: #22c55e;
+        }
+
+        .hint {
+            margin-top: 32px;
+            font-size: 12px;
+            color: #52525b;
+        }
+
+        .spin {
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        svg {
+            width: 28px;
+            height: 28px;
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M2 8.82a15.91 15.91 0 0 1 20 0" />
+                <path d="M5 12.86a10.94 10.94 0 0 1 5.17-2.88" />
+                <path d="M19 12.86a10.94 10.94 0 0 0-3.17-2.19" />
+                <path d="M8.53 16.11a6 6 0 0 1 2.91-.75" />
+                <path d="M12 20h.01" />
+                <path d="M2 2l20 20" />
+            </svg>
+        </div>
+
+        <h1 class="title">You're offline</h1>
+
+        <p class="description">
+            It looks like you've lost your internet connection.<br />
+            Check your network and try again.
+        </p>
+
+        <div class="actions">
+            <button class="retry" id="retryBtn">
+                <span id="retryText">Try again</span>
+            </button>
+
+            <button class="back" onclick="history.back()">
+                Go back
+            </button>
+        </div>
+
+    </main>
+
+    <script>
+        const retryBtn = document.getElementById("retryBtn");
+        const retryText = document.getElementById("retryText");
+
+        retryBtn.addEventListener("click", () => {
+            if (retryBtn.disabled) return;
+
+            retryBtn.disabled = true;
+            location.reload();
+        });
+
+    </script>
+</body>
+</html>
