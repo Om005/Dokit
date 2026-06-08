@@ -1,12 +1,12 @@
-name: Deploy Backend to EC2
+
+name: CI/CD
 
 on:
   push:
     branches:
       - main
-    paths:
-      - 'server/**'
 
+      
 env:
   DEPLOY_DIR:   /home/ubuntu/Dokit/deployments
   CURRENT_LINK: /home/ubuntu/Dokit/current
@@ -19,9 +19,123 @@ env:
   HEALTH_CHECK_INTERVAL: 5
 
 jobs:
-  deploy:
+  prettier-check:
     runs-on: ubuntu-latest
 
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+      
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prettier check
+        run: pnpm prettier:check
+  
+  lint-check:
+    runs-on: ubuntu-latest
+    needs: prettier-check
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+      
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: ESLint check
+        run: pnpm lint
+  
+  detect-changes:
+    runs-on: ubuntu-latest
+    needs: lint-check
+
+    outputs:
+      client: ${{ steps.filter.outputs.client }}
+      server: ${{ steps.filter.outputs.server }}
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            client:
+              - 'client/**'
+            server:
+              - 'server/**'
+
+  deploy-client:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.client == 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Pull Vercel Environment
+        run: |
+          cd client
+          vercel pull \
+            --yes \
+            --environment=production \
+            --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Build
+        run: |
+          cd client
+          pnpm install --frozen-lockfile
+          vercel build \
+            --prod \
+            --token=${{ secrets.VERCEL_TOKEN }}
+            
+      - name: Deploy to Vercel
+        run: |
+          cd client
+          vercel deploy \
+            --prebuilt \
+            --prod \
+            --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+  deploy-server:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.server == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
