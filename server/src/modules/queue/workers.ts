@@ -51,6 +51,15 @@ const initiatWorkers = () => {
         }
     );
 
+    const updateEmbeddingsWorker = new Worker(
+        queues.UPDATE_EMBEDDINGS_QUEUE,
+        workers.updateEmbeddings,
+        {
+            connection: redisConfig,
+            concurrency: 5,
+        }
+    );
+
     return [
         emailWorker,
         cleanContainersWorker,
@@ -59,6 +68,7 @@ const initiatWorkers = () => {
         syncToR2Worker,
         removeRequestWorker,
         createEmbeddingsWorker,
+        updateEmbeddingsWorker,
     ];
 };
 

@@ -12,7 +12,6 @@ export async function ingestProjectFiles(projectId: string, files: FileInput[]):
     for (const file of files) {
         try {
             const chunks = extractCodeChunks(file.content, file.filePath, projectId);
-
             if (chunks.length === 0) continue;
 
             await prisma.$executeRaw`
@@ -23,7 +22,6 @@ export async function ingestProjectFiles(projectId: string, files: FileInput[]):
 
             for (const chunk of chunks) {
                 const embedding = await generateEmbedding(chunk.content);
-
                 await prisma.$executeRaw`
                     INSERT INTO "CodeChunk" (
                         "id", 

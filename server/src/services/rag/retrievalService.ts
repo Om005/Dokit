@@ -75,7 +75,7 @@ export async function retrieveContext(
     projectId: string,
     options: RetrieveOptions = {}
 ): Promise<RetrievedChunk[]> {
-    const { topK = 5, minSimilarity = 0.3, mmr = true, mmrLambda = 0.6 } = options;
+    const { topK = 50, minSimilarity = 0.3, mmr = true, mmrLambda = 0.6 } = options;
 
     const queryEmbedding = await generateEmbedding(query);
 

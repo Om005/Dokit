@@ -206,7 +206,16 @@ const controllers = {
                     statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
                 });
             });
-
+            prisma.codeChunk
+                .deleteMany({
+                    where: {
+                        projectId,
+                        filePath: nodePath,
+                    },
+                })
+                .catch((error) => {
+                    logger.error(`Error deleting code chunks for ${nodePath}:`, error);
+                });
             return sendResponse(res, {
                 success: true,
                 message: "Node deleted successfully",
@@ -260,6 +269,23 @@ const controllers = {
                     statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
                 });
             });
+
+            prisma.codeChunk
+                .updateMany({
+                    where: {
+                        projectId,
+                        filePath: oldPath,
+                    },
+                    data: {
+                        filePath: newPath,
+                    },
+                })
+                .catch((error) => {
+                    logger.error(
+                        `Error updating code chunks for renamed node from ${oldPath} to ${newPath}:`,
+                        error
+                    );
+                });
 
             return sendResponse(res, {
                 success: true,

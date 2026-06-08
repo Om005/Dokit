@@ -586,6 +586,17 @@ async function startFileSystemWatcher(projectId: string): Promise<void> {
                         path: relativePath,
                         isDir: isDir,
                     });
+                    if (!isDir) {
+                        const content = await getFileContent(projectId, relativePath);
+                        queueActions
+                            .addUpdateEmbeddingsJob(projectId, relativePath, content || "")
+                            .catch((err) => {
+                                logger.error(
+                                    `Failed to add update embeddings job for new file ${relativePath} in project ${projectId}:`
+                                );
+                                logger.error(err);
+                            });
+                    }
                     await new Promise((resolve) => {
                         setTimeout(() => {
                             syncLocks.delete(
@@ -600,6 +611,16 @@ async function startFileSystemWatcher(projectId: string): Promise<void> {
                         path: relativePath,
                         isDir: isDir,
                     });
+                    prisma.codeChunk
+                        .deleteMany({
+                            where: {
+                                projectId,
+                                filePath: relativePath,
+                            },
+                        })
+                        .catch((error) => {
+                            logger.error(`Error deleting code chunks for ${relativePath}:`, error);
+                        });
                 } else {
                     const [action, path] = event.split("|");
                     if (action.includes("MOVED_FROM")) {
@@ -626,6 +647,22 @@ async function startFileSystemWatcher(projectId: string): Promise<void> {
                             toPath: toPathRelative,
                             isDir: isDir,
                         });
+                        prisma.codeChunk
+                            .updateMany({
+                                where: {
+                                    projectId,
+                                    filePath: fromPathRelative,
+                                },
+                                data: {
+                                    filePath: toPathRelative,
+                                },
+                            })
+                            .catch((error) => {
+                                logger.error(
+                                    `Error updating code chunks for moved file from ${fromPathRelative} to ${toPathRelative}:`,
+                                    error
+                                );
+                            });
                         await new Promise((resolve) => {
                             setTimeout(() => {
                                 syncLocks.delete(

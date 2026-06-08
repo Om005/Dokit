@@ -147,11 +147,11 @@ const queueActions = {
         }
     },
 
-    addUpdateEmbeddingsJob: async (projectId: string, filePath: string) => {
+    addUpdateEmbeddingsJob: async (projectId: string, filePath: string, content: string) => {
         try {
             await updateEmbeddingsQueue.add(
                 "update-embeddings",
-                { projectId, filePath },
+                { projectId, filePath, content },
                 {
                     removeOnComplete: true,
                     removeOnFail: { count: 5 },

@@ -6,6 +6,7 @@ import { debounce } from "lodash";
 import DockerManager from "services/dockerManager";
 import logger from "@utils/logger";
 import diff from "fast-diff";
+import queueActions from "@modules/queue/queueActions";
 
 export const yjsWss = new WebSocketServer({ noServer: true });
 
@@ -50,6 +51,7 @@ yjsWss.on("connection", (ws, req) => {
 
         try {
             await DockerManager.writeFileToContainer(correctProjectId, filePath, currentText);
+            queueActions.addUpdateEmbeddingsJob(correctProjectId, filePath, currentText);
         } catch (err) {
             logger.error(`Docker write failed for ${filePath}`);
             logger.error(err);

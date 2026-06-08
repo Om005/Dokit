@@ -41,6 +41,12 @@ const workers = {
         try {
             await R2Manager.deleteProject(projectId);
             await DockerManager.deleteDokitContainer(projectId);
+            prisma.codeChunk.deleteMany({ where: { projectId } }).catch((error) => {
+                logger.error(`Error deleting code chunks for project ${projectId}:`, error);
+            });
+            prisma.chatThread.deleteMany({ where: { projectId } }).catch((error) => {
+                logger.error(`Error deleting chat threads for project ${projectId}:`, error);
+            });
             logger.info(`Project deletion completed for project ${projectId} by job id: ${job.id}`);
         } catch (error) {
             logger.error(`Failed to delete project ${projectId} by job id: ${job.id}`);
@@ -145,6 +151,21 @@ const workers = {
         } catch (error) {
             logger.error(
                 `Failed to create embeddings for project ${projectId} by job id: ${job.id}`
+            );
+            logger.error(error);
+            throw error;
+        }
+    },
+    updateEmbeddings: async (job: Job) => {
+        const { projectId, filePath, content } = job.data;
+        try {
+            await ingestProjectFiles(projectId, [{ filePath, content }]);
+            logger.info(
+                `[Vector DB] Background update of embeddings complete for ${filePath} in project ${projectId}.`
+            );
+        } catch (error) {
+            logger.error(
+                `Failed to update embeddings for ${filePath} in project ${projectId} by job id: ${job.id}`
             );
             logger.error(error);
             throw error;

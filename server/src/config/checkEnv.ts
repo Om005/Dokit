@@ -25,7 +25,6 @@ export const EnvSchema = z
         NGINX_HOST: z.string().min(1),
         TWO_FACTOR_ENCRYPTION_KEY: z.string().min(1),
         DOKIT_PROJECT_NETWORK: z.string().min(1),
-        GEMINI_API_KEY: z.string().min(1),
         OLLAMA_URL: z.string().min(1),
         OPENROUTER_API_KEY: z.string().min(1),
         OPENROUTER_CHAT_MODEL: z.string().min(1),
