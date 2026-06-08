@@ -3,7 +3,7 @@ import { AxiosError } from "axios";
 import createApiHandler from "@/utils/apiHandler";
 import { ApiResponse } from "@/types/types";
 import { persistReducer } from "redux-persist";
-import storage from "redux-persist/lib/storage";
+import storageSession from "redux-persist/lib/storage/session";
 import api from "@/utils/api";
 
 export type ChatRole = "USER" | "ASSISTANT" | "SYSTEM";
@@ -366,7 +366,7 @@ const chatSlice = createSlice({
 
 const chatPersistConfig = {
     key: "chat",
-    storage,
+    storage: storageSession,
     whitelist: ["activeChatId"],
 };
 

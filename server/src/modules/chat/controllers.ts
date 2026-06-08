@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { ChatRole } from "@generated/prisma";
 import { prisma } from "@db/prisma";
 import { retrieveContext } from "services/rag/retrievalService";
@@ -7,8 +6,12 @@ import logger from "@utils/logger";
 import env from "@config/env";
 import sendResponse from "@utils/sendResponse";
 import { StatusCodes } from "http-status-codes";
+import { generateText } from "ai";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 
-const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+const openRouter = createOpenRouter({
+    apiKey: env.OPENROUTER_API_KEY,
+});
 const DEFAULT_CHAT_LIMIT = 50;
 const MAX_CHAT_LIMIT = 200;
 const CHAT_TITLE_MAX = 80;
@@ -39,12 +42,14 @@ const sanitizeChatTitle = (value: string) => {
 };
 
 const generateChatTitle = async (message: string) => {
-    const prompt = `Create a short chat title (3-7 words, max ${CHAT_TITLE_MAX} characters). Return only the title.`;
+    const prompt = `Create a short chat title (3-7 words, max ${CHAT_TITLE_MAX} characters). Return only the title, nothing else.\n\nMessage: ${message}`;
 
     try {
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-        const result = await model.generateContent(`${prompt}\n\nMessage: ${message}`);
-        const rawTitle = sanitizeChatTitle(result.response.text());
+        const { text } = await generateText({
+            model: openRouter(env.OPENROUTER_TITLE_MODEL),
+            prompt,
+        });
+        const rawTitle = sanitizeChatTitle(text);
         return buildChatTitle(rawTitle) ?? buildChatTitle(message);
     } catch (error) {
         logger.warn(
@@ -437,6 +442,7 @@ const controllers = {
                     where: { id: activeChatId },
                     select: { id: true, projectId: true, summary: true },
                 });
+
                 if (!existingChat) {
                     return sendResponse(res, {
                         success: false,
@@ -444,6 +450,7 @@ const controllers = {
                         statusCode: StatusCodes.NOT_FOUND,
                     });
                 }
+
                 if (existingChat.projectId !== normalizedProjectId) {
                     return sendResponse(res, {
                         success: false,
@@ -451,6 +458,7 @@ const controllers = {
                         statusCode: StatusCodes.BAD_REQUEST,
                     });
                 }
+
                 existingSummary = existingChat.summary;
             } else {
                 const generatedTitle = await generateChatTitle(trimmedMessage);
@@ -462,6 +470,7 @@ const controllers = {
                     },
                     select: { id: true, title: true },
                 });
+
                 activeChatId = newChat.id;
                 activeChatTitle = newChat.title;
             }
@@ -520,10 +529,11 @@ Respond with ONLY a valid JSON object. No text before or after. No markdown fenc
   "summary": "<updated summary: take the existing summary above and append 1-2 sentences about what was discussed or decided in THIS exchange. If no existing summary, write 1-2 sentences for this exchange only. Focus on technical decisions, patterns, and solutions.>"
 }`;
 
-            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-            const result = await model.generateContent(prompt);
-            const rawText = result.response.text();
-
+            const modelName = env.OPENROUTER_CHAT_MODEL ?? "qwen/qwen3-coder:free";
+            const { text: rawText } = await generateText({
+                model: openRouter(modelName),
+                prompt,
+            });
             let replyText = "";
             let updatedSummary: string | null = null;
 
@@ -551,7 +561,7 @@ Respond with ONLY a valid JSON object. No text before or after. No markdown fenc
                         chatId: activeChatId,
                         role: ChatRole.ASSISTANT,
                         content: trimmedReply,
-                        metadata: { model: "gemini-2.5-flash", sources },
+                        metadata: { model: modelName, sources },
                     },
                 });
 

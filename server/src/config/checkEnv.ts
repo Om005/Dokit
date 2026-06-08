@@ -27,6 +27,9 @@ export const EnvSchema = z
         DOKIT_PROJECT_NETWORK: z.string().min(1),
         GEMINI_API_KEY: z.string().min(1),
         OLLAMA_URL: z.string().min(1),
+        OPENROUTER_API_KEY: z.string().min(1),
+        OPENROUTER_CHAT_MODEL: z.string().min(1),
+        OPENROUTER_TITLE_MODEL: z.string().min(1),
     })
     .strict();
 

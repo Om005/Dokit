@@ -6,8 +6,9 @@ import {
     emailQueue,
     removeRequestQueue,
     syncToR2Queue,
-    updateEmbeddingsQueue,
+    createEmbeddingsQueue,
     updateProjectLastAccessedQueue,
+    updateEmbeddingsQueue,
 } from "./queues";
 
 const queueActions = {
@@ -128,11 +129,29 @@ const queueActions = {
         }
     },
 
-    addUpdateEmbeddingsJob: async (projectId: string) => {
+    addCreateEmbeddingsJob: async (projectId: string) => {
+        try {
+            await createEmbeddingsQueue.add(
+                "create-embeddings",
+                { projectId },
+                {
+                    removeOnComplete: true,
+                    removeOnFail: { count: 5 },
+                }
+            );
+            logger.info(`Create embeddings job added to the queue for project ${projectId}`);
+        } catch (error) {
+            logger.error("Error adding create embeddings job to queue:");
+            logger.error(error);
+            throw error;
+        }
+    },
+
+    addUpdateEmbeddingsJob: async (projectId: string, filePath: string) => {
         try {
             await updateEmbeddingsQueue.add(
                 "update-embeddings",
-                { projectId },
+                { projectId, filePath },
                 {
                     removeOnComplete: true,
                     removeOnFail: { count: 5 },

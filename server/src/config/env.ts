@@ -40,6 +40,9 @@ interface EnvConfig {
     DOKIT_PROJECT_NETWORK: string;
     GEMINI_API_KEY: string;
     OLLAMA_URL: string;
+    OPENROUTER_API_KEY: string;
+    OPENROUTER_CHAT_MODEL: string;
+    OPENROUTER_TITLE_MODEL: string;
 }
 
 const env: EnvConfig = {
@@ -67,6 +70,9 @@ const env: EnvConfig = {
     DOKIT_PROJECT_NETWORK: process.env.DOKIT_PROJECT_NETWORK as string,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY as string,
     OLLAMA_URL: process.env.OLLAMA_URL as string,
+    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY as string,
+    OPENROUTER_CHAT_MODEL: process.env.OPENROUTER_CHAT_MODEL as string,
+    OPENROUTER_TITLE_MODEL: process.env.OPENROUTER_TITLE_MODEL as string,
 };
 
 export default env;

@@ -92,7 +92,7 @@ const workers = {
             throw error;
         }
     },
-    updateEmbeddings: async (job: Job) => {
+    createEmbeddings: async (job: Job) => {
         const { projectId } = job.data;
         try {
             const FileTree: Record<string, FileNode> | null = await DockerManager.getFolderContent(
@@ -144,7 +144,7 @@ const workers = {
             }
         } catch (error) {
             logger.error(
-                `Failed to update embeddings for project ${projectId} by job id: ${job.id}`
+                `Failed to create embeddings for project ${projectId} by job id: ${job.id}`
             );
             logger.error(error);
             throw error;

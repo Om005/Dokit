@@ -69,6 +69,17 @@ const removeRequestQueue = new Queue(queues.REMOVE_REQUEST_QUEUE, {
     },
 });
 
+const createEmbeddingsQueue = new Queue(queues.CREATE_EMBEDDINGS_QUEUE, {
+    connection: redisConfig,
+    defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+            type: "exponential",
+            delay: 3000,
+        },
+    },
+});
+
 const updateEmbeddingsQueue = new Queue(queues.UPDATE_EMBEDDINGS_QUEUE, {
     connection: redisConfig,
     defaultJobOptions: {
@@ -87,5 +98,6 @@ export {
     updateProjectLastAccessedQueue,
     syncToR2Queue,
     removeRequestQueue,
+    createEmbeddingsQueue,
     updateEmbeddingsQueue,
 };

@@ -35,8 +35,11 @@ import {
     Trash2,
     PanelLeft,
     ArrowLeft,
+    Sun,
+    Moon,
 } from "lucide-react";
 import { Payload } from "@/types/types";
+import { useTheme } from "next-themes";
 
 interface AiAssistantProps {
     projectId: string;
@@ -302,6 +305,8 @@ const ChatList = ({
         return chats.filter((chat) => (chat.title ?? "").toLowerCase().includes(trimmed));
     }, [chats, query]);
 
+    const { resolvedTheme, setTheme } = useTheme();
+
     return (
         <div className="flex h-full flex-col">
             <div className="space-y-3 border-b border-border p-3">
@@ -344,17 +349,17 @@ const ChatList = ({
                                 <div
                                     key={chat.id}
                                     className={cn(
-                                        "group relative flex items-center rounded-lg transition-colors",
+                                        "group relative grid grid-cols-[1fr_auto] items-center rounded-lg transition-colors",
                                         isActive ? "bg-muted" : "hover:bg-muted/60"
                                     )}
                                 >
                                     <button
                                         onClick={() => onSelectChat(chat.id)}
-                                        className="flex-1 hover:cursor-pointer truncate py-2 pl-3 pr-9 text-left text-sm"
+                                        className="min-w-0 overflow-hidden py-2 pl-3 pr-2 text-left text-sm hover:cursor-pointer"
                                     >
                                         <span
                                             className={cn(
-                                                "truncate",
+                                                "block w-full truncate",
                                                 isActive
                                                     ? "font-medium text-foreground"
                                                     : "text-foreground/80"
@@ -368,7 +373,7 @@ const ChatList = ({
                                         <DropdownMenuTrigger asChild>
                                             <button
                                                 className={cn(
-                                                    "absolute hover:cursor-pointer right-1.5 flex size-7 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-background hover:text-foreground",
+                                                    "flex size-7 cursor-pointer mr-1 items-center justify-center rounded-md text-muted-foreground transition-all hover:bg-background hover:text-foreground",
                                                     "opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100",
                                                     isActive && "opacity-100"
                                                 )}
@@ -394,6 +399,21 @@ const ChatList = ({
                     )}
                 </div>
             </ScrollArea>
+            <div className="flex items-center justify-center border-t p-2">
+                <button
+                    onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                    className="cursor-pointer rounded p-1.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                    title={
+                        resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"
+                    }
+                >
+                    {resolvedTheme === "dark" ? (
+                        <Sun className="h-4 w-4" />
+                    ) : (
+                        <Moon className="h-4 w-4" />
+                    )}
+                </button>
+            </div>
         </div>
     );
 };
@@ -572,7 +592,7 @@ export const AiAssistant = ({ projectId }: AiAssistantProps) => {
         const response = await dispatch(chatActions.addMessage({ chatId, content: trimmed }));
         if (chatActions.addMessage.fulfilled.match(response)) {
             setDraft("");
-            refreshChats();
+            // refreshChats();
         } else {
             const payload = response.payload as { message?: string } | undefined;
             toast.error(payload?.message ?? "Failed to save note.");
