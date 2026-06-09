@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import * as yjs from "yjs";
 import { WebsocketProvider } from "y-websocket";
-import env from "@/config/env";
 
 interface ActiveUser {
     name: string;
@@ -28,7 +27,7 @@ export function useOnlineMembers(
         const globalRoomName = `dokit-global-${projectId}`;
 
         const provider = new WebsocketProvider(
-            env.NEXT_PUBLIC_EDITOR_SOCKET_URL!,
+            process.env.NEXT_PUBLIC_EDITOR_SOCKET_URL!,
             globalRoomName,
             globalDoc
         );

@@ -1,4 +1,3 @@
-import env from "@/config/env";
 import { FileSystemEvent, TreeNode } from "@/types/types";
 import { useEffect, useRef } from "react";
 import { io } from "socket.io-client";
@@ -23,7 +22,7 @@ function useFileTreeSocket(
     useEffect(() => {
         if (!projectId) return;
 
-        socketRef.current = io(env.NEXT_PUBLIC_PROJECT_SOCKET_URL, {
+        socketRef.current = io(process.env.NEXT_PUBLIC_PROJECT_SOCKET_URL, {
             withCredentials: true,
         });
         const socket = socketRef.current;

@@ -69,7 +69,6 @@ import defaultPorts from "@/utils/defaultPorts";
 import { useOnlineMembers } from "@/hooks/use-online-members";
 import { ALLOWED_TOOL_KEYS } from "@/utils/allowedTools";
 import { setCursorColor } from "@/store/editor";
-import env from "@/config/env";
 import Link from "next/link";
 
 interface Props {
@@ -409,7 +408,7 @@ export default function ProjectPage({ projectId, token }: Props) {
     );
     const installedTools = new Set(currProject?.tools ?? []);
 
-    const wsUrl = `wss://${env.NEXT_PUBLIC_NGINX_HOST}/terminal/${projectId}/ws`;
+    const wsUrl = `wss://${process.env.NEXT_PUBLIC_NGINX_HOST}/terminal/${projectId}/ws`;
 
     if (showPasswordForm) {
         return (

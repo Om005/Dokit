@@ -5,7 +5,6 @@ import { WebsocketProvider } from "y-websocket";
 import { yCollab } from "y-codemirror.next";
 import { getLanguageExtension } from "@/utils/getLanguageExtension";
 import { useEffect, useState } from "react";
-import env from "@/config/env";
 import { EditorView } from "@codemirror/view";
 import { Extension } from "@codemirror/state";
 import { useTheme } from "next-themes";
@@ -63,7 +62,11 @@ function EditorBody({ filePath, projectId, readOnly = false, className = "" }: E
 
         const ydoc = new yjs.Doc();
         const roomName = `${projectId}-${filePath}`;
-        const provider = new WebsocketProvider(env.NEXT_PUBLIC_EDITOR_SOCKET_URL!, roomName, ydoc);
+        const provider = new WebsocketProvider(
+            process.env.NEXT_PUBLIC_EDITOR_SOCKET_URL!,
+            roomName,
+            ydoc
+        );
         const ytext = ydoc.getText("codemirror");
         const extension = yCollab(ytext, provider.awareness);
 

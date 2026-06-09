@@ -4,10 +4,9 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Mail, MessageSquare, Send, User, Sparkles } from "lucide-react";
-import env from "@/config/env";
 
 export function ContactForm() {
-    const formAccessKey = env.NEXT_PUBLIC_FORM_ACCESS_KEY;
+    const formAccessKey = process.env.NEXT_PUBLIC_FORM_ACCESS_KEY;
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {

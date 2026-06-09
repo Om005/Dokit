@@ -3,7 +3,6 @@ import { RefreshCw, ExternalLink, Globe } from "lucide-react";
 import defaultPorts from "@/utils/defaultPorts";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
-import env from "@/config/env";
 
 interface PreviewPaneProps {
     projectId: string;
@@ -24,7 +23,7 @@ export function PreviewPane({ projectId, isRunning, token }: PreviewPaneProps) {
         const stackKey = currProject.stack.toLowerCase() as keyof typeof defaultPorts;
         const port = defaultPorts[stackKey] ?? defaultPorts.react_vite;
 
-        return `${protocol}://${port}-${projectId}.${env.NEXT_PUBLIC_NGINX_HOST}/preview-auth?token=${encodeURIComponent(
+        return `${protocol}://${port}-${projectId}.${process.env.NEXT_PUBLIC_NGINX_HOST}/preview-auth?token=${encodeURIComponent(
             token
         )}`;
     }, [currProject, projectId, token]);
