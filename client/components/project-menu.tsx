@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { MoreVertical, Settings } from "lucide-react";
+import { MoreVertical, Settings, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -9,6 +9,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import Link from "next/link";
 
 interface ProjectMenuProps {
     projectId: string;
@@ -33,6 +34,16 @@ export function ProjectMenu({ projectId }: ProjectMenuProps) {
                 <DropdownMenuItem onClick={handleSettings}>
                     <Settings className="mr-2 size-4" />
                     Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                    <Link
+                        href={`/ai-assistant/${projectId}`}
+                        target="_blank"
+                        className="flex items-center w-full"
+                    >
+                        <Sparkles className="mr-2 size-4" />
+                        Ask ASTra
+                    </Link>
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
