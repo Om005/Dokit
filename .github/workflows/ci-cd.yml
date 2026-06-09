@@ -116,9 +116,6 @@ jobs:
             --yes \
             --environment=production \
             --token="${{ secrets.VERCEL_TOKEN }}"
-            echo "--- Vercel env file contents ---"
-            cat .vercel/.env.production.local || echo "FILE NOT FOUND"
-            echo "--------------------------------"
 
       - name: Build
         run: |
