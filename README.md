@@ -46,6 +46,7 @@ Enterprise-grade security infrastructure including:
 - **Remote Session Revocation** — Invalidate sessions across all devices instantly
 - **Two-Factor Authentication (2FA)** — TOTP-based verification with AES-encrypted secrets and backup recovery codes
 - **Sign-in Email Notifications** — Optional alerts for new logins
+- **Password Recovery Flow** — Secure forgot password mechanism with email verification and token-based reset
 
 ### Advanced Container Sandboxing
 Defense-in-depth container security:
@@ -97,13 +98,22 @@ Flexible access control for projects:
 - **Private** — Owner and invited collaborators only
 - **Public** — Viewable by anyone, editable and executable by collaborators
 - **Password Protection** — Additional layer for sensitive projects
-- **Access Requests** — Users can request contributor access to collaborate on public projects.
+- **Access Requests** — Users can request contributor access to collaborate on public projects
+- **View-Only Mode** — Public preview access for shared projects without authentication
 
 ### Public Profile
 Customizable developer introduction and project showcasing:
 - **Markdown Profile Pages** Render personalized developer landing pages using a customizable `profile.md` file.
 - **Featured Projects** Pin and unpin projects to curate a public developer portfolio.
 - **Workspace Exporting** Download entire project (source code) as .zip archives for local execution or backup.
+
+### AI Assistant with RAG
+Context-aware intelligent assistant powered by **OpenRouter LLM** and **Retrieval-Augmented Generation (RAG)**:
+- **Semantic Code Search** — Embeddings-based retrieval of relevant code files for accurate context
+- **Code Understanding** — AST parsing and ingestion pipeline for deep codebase comprehension
+- **Smart Chat Interface** — Multi-turn conversations with automatic chat title generation
+- **Context-Aware Responses** — AI assistant leverages project codebase for accurate, context-specific help
+- **Conversation History** — Persistent storage and management of chat sessions per project
 
 ---
 
@@ -173,6 +183,10 @@ Dokit backend runs on AWS EC2 with a 3-version rolling deployment strategy — e
 | **JWT** | Token-based authentication |
 | **otplib** | TOTP 2FA implementation |
 | **Pino** | High-performance logging |
+| **OpenRouter** | Multi-model LLM API integration |
+| **Vector Embeddings** | Semantic code search via embeddings |
+| **AST Parser** | Abstract Syntax Tree parsing for code analysis |
+| **Nodemailer** | Email delivery for password recovery and notifications |
 
 ### Infrastructure
 
@@ -186,6 +200,8 @@ Dokit backend runs on AWS EC2 with a 3-version rolling deployment strategy — e
 | **Cloudflare R2** | S3-compatible object storage |
 | **Rclone** | Cloud storage synchronization |
 | **MaxMind GeoIP** | IP geolocation for sessions |
+| **Vector Database** | Semantic search and embeddings storage |
+| **Email Service** | Transactional email delivery (Nodemailer) |
 
 ---
 
