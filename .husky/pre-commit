@@ -8,6 +8,9 @@ fi
 
 printf '%s\n' '[husky][pre-commit] Code formatted successfully.'
 
+printf '%s\n' '[husky][pre-commit] Restaging formatted code'
+git add .
+
 printf '%s\n' '[husky][pre-commit] Running: pnpm lint'
 
 if ! pnpm lint; then

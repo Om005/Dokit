@@ -12,7 +12,7 @@ Ensure the following are installed on your system:
 |-------------|---------|-------|
 | Node.js | 20+ | Required for both client and server |
 | pnpm | 10+ | Package manager |
-| Docker Desktop | Latest | Must be running |
+| Docker | Latest | Engine must be running |
 | Git | Latest | Version control |
 
 
@@ -30,6 +30,7 @@ The following ports are used by Dokit services:
 | `5432` | PostgreSQL | Primary database |
 | `6379` | Redis | Caching and pub/sub |
 | `5050` | pgAdmin | Database administration UI |
+| `11434` | Ollama | Model inference server |
 
 Ensure these ports are available before starting the application.
 
@@ -79,9 +80,7 @@ Dokit uses custom Docker images for sandboxed environments. These must be built 
 pnpm --dir server run script:images
 ```
 
-### Manual Build (If bash is unavailable)
-
-If you're on Windows without bash access, build each image manually from the `server/` directory:
+### Manual Build
 
 ```bash
 cd server
@@ -102,7 +101,6 @@ docker build -t dokit-blank:latest ./docker/blank/
 | `dokit-node` | Node.js runtime environment |
 | `dokit-express` | Express.js backend template |
 | `dokit-react_vite` | React + Vite frontend template |
-| `dokit-nginx` | Nginx reverse proxy |
 | `dokit-github` | GitHub repository import handler |
 | `dokit-blank` | Empty starter environment |
 
@@ -182,6 +180,13 @@ R2_BUCKET_NAME=projects
 
 # Nginx Configuration
 NGINX_HOST=localhost:80
+DOKIT_PROJECT_NETWORK=dokit-project-network
+
+# Embeddings & LLMs
+OLLAMA_URL=http://localhost:11434
+OPENROUTER_API_KEY=<your-openrouter-api-key>
+OPENROUTER_CHAT_MODEL=poolside/laguna-xs.2:free (You can choose any compatible model from OpenRouter)
+OPENROUTER_TITLE_MODEL=openai/gpt-oss-20b:free (You can choose any compatible model from OpenRouter)
 ```
 
 ---
@@ -206,7 +211,7 @@ Ensure your `client/.env` and `server/.env.development` host values align with y
 
 ## Starting Infrastructure Services
 
-Start the Docker infrastructure (PostgreSQL, Redis, pgAdmin, Nginx):
+Start the Docker infrastructure (PostgreSQL, Redis, pgAdmin, Nginx, Ollama):
 
 ```bash
 # From project root
@@ -221,6 +226,17 @@ pnpm run docker:up
 | Redis | `localhost:6379` | - |
 | pgAdmin | `http://localhost:5050` | `admin@admin.com` / `admin` |
 | Nginx | `http://localhost:80` | - |
+| Ollama | `http://localhost:11434` | - |
+
+---
+
+## Start embeddings server (Ollama)
+After Ollama container is running, pull and start the embedding model:
+
+```bash
+docker exec -it ollama ollama pull nomic-embed-text
+docker exec -it ollama ollama run nomic-embed-text
+```
 
 ---
 
@@ -429,4 +445,3 @@ docker-compose down -v
 ## Next Steps
 
 - Read the [README](../README.md) for project overview and features
-- Check [Contributing Guidelines](../README.md#contributing) to contribute

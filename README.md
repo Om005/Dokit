@@ -8,17 +8,33 @@
   <strong>Cloud-native collaborative development workspace</strong>
 </p>
 
-![Dokit](./docs/Dokit.png)
+<!-- ![Dokit](./docs/Dokit.png) -->
 
 <p align="center">
-  <a href="https://dokit-ide.vercel.app">Live Demo</a> •
-  <a href="#features">Features</a> •
-  <a href="#architecture">Architecture</a> •
-  <a href="#tech-stack">Tech Stack</a> •
-  <a href="./docs/SETUP.md">Setup Guide</a>
+  <a href="https://dokit-ide.vercel.app">
+    <img src="https://img.shields.io/badge/Live-dokit--ide.vercel.app-00C853?logoColor=white" />
+  </a>
+  <img src="https://img.shields.io/badge/License-MIT-blue" />
 </p>
 
----
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=nextdotjs" />
+  <img src="https://img.shields.io/badge/Express-5-000000?style=flat-square&logo=express" />
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/PostgreSQL-15-4169E1?style=flat-square&logo=postgresql&logoColor=white" />
+  <img src="https://img.shields.io/badge/Prisma-ORM-2D3748?style=flat-square&logo=prisma" />
+  <img src="https://img.shields.io/badge/Redis-Latest-DC382D?style=flat-square&logo=redis&logoColor=white" />
+  <img src="https://img.shields.io/badge/Docker-Container_orchestration-2496ED?style=flat-square&logo=docker&logoColor=white" />
+  <img src="https://img.shields.io/badge/Nginx-Reverse_Proxy-009639?style=flat-square&logo=nginx&logoColor=white" />
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Yjs-CRDT_Collaboration-purple?style=flat-square" />
+  <img src="https://img.shields.io/badge/Socket.IO-Realtime-black?style=flat-square&logo=socketdotio" />
+  <img src="https://img.shields.io/badge/RAG-ASTra-orange?style=flat-square" />
+  <img src="https://img.shields.io/badge/Cloudflare-R2-F38020?style=flat-square&logo=cloudflare&logoColor=white" />
+  <img src="https://img.shields.io/badge/AWS-EC2-FF9900?style=flat-square&logo=amazonaws&logoColor=white" />
+</p>
 
 ## Overview
 
@@ -35,23 +51,25 @@ Programmatic provisioning, management, and teardown of isolated Linux environmen
 
 ### Real-Time Collaboration
 Conflict-free concurrent editing powered by **Yjs CRDTs** and **CodeMirror 6**. Multiple developers can edit the same file simultaneously with:
-- Live cursors showing collaborator positions
-- File-wise and global presence tracking
-- Multiplayer synchronization over WebSockets
-- Instant conflict resolution
-
-### Authentication & Security
-Enterprise-grade security infrastructure including:
-- **JWT-based Session Management** — Short-lived access tokens with securely rotating refresh tokens
-- **Remote Session Revocation** — Invalidate sessions across all devices instantly
-- **Two-Factor Authentication (2FA)** — TOTP-based verification with AES-encrypted secrets and backup recovery codes
-- **Sign-in Email Notifications** — Optional alerts for new logins
+ - Live cursors showing collaborator positions
+ - File-wise and global presence tracking
+ - Multiplayer synchronization over WebSockets
+ - Instant conflict resolution
 
 ### Advanced Container Sandboxing
 Defense-in-depth container security:
 - Root privilege step-down to restricted `dokituser` via **gosu**
 - Granular **Role-Based Access Control (RBAC)** for project collaborators
 - READ/WRITE permission levels for fine-grained access management
+
+### Project-Aware AI Assistant (ASTra)
+Project context and chat history aware assistant powered by **OpenRouter LLM** and **Retrieval-Augmented Generation (RAG)**:
+- **Semantic Code Search** — Embeddings-based retrieval using `nomic-embed-text` via local Ollama for accurate, privacy-first context
+- **Code Understanding** — Regex-based parsing pipeline supporting JS, TS, Python, Go, Rust, C/C++ with language-specific chunking strategies.
+- **pgvector Integration** — Cosine similarity search over 768-dimensional embeddings stored directly in PostgreSQL
+- **MMR Reranking** — Maximal Marginal Relevance reranking for diverse, non-redundant context retrieval
+- **Conversation Memory** — Incremental rolling summary persisted per chat thread
+- **Multi-chat Support** — Multiple named chat threads per project with auto-generated titles and full message persistence
 
 ### Bidirectional File Synchronization
 Real-time mirroring between container filesystem and frontend:
@@ -70,7 +88,6 @@ End-to-end pipeline for repository imports:
 On-the-fly workspace customization:
 - Install backend runtimes: **Python**, **Go**, **Rust**, **Java** etc...
 - Add terminal utilities and development tools seamlessly
-- Per-project tool persistence
 
 ### Project Templates
 Pre-configured starter environments:
@@ -80,17 +97,26 @@ Pre-configured starter environments:
 - **Blank** — Empty canvas for custom setups
 
 ### Dynamic Proxy & Access Control
-Intelligent request routing via **Nginx** reverse proxy:
+Request routing via **Nginx** reverse proxy:
 - Implemented dynamic DNS routing via [port]-[projectId].dokit.backends.live to enable instant preview traffic routing.
 - WebSocket terminal session proxying
 - HTTP preview traffic routing with live reload
 - Internal authorization sub-requests for secure access
 
-### API Security
+### Security
 Hardened backend infrastructure:
 - **Redis-based sliding-window rate limiter** — IP-based request throttling
 - **Zod validation** — Strict payload validation on all endpoints
 - **GeoIP tracking** — Session location awareness via MaxMind
+
+
+### Authentication
+Enterprise-grade security infrastructure including:
+- **JWT-based Session Management** — Short-lived access tokens with securely rotating refresh tokens
+- **Remote Session Revocation** — Invalidate sessions across all devices instantly
+- **Two-Factor Authentication (2FA)** — TOTP-based verification with AES-encrypted secrets and backup recovery codes
+- **Sign-in Email Notifications** — Optional alerts for new logins
+
 
 ### Project Visibility & Sharing
 Flexible access control for projects:
@@ -115,30 +141,17 @@ Prisma data model managing users, sessions, projects, collaborators, and access 
 
 ![Dokit Database Schema](./docs/diagrams/dokit_database_schema.png)
 
-<details>
-<summary>View Schema Details</summary>
-
-| Model | Description |
-|-------|-------------|
-| **User** | User accounts with 2FA support, backup codes, and session management |
-| **Session** | Active sessions with device info, geolocation, and refresh tokens |
-| **Project** | Workspaces with visibility settings, stack type, and installed tools |
-| **ProjectCollaborator** | Many-to-many relationship with READ/WRITE access levels |
-| **AccessRequest** | Pending/approved/rejected access requests for private projects |
-
-</details>
-
 ### Real-Time Collaboration Flow
 
 Bidirectional synchronization across editors and container filesystem changes, including Yjs room updates and Socket.IO file tree events.
 
 ![Dokit Realtime Sync Flow](./docs/diagrams/dokit_realtime_sync_flow.png)
 
-### Deployment Architecture
+### System Architecture
 
 Dokit backend runs on AWS EC2 with a 3-version rolling deployment strategy — every push to main atomically flips a symlink to the new release, with automatic instant rollback to the last stable version if the health check fails.
 
-![Dokit Deployment Architecture](./docs/diagrams/dokit_deployment_architecture.png)
+![Dokit System Architecture](./docs/diagrams/dokit_system_architecture.png)
 
 ---
 
@@ -157,6 +170,7 @@ Dokit backend runs on AWS EC2 with a 3-version rolling deployment strategy — e
 | **Socket.IO Client** | Real-time bidirectional communication |
 | **Tailwind CSS 4** | Utility-first styling |
 | **Radix UI** | Accessible component primitives |
+| **Shadcn UI** | Tailwind-based component library |
 | **Lucide Icons** | Beautiful icon library |
 
 ### Backend
@@ -165,7 +179,10 @@ Dokit backend runs on AWS EC2 with a 3-version rolling deployment strategy — e
 |------------|---------|
 | **Node.js** | JavaScript runtime |
 | **Express 5** | Web framework for REST API |
+| **PostgreSQL** | Primary database |
 | **Prisma ORM** | Type-safe database client |
+| **BullMQ** | Background job queue (email, sync projects, delete project, etc.) |
+| **Redis** | Caching, rate limiting, job queues |
 | **Socket.IO** | Real-time event broadcasting |
 | **y-websocket** | Yjs WebSocket provider |
 | **Zod** | Runtime schema validation |
@@ -173,17 +190,18 @@ Dokit backend runs on AWS EC2 with a 3-version rolling deployment strategy — e
 | **JWT** | Token-based authentication |
 | **otplib** | TOTP 2FA implementation |
 | **Pino** | High-performance logging |
+| **ua-parser** | User agent parsing |
 
-### Infrastructure
+
+### DevOps & Tooling
 
 | Technology | Purpose |
 |------------|---------|
 | **Docker Engine API** | Container orchestration |
 | **Nginx** | Reverse proxy with wildcard DNS |
-| **PostgreSQL** | Primary database |
-| **Redis** | Caching, rate limiting, pub/sub |
-| **BullMQ** | Job queue for async tasks |
 | **Cloudflare R2** | S3-compatible object storage |
+| **GitHub Actions** | CI/CD pipeline (prettier + lint checkes and deployment) |
+| **PM2** | Process manager |
 | **Rclone** | Cloud storage synchronization |
 | **MaxMind GeoIP** | IP geolocation for sessions |
 
@@ -207,19 +225,18 @@ Please refer to file **[DIRECTORY_STRUCTURE.md](./docs/DIRECTORY_STRUCTURE.md)**
 - Resource limits (CPU, memory, disk)
 - Network isolation between user projects and application services
 - Read-only base filesystem with writable workspace overlay
-\
+
 
 ---
 
-## Contributing
+## Getting Started
 
-Contributions are welcome! Please read the setup guide in `docs/SETUP.md` before getting started.
+### Prerequisites
+  - **Docker Engine** installed and running
+  - **Node.js** >= 20
+  - **pnpm** >= 10
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+> For detailed setup instructions, refer to **[SETUP.md](./docs/SETUP.md)**.
 
 ---
 
