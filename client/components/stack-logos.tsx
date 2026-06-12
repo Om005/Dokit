@@ -1,4 +1,4 @@
-import { Code2, Zap, Package, Github } from "lucide-react";
+import { Code2, Zap, Package, Github, NotebookPen } from "lucide-react";
 
 export const STACKS = [
     {
@@ -20,9 +20,15 @@ export const STACKS = [
         color: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
     },
     {
-        id: "BLANK",
+        id: "GITHUB",
         name: "GitHub",
         icon: Github,
+        color: "bg-gray-500/10 text-gray-600 dark:text-gray-400",
+    },
+    {
+        id: "BLANK",
+        name: "Blank",
+        icon: NotebookPen,
         color: "bg-gray-500/10 text-gray-600 dark:text-gray-400",
     },
 ];

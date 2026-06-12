@@ -514,7 +514,7 @@ const controllers = {
             try {
                 const containerInfo = await DockerManager.createDokitContainer(
                     project.id,
-                    project.stack
+                    project.stack == "GITHUB" ? "BLANK" : project.stack
                 );
                 if (!containerInfo.containerId) {
                     logger.error("Failed to create dokit container for project.");
@@ -867,7 +867,7 @@ const controllers = {
                     id: projectId,
                     name,
                     description,
-                    stack: "BLANK",
+                    stack: "GITHUB",
                     visibility: visibility as Visibility,
                     ownerId: userId,
                     isPasswordProtected,

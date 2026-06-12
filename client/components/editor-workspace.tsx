@@ -537,7 +537,6 @@ export default function ProjectPage({ projectId, token }: Props) {
             );
             const payload = response.payload as Payload<void>;
             if (payload?.success) {
-                toast.success("Project closed successfully.");
             } else {
                 toast.error(payload?.message ?? "Failed to close project.");
             }

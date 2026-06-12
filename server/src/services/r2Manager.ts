@@ -23,6 +23,7 @@ const STACK_BASE_PREFIX: Record<ProjectStack, string> = {
     REACT_VITE: "base/react_vite",
     EXPRESS: "base/express",
     BLANK: "base/blank",
+    GITHUB: "base/github",
 };
 
 interface FileSystemItem {
