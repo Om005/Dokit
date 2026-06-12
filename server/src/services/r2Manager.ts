@@ -24,6 +24,7 @@ const STACK_BASE_PREFIX: Record<ProjectStack, string> = {
     EXPRESS: "base/express",
     BLANK: "base/blank",
     GITHUB: "base/github",
+    FASTAPI: "base/fastapi",
 };
 
 interface FileSystemItem {

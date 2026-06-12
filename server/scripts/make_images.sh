@@ -4,3 +4,4 @@ docker build -t dokit-react_vite:latest ./docker/react_vite/
 docker build -t dokit-nginx:latest ./docker/nginx/
 docker build -t dokit-github:latest ./docker/github/
 docker build -t dokit-blank:latest ./docker/blank/
+docker build -t dokit-fastapi:latest ./docker/fastapi/

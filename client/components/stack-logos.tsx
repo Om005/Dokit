@@ -1,4 +1,4 @@
-import { Code2, Zap, Package, Github, NotebookPen } from "lucide-react";
+import { Code2, Zap, Package, Github, NotebookPen, Rocket } from "lucide-react";
 
 export const STACKS = [
     {
@@ -30,6 +30,12 @@ export const STACKS = [
         name: "Blank",
         icon: NotebookPen,
         color: "bg-gray-500/10 text-gray-600 dark:text-gray-400",
+    },
+    {
+        id: "FASTAPI",
+        name: "FastAPI",
+        icon: Rocket,
+        color: "bg-green-500/10 text-green-600 dark:text-green-400",
     },
 ];
 

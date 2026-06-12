@@ -162,6 +162,7 @@ enum ProjectStack {
   EXPRESS
   BLANK
   GITHUB
+  FASTAPI
 }
 
 enum Visibility {
