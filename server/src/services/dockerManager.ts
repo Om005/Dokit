@@ -9,6 +9,7 @@ import { FileNode } from "types/express";
 import { syncDockerToYjs } from "sockets/yjsServer";
 import { io } from "index";
 import { ALLOWED_TOOLS } from "constants/tools";
+import { IGNORED_DIRECTORIES } from "@modules/queue/workerActions";
 
 const docker = new Docker();
 
@@ -369,6 +370,8 @@ async function getFolderContent(
             if (!nodeType || !name) continue;
 
             const nodePath = folderPath === "/" ? `/${name}` : `${folderPath}/${name}`;
+            const valid = !nodePath.split("/").some((part) => IGNORED_DIRECTORIES.has(part));
+            if (!valid) continue;
             nodes[nodePath] = {
                 path: nodePath,
                 name,
@@ -586,7 +589,9 @@ async function startFileSystemWatcher(projectId: string): Promise<void> {
                         path: relativePath,
                         isDir: isDir,
                     });
-                    if (!isDir) {
+                    const parts = relativePath.split("/");
+                    const valid = !parts.some((part) => IGNORED_DIRECTORIES.has(part));
+                    if (!isDir && valid) {
                         const content = await getFileContent(projectId, relativePath);
                         queueActions
                             .addUpdateEmbeddingsJob(projectId, relativePath, content || "")

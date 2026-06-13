@@ -32,6 +32,7 @@ const TEMPLATES: Record<string, string> = {
     "base/react_vite": path.join(__dirname, "../templates/react_vite"),
     "base/express": path.join(__dirname, "../templates/express"),
     "base/fastapi": path.join(__dirname, "../templates/fastapi"),
+    "base/go": path.join(__dirname, "../templates/go"),
 };
 
 function getAllFiles(dir: string): string[] {

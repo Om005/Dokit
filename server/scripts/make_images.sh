@@ -5,3 +5,4 @@ docker build -t dokit-nginx:latest ./docker/nginx/
 docker build -t dokit-github:latest ./docker/github/
 docker build -t dokit-blank:latest ./docker/blank/
 docker build -t dokit-fastapi:latest ./docker/fastapi/
+docker build -t dokit-go:latest ./docker/go/

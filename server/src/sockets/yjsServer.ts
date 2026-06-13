@@ -7,6 +7,7 @@ import DockerManager from "services/dockerManager";
 import logger from "@utils/logger";
 import diff from "fast-diff";
 import queueActions from "@modules/queue/queueActions";
+import { IGNORED_DIRECTORIES } from "@modules/queue/workerActions";
 
 export const yjsWss = new WebSocketServer({ noServer: true });
 
@@ -51,6 +52,10 @@ yjsWss.on("connection", (ws, req) => {
 
         try {
             await DockerManager.writeFileToContainer(correctProjectId, filePath, currentText);
+            const parts = filePath.split("/");
+            if (parts.some((part) => IGNORED_DIRECTORIES.has(part))) {
+                return;
+            }
             queueActions.addUpdateEmbeddingsJob(correctProjectId, filePath, currentText);
         } catch (err) {
             logger.error(`Docker write failed for ${filePath}`);

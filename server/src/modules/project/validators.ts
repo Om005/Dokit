@@ -7,7 +7,7 @@ const validators = {
             .min(1, "Project name is required")
             .max(100, "Project name must be at most 100 characters"),
         description: z.string().max(500, "Description must be at most 500 characters").optional(),
-        stack: z.enum(["NODE", "REACT_VITE", "EXPRESS", "GITHUB", "BLANK", "FASTAPI"]),
+        stack: z.enum(["NODE", "REACT_VITE", "EXPRESS", "GITHUB", "BLANK", "FASTAPI", "GO"]),
         visibility: z.enum(["PUBLIC", "PRIVATE"]),
         password: z
             .string()

@@ -8,6 +8,21 @@ import R2Manager from "services/r2Manager";
 import { FileInput, ingestProjectFiles } from "services/rag/ingestionService";
 import { FileNode } from "types/express";
 
+export const IGNORED_DIRECTORIES = new Set([
+    "node_modules",
+    ".git",
+    ".tmp",
+    "dist",
+    "build",
+    "out",
+    ".next",
+    "coverage",
+    "venv",
+    ".venv",
+    "__pycache__",
+    ".vscode",
+]);
+
 const workers = {
     sendEmail: async (job: Job) => {
         const emailOptions: MailerOptions = job.data;
@@ -111,6 +126,10 @@ const workers = {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const traverseTree = async (tree: Record<string, any>) => {
                 for (const [key, node] of Object.entries(tree)) {
+                    const parts = key.split("/");
+                    if (parts.some((part) => IGNORED_DIRECTORIES.has(part))) {
+                        continue;
+                    }
                     const fullPath = `${key}`;
                     if (node.type == "directory") {
                         const subTree = await DockerManager.getFolderContent(

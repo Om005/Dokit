@@ -163,6 +163,7 @@ enum ProjectStack {
   BLANK
   GITHUB
   FASTAPI
+  GO
 }
 
 enum Visibility {
