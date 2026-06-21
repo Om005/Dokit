@@ -91,10 +91,12 @@ On-the-fly workspace customization:
 
 ### Project Templates
 Pre-configured starter environments:
-- **Node.js** — Modern JavaScript runtime
-- **React + Vite** — Fast React development with Vite
-- **Express** — Backend API development
-- **Blank** — Empty canvas for custom setups
+- <img src="https://cdn.simpleicons.org/nodedotjs" width="16" /> **Node.js** — Modern JavaScript runtime
+- <img src="https://cdn.simpleicons.org/react" width="16" /> **React + Vite** — Fast React development with Vite
+- <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/express/express-original.svg" style="filter: invert(1);" width="16" /> **Express** — Backend API development
+- <img src="https://cdn.simpleicons.org/fastapi" width="16" /> **FastAPI** — High-performance Python framework
+- <img src="https://cdn.simpleicons.org/go" width="16" /> **Go API** — Scalable backend in Go
+- <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vscode/vscode-original.svg" style="filter: grayscale(1) brightness(1.5);" width="16" /> **Blank** — Empty canvas for custom setups
 
 ### Dynamic Proxy & Access Control
 Request routing via **Nginx** reverse proxy:
