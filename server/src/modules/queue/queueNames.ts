@@ -7,6 +7,7 @@ const queues = {
     REMOVE_REQUEST_QUEUE: "remove-request-queue",
     CREATE_PROJECT_QUEUE: "create-project-queue",
     UPDATE_EMBEDDINGS_QUEUE: "update-embeddings-queue",
+    IMPORT_GITHUB_REPO_QUEUE: "import-github-repo-queue",
 };
 
 export default queues;

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store/store";
-import { projectActions, setPendingPassword } from "@/store/project";
+import { projectActions } from "@/store/project";
 import { toast } from "sonner";
 import { Eye, EyeOff, Globe, Loader2, Lock } from "lucide-react";
 import {
@@ -25,9 +25,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { useRouter } from "next/navigation";
 import { FileNode, Payload } from "@/types/types";
-import { setCurrProject } from "@/store/editor";
 
 interface CreateProjectFromGithubDialogProps {
     open: boolean;
@@ -39,7 +37,6 @@ export function CreateProjectFromGithubDialog({
     onOpenChange,
 }: CreateProjectFromGithubDialogProps) {
     const dispatch = useDispatch<AppDispatch>();
-    const router = useRouter();
     const { creatingProjectFromGithub } = useSelector((state: RootState) => state.project);
     const [projectName, setProjectName] = useState("");
     const [description, setDescription] = useState("");
@@ -95,12 +92,6 @@ export function CreateProjectFromGithubDialog({
             if (payload.success) {
                 toast.success("Project imported from GitHub successfully!");
 
-                const projectId = payload.data!.project.id.toString().replaceAll("-", "");
-                await dispatch(setCurrProject(payload.data!.project));
-                if (isPasswordProtected && password) {
-                    dispatch(setPendingPassword(password));
-                }
-
                 setProjectName("");
                 setDescription("");
                 setRepoUrl("");
@@ -108,8 +99,6 @@ export function CreateProjectFromGithubDialog({
                 setIsPasswordProtected(false);
                 setPassword("");
                 onOpenChange(false);
-
-                router.push(`/project/${projectId}`);
             } else {
                 toast.error(result.payload?.message || "Failed to import project from GitHub");
             }

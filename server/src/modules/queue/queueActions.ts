@@ -9,6 +9,7 @@ import {
     updateProjectLastAccessedQueue,
     updateEmbeddingsQueue,
     createProjectQueue,
+    importGithubRepoQueue,
 } from "./queues";
 import { ProjectStack } from "@generated/prisma";
 
@@ -161,6 +162,24 @@ const queueActions = {
             logger.info(`Update embeddings job added to the queue for project ${projectId}`);
         } catch (error) {
             logger.error("Error adding update embeddings job to queue:");
+            logger.error(error);
+            throw error;
+        }
+    },
+
+    addImportGithubRepoJob: async (projectId: string, repoUrl: string, userId: string) => {
+        try {
+            await importGithubRepoQueue.add(
+                "import-github-repo",
+                { projectId, repoUrl, userId },
+                {
+                    removeOnComplete: true,
+                    removeOnFail: { count: 5 },
+                }
+            );
+            logger.info(`Import GitHub repo job added to the queue for project ${projectId}`);
+        } catch (error) {
+            logger.error("Error adding import GitHub repo job to queue:");
             logger.error(error);
             throw error;
         }

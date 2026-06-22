@@ -868,27 +868,14 @@ const controllers = {
                     stack: "GITHUB",
                     visibility: visibility as Visibility,
                     ownerId: userId,
+                    status: "INITIALIZING",
                     isPasswordProtected,
                     passwordHash: isPasswordProtected ? passwordHash : null,
                 },
             });
 
-            try {
-                await DockerManager.createDokitContainerFromGithub(projectId, githubRepoUrl);
-            } catch {
-                await prisma.project.delete({
-                    where: { id: projectId },
-                });
-                return sendResponse(res, {
-                    success: false,
-                    message:
-                        "Failed to create project from GitHub repository. Please check the repository URL, make sure it's a public repository.",
-                    statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-                });
-            }
-
-            queueActions.addSyncToR2Job(projectId).catch((error) => {
-                logger.error(`Failed to add sync to R2 job for project ${projectId}:`);
+            queueActions.addImportGithubRepoJob(projectId, githubRepoUrl, userId).catch((error) => {
+                logger.error(`Failed to add import GitHub repo job for project ${projectId}:`);
                 logger.error(error);
             });
 

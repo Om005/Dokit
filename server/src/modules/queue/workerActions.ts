@@ -9,6 +9,7 @@ import R2Manager from "services/r2Manager";
 import { FileInput, ingestProjectFiles } from "services/rag/ingestionService";
 import { FileNode } from "types/express";
 import { io } from "index";
+import queueActions from "./queueActions";
 
 export const IGNORED_DIRECTORIES = new Set([
     "node_modules",
@@ -214,6 +215,100 @@ const workers = {
             );
             logger.error(error);
             throw error;
+        }
+    },
+
+    importGithubRepo: async (job: Job) => {
+        const { projectId, repoUrl, userId } = job.data;
+        try {
+            const containerId = await DockerManager.createDokitContainerFromGithub(
+                projectId,
+                repoUrl
+            );
+            if (!containerId) {
+                logger.error("Failed to create dokit container from GitHub repo for project.");
+                await prisma.project.update({
+                    where: { id: projectId },
+                    data: { status: "FAILED" },
+                });
+                return;
+            }
+            await prisma.project.update({
+                where: { id: projectId },
+                data: { status: "RUNNING" },
+            });
+
+            io.to(`user-${userId}`).emit("project-status-updated", {
+                projectId,
+                status: "RUNNING",
+            });
+            queueActions.addSyncToR2Job(projectId);
+
+            try {
+                const FileTree: Record<string, FileNode> | null =
+                    await DockerManager.getFolderContent(projectId, "/");
+
+                const filesToIngest: FileInput[] = [];
+
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const traverseTree = async (tree: Record<string, any>) => {
+                    for (const [key, node] of Object.entries(tree)) {
+                        const parts = key.split("/");
+                        if (parts.some((part) => IGNORED_DIRECTORIES.has(part))) {
+                            continue;
+                        }
+                        const fullPath = `${key}`;
+                        if (node.type == "directory") {
+                            const subTree = await DockerManager.getFolderContent(
+                                projectId,
+                                fullPath + "/"
+                            );
+                            if (subTree) await traverseTree(subTree);
+                        } else {
+                            if (
+                                /\.(js|ts|jsx|tsx|py|go|rs|c|cpp|md|txt|json|css|html|svg)$/i.test(
+                                    key
+                                )
+                            ) {
+                                try {
+                                    const content = await DockerManager.getFileContent(
+                                        projectId,
+                                        fullPath
+                                    );
+                                    if (content) {
+                                        filesToIngest.push({ filePath: fullPath, content });
+                                    }
+                                } catch {
+                                    logger.warn(`Could not read file ${fullPath} for ingestion.`);
+                                }
+                            }
+                        }
+                    }
+                };
+
+                await traverseTree(FileTree!);
+
+                if (filesToIngest.length > 0) {
+                    await ingestProjectFiles(projectId, filesToIngest);
+                    logger.info(
+                        `[Vector DB] Background ingestion complete for project ${projectId}.`
+                    );
+                } else {
+                    logger.info(
+                        `[Vector DB] No valid source files found to index for project ${projectId}.`
+                    );
+                }
+            } catch (error) {
+                logger.error(
+                    `Failed to create project for project ${projectId} by job id: ${job.id}`
+                );
+                logger.error(error);
+            }
+        } catch (error) {
+            logger.error(
+                `Failed to import GitHub repo for project ${projectId} by job id: ${job.id}`
+            );
+            logger.error(error);
         }
     },
 };

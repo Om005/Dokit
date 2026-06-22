@@ -56,6 +56,15 @@ const initiatWorkers = () => {
         }
     );
 
+    const importGithubRepoWorker = new Worker(
+        queues.IMPORT_GITHUB_REPO_QUEUE,
+        workers.importGithubRepo,
+        {
+            connection: redisConfig,
+            concurrency: 5,
+        }
+    );
+
     return [
         emailWorker,
         cleanContainersWorker,
@@ -65,6 +74,7 @@ const initiatWorkers = () => {
         removeRequestWorker,
         createProjectWorker,
         updateEmbeddingsWorker,
+        importGithubRepoWorker,
     ];
 };
 

@@ -91,6 +91,17 @@ const updateEmbeddingsQueue = new Queue(queues.UPDATE_EMBEDDINGS_QUEUE, {
     },
 });
 
+const importGithubRepoQueue = new Queue(queues.IMPORT_GITHUB_REPO_QUEUE, {
+    connection: redisConfig,
+    defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+            type: "exponential",
+            delay: 3000,
+        },
+    },
+});
+
 export {
     emailQueue,
     cleanContainersQueue,
@@ -100,4 +111,5 @@ export {
     removeRequestQueue,
     createProjectQueue,
     updateEmbeddingsQueue,
+    importGithubRepoQueue,
 };
