@@ -15,7 +15,16 @@ import { io } from "index";
 const controllers = {
     createProject: async (req: Request, res: Response) => {
         try {
-            const { name, description, stack, password, visibility } = req.body;
+            const result = validators.CreateProjectSchema.safeParse(req.body);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { name, description, stack, password, visibility } = result.data;
             const userId = req.meta.user?.id;
             if (!userId) {
                 return sendResponse(res, {
@@ -109,7 +118,16 @@ const controllers = {
 
     deleteProject: async (req: Request, res: Response) => {
         try {
-            const { projectId, accountPassword } = req.body;
+            const result = validators.DeleteProjectSchema.safeParse(req.query);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { projectId, accountPassword } = result.data;
 
             const userId = req.meta.user?.id;
             if (!userId) {
@@ -419,9 +437,18 @@ const controllers = {
     },
 
     startProject: async (req: Request, res: Response) => {
-        const { projectId, password } = req.body;
-
         try {
+            const result = validators.startProjectSchema.safeParse(req.body);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { projectId, password } = result.data;
+
             const userId = req.meta.user?.id;
             if (!userId) {
                 return sendResponse(res, {
@@ -580,6 +607,15 @@ const controllers = {
 
     changeProjectSettings: async (req: Request, res: Response) => {
         try {
+            const result = validators.changeSettings.safeParse(req.body);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
             const {
                 projectId,
                 newName,
@@ -588,7 +624,7 @@ const controllers = {
                 isPasswordProtected,
                 password,
                 accountPassword,
-            } = req.body;
+            } = result.data;
 
             const userId = req.meta.user?.id;
             if (!userId) {
@@ -730,7 +766,16 @@ const controllers = {
 
     closeProject: async (req: Request, res: Response) => {
         try {
-            const { projectId } = req.body;
+            const result = validators.closeProjectSchema.safeParse(req.body);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { projectId } = result.data;
 
             const userId = req.meta.user?.id;
             if (!userId) {
@@ -824,7 +869,16 @@ const controllers = {
                 });
             }
 
-            const { name, description, visibility, githubRepoUrl, password } = req.body;
+            const result = validators.CreateProjectFromGithubSchema.safeParse(req.body);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { name, description, visibility, githubRepoUrl, password } = result.data;
 
             let isPasswordProtected = false;
             let passwordHash: string | null = null;
@@ -907,9 +961,18 @@ const controllers = {
     },
 
     downloadProject: async (req: Request, res: Response) => {
-        const { projectId } = req.body;
-        const userId = req.meta.user?.id;
         try {
+            const result = validators.downloadProjectSchema.safeParse(req.query);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { projectId } = result.data;
+            const userId = req.meta.user?.id;
             const project = await prisma.project.findUnique({
                 where: { id: projectId },
                 select: { id: true, name: true, visibility: true, ownerId: true },

@@ -58,7 +58,7 @@ const editorActions = {
         "editor/getFolderContent",
         createApiHandler<{ projectId: string; folderPath: string }>(
             "/api/editor/get-folder-content",
-            "post"
+            "get"
         )
     ),
     getRootContent: createAsyncThunk<
@@ -69,7 +69,7 @@ const editorActions = {
         "editor/getRootContent",
         createApiHandler<{ projectId: string; folderPath: string }>(
             "/api/editor/get-folder-content",
-            "post"
+            "get"
         )
     ),
     getFileContent: createAsyncThunk<
@@ -80,7 +80,7 @@ const editorActions = {
         "editor/getFileContent",
         createApiHandler<{ projectId: string; filePath: string }>(
             "/api/editor/get-file-content",
-            "post"
+            "get"
         )
     ),
     createNode: createAsyncThunk<
@@ -100,7 +100,10 @@ const editorActions = {
         { rejectValue: ApiResponse }
     >(
         "editor/deleteNode",
-        createApiHandler<{ projectId: string; nodePath: string }>("/api/editor/delete-node", "post")
+        createApiHandler<{ projectId: string; nodePath: string }>(
+            "/api/editor/delete-node",
+            "delete"
+        )
     ),
     renameNode: createAsyncThunk<
         ApiResponse,
@@ -110,7 +113,7 @@ const editorActions = {
         "editor/renameNode",
         createApiHandler<{ projectId: string; oldPath: string; newPath: string }>(
             "/api/editor/rename-node",
-            "post"
+            "put"
         )
     ),
     installTool: createAsyncThunk<
@@ -132,7 +135,7 @@ const editorActions = {
         "editor/uninstallTool",
         createApiHandler<{ projectId: string; toolName: string }>(
             "/api/editor/uninstall-tool",
-            "post"
+            "delete"
         )
     ),
     terminalToken: createAsyncThunk<ApiResponse, void, { rejectValue: ApiResponse }>(

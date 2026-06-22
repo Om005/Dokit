@@ -5,11 +5,21 @@ import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import DockerManager from "services/dockerManager";
 import { FileNode } from "types/express";
+import validators from "./validators";
 
 const controllers = {
     getFolderContent: async (req: Request, res: Response) => {
         try {
-            const { projectId, folderPath } = req.body;
+            const result = validators.getFolderContent.safeParse(req.query);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { projectId, folderPath } = result.data;
             const userId = req.meta.user?.id;
             if (!userId) {
                 return sendResponse(res, {
@@ -65,7 +75,16 @@ const controllers = {
 
     getFileContent: async (req: Request, res: Response) => {
         try {
-            const { projectId, filePath } = req.body;
+            const result = validators.getFileContent.safeParse(req.query);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { projectId, filePath } = result.data;
             const userId = req.meta.user?.id;
             if (!userId) {
                 return sendResponse(res, {
@@ -118,7 +137,16 @@ const controllers = {
 
     createNode: async (req: Request, res: Response) => {
         try {
-            const { projectId, nodePath, isDir } = req.body;
+            const result = validators.createNode.safeParse(req.body);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { projectId, nodePath, isDir } = result.data;
             const userId = req.meta.user?.id;
             if (!userId) {
                 return sendResponse(res, {
@@ -171,7 +199,16 @@ const controllers = {
 
     deleteNode: async (req: Request, res: Response) => {
         try {
-            const { projectId, nodePath } = req.body;
+            const result = validators.deleteNode.safeParse(req.query);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { projectId, nodePath } = result.data;
             const userId = req.meta.user?.id;
             if (!userId) {
                 return sendResponse(res, {
@@ -234,7 +271,16 @@ const controllers = {
 
     renameNode: async (req: Request, res: Response) => {
         try {
-            const { projectId, oldPath, newPath } = req.body;
+            const result = validators.renameNode.safeParse(req.body);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { projectId, oldPath, newPath } = result.data;
             const userId = req.meta.user?.id;
             if (!userId) {
                 return sendResponse(res, {
@@ -312,7 +358,16 @@ const controllers = {
                     statusCode: StatusCodes.UNAUTHORIZED,
                 });
             }
-            const { projectId, toolName } = req.body;
+            const result = validators.installEnvironmentTool.safeParse(req.body);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { projectId, toolName } = result.data;
             const project = await prisma.project.findFirst({
                 where: {
                     id: projectId,
@@ -374,7 +429,16 @@ const controllers = {
                     statusCode: StatusCodes.UNAUTHORIZED,
                 });
             }
-            const { projectId, toolName } = req.body;
+            const result = validators.uninstallEnvironmentTool.safeParse(req.query);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { projectId, toolName } = result.data;
             const project = await prisma.project.findFirst({
                 where: {
                     id: projectId,

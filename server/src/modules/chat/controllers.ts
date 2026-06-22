@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { ChatRole } from "@generated/prisma";
+import validators from "./validators";
 import { prisma } from "@db/prisma";
 import { retrieveContext } from "services/rag/retrievalService";
 import logger from "@utils/logger";
@@ -97,7 +98,16 @@ const ensureProjectAccess = async (projectId: string, userId: string) => {
 const controllers = {
     createChat: async (req: Request, res: Response) => {
         try {
-            const { projectId, title } = req.body;
+            const result = validators.createChat.safeParse(req.body);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { projectId, title } = result.data;
             const userId = req.meta.user?.id;
 
             if (!userId) {
@@ -144,7 +154,16 @@ const controllers = {
 
     getChats: async (req: Request, res: Response) => {
         try {
-            const { projectId, limit } = req.body;
+            const result = validators.listChats.safeParse(req.query);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { projectId, limit } = result.data;
             const userId = req.meta.user?.id;
 
             if (!userId) {
@@ -206,7 +225,16 @@ const controllers = {
 
     getChat: async (req: Request, res: Response) => {
         try {
-            const { chatId, limit, cursor } = req.body;
+            const result = validators.getChat.safeParse(req.query);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { chatId, limit, cursor } = result.data;
             const userId = req.meta.user?.id;
 
             if (!userId) {
@@ -283,7 +311,16 @@ const controllers = {
 
     addMessage: async (req: Request, res: Response) => {
         try {
-            const { chatId, content } = req.body;
+            const result = validators.addMessage.safeParse(req.body);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { chatId, content } = result.data;
             const userId = req.meta.user?.id;
 
             if (!userId) {
@@ -348,7 +385,16 @@ const controllers = {
 
     deleteChat: async (req: Request, res: Response) => {
         try {
-            const { chatId } = req.body;
+            const result = validators.deleteChat.safeParse(req.query);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { chatId } = result.data;
             const userId = req.meta.user?.id;
 
             if (!userId) {
@@ -400,18 +446,19 @@ const controllers = {
     },
 
     handleProjectChat: async (req: Request, res: Response) => {
-        const { projectId, message, chatId } = req.body;
+        const result = validators.handleProjectChat.safeParse(req.body);
+        if (!result.success) {
+            const message = result.error.issues[0]?.message;
+            return sendResponse(res, {
+                success: false,
+                statusCode: StatusCodes.BAD_REQUEST,
+                message: message || "Invalid request",
+            });
+        }
+        const { projectId, message, chatId } = result.data;
         const userId = req.meta.user?.id;
 
         const trimmedMessage = typeof message === "string" ? message.trim() : "";
-
-        if (!trimmedMessage) {
-            return sendResponse(res, {
-                success: false,
-                message: "Message is required.",
-                statusCode: StatusCodes.BAD_REQUEST,
-            });
-        }
 
         if (!userId) {
             return sendResponse(res, {

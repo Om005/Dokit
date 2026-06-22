@@ -11,10 +11,20 @@ import { StatusCodes } from "http-status-codes";
 import { io } from "index";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import validators from "./validators";
 
 const controllers = {
     requestAccess: async (req: Request, res: Response) => {
-        const { projectId } = req.body;
+        const result = validators.requestAccessSchema.safeParse(req.body);
+        if (!result.success) {
+            const message = result.error.issues[0]?.message;
+            return sendResponse(res, {
+                success: false,
+                statusCode: StatusCodes.BAD_REQUEST,
+                message: message || "Invalid request",
+            });
+        }
+        const { projectId } = result.data;
         try {
             const userId = req.meta.user?.id;
             if (!userId) {
@@ -128,7 +138,16 @@ const controllers = {
     },
 
     reviewAccessRequest: async (req: Request, res: Response) => {
-        const { requestId, status } = req.body;
+        const result = validators.reviewAccessRequestSchema.safeParse(req.body);
+        if (!result.success) {
+            const message = result.error.issues[0]?.message;
+            return sendResponse(res, {
+                success: false,
+                statusCode: StatusCodes.BAD_REQUEST,
+                message: message || "Invalid request",
+            });
+        }
+        const { requestId, status } = result.data;
         try {
             const userId = req.meta.user?.id;
             if (!userId) {
@@ -240,7 +259,16 @@ const controllers = {
     },
 
     getPendingAccessRequests: async (req: Request, res: Response) => {
-        const { projectId } = req.body;
+        const result = validators.getPendingAccessRequestsSchema.safeParse(req.query);
+        if (!result.success) {
+            const message = result.error.issues[0]?.message;
+            return sendResponse(res, {
+                success: false,
+                statusCode: StatusCodes.BAD_REQUEST,
+                message: message || "Invalid request",
+            });
+        }
+        const { projectId } = result.data;
         try {
             const userId = req.meta.user?.id;
             if (!userId) {
@@ -306,7 +334,16 @@ const controllers = {
     },
 
     inviteMember: async (req: Request, res: Response) => {
-        const { projectId, email, accessLevel } = req.body;
+        const result = validators.inviteMemberSchema.safeParse(req.body);
+        if (!result.success) {
+            const message = result.error.issues[0]?.message;
+            return sendResponse(res, {
+                success: false,
+                statusCode: StatusCodes.BAD_REQUEST,
+                message: message || "Invalid request",
+            });
+        }
+        const { projectId, email, accessLevel } = result.data;
 
         try {
             const ownerId = req.meta.user?.id;
@@ -433,7 +470,16 @@ const controllers = {
     },
 
     changeMemberAccess: async (req: Request, res: Response) => {
-        const { projectId, userId, newAccessLevel } = req.body;
+        const result = validators.changeMemberAccessLevelSchema.safeParse(req.body);
+        if (!result.success) {
+            const message = result.error.issues[0]?.message;
+            return sendResponse(res, {
+                success: false,
+                statusCode: StatusCodes.BAD_REQUEST,
+                message: message || "Invalid request",
+            });
+        }
+        const { projectId, userId, newAccessLevel } = result.data;
 
         try {
             const reqUserId = req.meta.user?.id;
@@ -528,7 +574,16 @@ const controllers = {
     },
 
     removeMember: async (req: Request, res: Response) => {
-        const { projectId, userId } = req.body;
+        const result = validators.removeMemberSchema.safeParse(req.query);
+        if (!result.success) {
+            const message = result.error.issues[0]?.message;
+            return sendResponse(res, {
+                success: false,
+                statusCode: StatusCodes.BAD_REQUEST,
+                message: message || "Invalid request",
+            });
+        }
+        const { projectId, userId } = result.data;
 
         try {
             const reqUserId = req.meta.user?.id;

@@ -8,6 +8,7 @@ import R2Manager from "services/r2Manager";
 import env from "@config/env";
 import queueActions from "@modules/queue/queueActions";
 import { redisClient } from "@config/redisClient";
+import validators from "./validators";
 
 interface cookieOptions {
     httpOnly: boolean;
@@ -54,7 +55,16 @@ const normalizeSessionPayload = (session: {
 const controllers = {
     getPublicProfile: async (req: Request, res: Response) => {
         try {
-            const { username } = req.body;
+            const result = validators.getPublicProfile.safeParse(req.query);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { username } = result.data;
 
             const user = await prisma.user.findFirst({
                 where: { username },
@@ -220,7 +230,16 @@ const controllers = {
                 });
             }
 
-            const { signInEmailEnabled } = req.body;
+            const result = validators.updateSettings.safeParse(req.body);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { signInEmailEnabled } = result.data;
 
             const updatedUser = await prisma.user.update({
                 where: { id: userId },
@@ -260,7 +279,16 @@ const controllers = {
                 });
             }
 
-            const { oldPassword, newPassword } = req.body;
+            const result = validators.changePassword.safeParse(req.body);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { oldPassword, newPassword } = result.data;
 
             const user = await prisma.user.findUnique({
                 where: { id: userId },
@@ -318,7 +346,16 @@ const controllers = {
                 });
             }
 
-            const { password } = req.body;
+            const result = validators.deleteAccount.safeParse(req.query);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { password } = result.data;
 
             const user = await prisma.user.findUnique({
                 where: { id: userId },
@@ -446,7 +483,16 @@ const controllers = {
                 });
             }
 
-            const { sessionId } = req.body;
+            const result = validators.logoutSession.safeParse(req.query);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { sessionId } = result.data;
 
             const session = await prisma.session.findFirst({
                 where: { id: sessionId, userId },
@@ -550,7 +596,16 @@ const controllers = {
                 });
             }
 
-            const content = (req.body.content || "").trim();
+            const result = validators.updateProfileReadme.safeParse(req.body);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const content = (result.data.content || "").trim();
 
             if (!content) {
                 await R2Manager.deleteProfileReadme(userId);
@@ -599,7 +654,16 @@ const controllers = {
                 });
             }
 
-            const { projectId, pinned } = req.body;
+            const result = validators.pinProject.safeParse(req.body);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { projectId, pinned } = result.data;
 
             const project = await prisma.project.findFirst({
                 where: { id: projectId, ownerId: userId },
@@ -647,9 +711,20 @@ const controllers = {
             });
         }
     },
+
     getViewFolderContent: async (req: Request, res: Response) => {
         try {
-            const { projectId, folderPath } = req.body;
+            const result = validators.getViewFolderContent.safeParse(req.query);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { projectId, folderPath } = result.data;
+
             const project = await prisma.project.findUnique({
                 where: { id: projectId },
                 select: { id: true, visibility: true },
@@ -681,7 +756,17 @@ const controllers = {
 
     getViewFileContent: async (req: Request, res: Response) => {
         try {
-            const { projectId, filePath } = req.body;
+            const result = validators.getViewFileContent.safeParse(req.query);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { projectId, filePath } = result.data;
+
             const project = await prisma.project.findUnique({
                 where: { id: projectId },
                 select: { id: true, visibility: true },
@@ -720,7 +805,17 @@ const controllers = {
 
     getViewProjectDetails: async (req: Request, res: Response) => {
         try {
-            const { projectId } = req.body;
+            const result = validators.getViewProject.safeParse(req.query);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { projectId } = result.data;
+
             const project = await prisma.project.findUnique({
                 where: { id: projectId },
                 select: {

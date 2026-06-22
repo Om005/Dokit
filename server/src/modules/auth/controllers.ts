@@ -15,6 +15,7 @@ import { userNameBloomFilter } from "@config/bloomFilter";
 import { generateSecret, generateURI, verify, verifySync } from "otplib";
 import QRCode from "qrcode";
 import jwt from "jsonwebtoken";
+import validators from "./validators";
 
 const REFRESH_TOKEN_EXPIRY_MS = 15 * 24 * 60 * 60 * 1000;
 const ACCESS_COOKIE_EXPIRY_MS = 15 * 60 * 1000;
@@ -816,7 +817,17 @@ const controllers = {
 
     isUsernameAvailable: async (req: Request, res: Response) => {
         try {
-            const { username } = req.body;
+            const result = validators.isUsernameAvailable.safeParse(req.query);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                    data: { available: false },
+                });
+            }
+            const { username } = result.data;
             const normalizedUsername = username.trim();
 
             if (normalizedUsername.length === 0) {
@@ -871,7 +882,16 @@ const controllers = {
     },
     toggle2FA: async (req: Request, res: Response) => {
         try {
-            const { password } = req.body;
+            const result = validators.toggle2FA.safeParse(req.body);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { password } = result.data;
             const userId = req.meta.user?.id;
             if (!userId) {
                 return sendResponse(res, {
@@ -1274,7 +1294,16 @@ const controllers = {
     },
     emergencyRevokeSession: async (req: Request, res: Response) => {
         try {
-            const { token } = req.body;
+            const result = validators.emergencyRevokeSession.safeParse(req.query);
+            if (!result.success) {
+                const message = result.error.issues[0]?.message;
+                return sendResponse(res, {
+                    success: false,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    message: message || "Invalid request",
+                });
+            }
+            const { token } = result.data;
 
             let decoded: { sessionId: string; purpose: string };
             try {

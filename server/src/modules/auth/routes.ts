@@ -1,4 +1,3 @@
-import validationMiddleware from "@middlewares/validation";
 import express from "express";
 import validators from "./validators";
 import controllers from "./controllers";
@@ -6,6 +5,7 @@ import rateLimit from "@middlewares/rateLimiter";
 import uaParserMiddleware from "@middlewares/UAparser";
 import { locationMiddleware } from "@middlewares/location";
 import { authenticate } from "@middlewares/authenticate";
+import validationMiddleware from "@middlewares/validation";
 
 const router = express.Router();
 
@@ -41,7 +41,7 @@ router.post(
     controllers.signIn
 );
 
-router.post(
+router.delete(
     "/sign-out",
     authenticate,
     rateLimit({ limit: 10, windowMs: 60 * 1000, prefix: "sign-out" }),
@@ -77,25 +77,23 @@ router.post(
     controllers.resetPassword
 );
 
-router.post(
+router.get(
     "/is-authenticated",
     authenticate,
     rateLimit({ limit: 60, windowMs: 60 * 1000, prefix: "is-authenticated" }),
     controllers.isAuthenticated
 );
 
-router.post(
+router.get(
     "/is-username-available",
     rateLimit({ limit: 60, windowMs: 60 * 1000, prefix: "is-username-available" }),
-    validationMiddleware(validators.isUsernameAvailable),
     controllers.isUsernameAvailable
 );
 
-router.post(
+router.put(
     "/toggle-2fa",
     authenticate,
     rateLimit({ limit: 10, windowMs: 60 * 1000, prefix: "toggle-2fa" }),
-    validationMiddleware(validators.toggle2FA),
     controllers.toggle2FA
 );
 
@@ -124,10 +122,9 @@ router.post(
     controllers.verify2FAForSignIn
 );
 
-router.post(
+router.delete(
     "/emergency-revoke-session",
     rateLimit({ limit: 10, windowMs: 60 * 1000, prefix: "emergency-revoke-session" }),
-    validationMiddleware(validators.emergencyRevokeSession),
     controllers.emergencyRevokeSession
 );
 

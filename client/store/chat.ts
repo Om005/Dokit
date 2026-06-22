@@ -106,7 +106,7 @@ const chatActions = {
         { rejectValue: ApiResponse }
     >(
         "chat/listChats",
-        createApiHandler<{ projectId: string; limit?: number }>("/api/chat/list-chats", "post")
+        createApiHandler<{ projectId: string; limit?: number }>("/api/chat/list-chats", "get")
     ),
 
     getChat: createAsyncThunk<
@@ -117,7 +117,7 @@ const chatActions = {
         "chat/getChat",
         createApiHandler<{ chatId: string; limit?: number; cursor?: string }>(
             "/api/chat/get-chat",
-            "post"
+            "get"
         )
     ),
 
@@ -132,7 +132,7 @@ const chatActions = {
 
     deleteChat: createAsyncThunk<ApiResponse, { chatId: string }, { rejectValue: ApiResponse }>(
         "chat/deleteChat",
-        createApiHandler<{ chatId: string }>("/api/chat/delete-chat", "post")
+        createApiHandler<{ chatId: string }>("/api/chat/delete-chat", "delete")
     ),
 
     projectChat: createAsyncThunk<

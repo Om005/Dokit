@@ -70,7 +70,7 @@ const authActions = {
 
     signOut: createAsyncThunk<ApiResponse, void, { rejectValue: ApiResponse }>(
         "auth/signOut",
-        createApiHandler<void>("/api/auth/sign-out")
+        createApiHandler<void>("/api/auth/sign-out", "delete")
     ),
 
     refreshSession: createAsyncThunk<ApiResponse, void, { rejectValue: ApiResponse }>(
@@ -107,7 +107,7 @@ const authActions = {
 
     isAuthenticated: createAsyncThunk<ApiResponse, void, { rejectValue: ApiResponse }>(
         "auth/isAuthenticated",
-        createApiHandler<void>("/api/auth/is-authenticated")
+        createApiHandler<void>("/api/auth/is-authenticated", "get")
     ),
 
     isUsernameAvailable: createAsyncThunk<
@@ -116,12 +116,12 @@ const authActions = {
         { rejectValue: ApiResponse }
     >(
         "auth/isUsernameAvailable",
-        createApiHandler<{ username: string }>("/api/auth/is-username-available")
+        createApiHandler<{ username: string }>("/api/auth/is-username-available", "get")
     ),
 
     toggle2FA: createAsyncThunk<ApiResponse, { password: string }, { rejectValue: ApiResponse }>(
         "auth/toggle2FA",
-        createApiHandler<{ password: string }>("/api/auth/toggle-2fa")
+        createApiHandler<{ password: string }>("/api/auth/toggle-2fa", "put")
     ),
 
     verify2FAsetup: createAsyncThunk<ApiResponse, { token: string }, { rejectValue: ApiResponse }>(
@@ -155,7 +155,7 @@ const authActions = {
         { rejectValue: ApiResponse }
     >(
         "auth/emergencyRevokeSession",
-        createApiHandler<{ token: string }>("/api/auth/emergency-revoke-session")
+        createApiHandler<{ token: string }>("/api/auth/emergency-revoke-session", "delete")
     ),
 };
 

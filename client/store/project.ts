@@ -73,7 +73,7 @@ const projectActions = {
         "project/deleteProject",
         createApiHandler<{ projectId: string; accountPassword: string }>(
             "/api/project/delete-project",
-            "post"
+            "delete"
         )
     ),
 
@@ -111,7 +111,7 @@ const projectActions = {
             visibility: "PUBLIC" | "PRIVATE";
             password?: string;
             accountPassword: string;
-        }>("/api/project/change-settings", "post")
+        }>("/api/project/change-settings", "put")
     ),
     closeProject: createAsyncThunk<
         ApiResponse,
@@ -137,7 +137,7 @@ const projectActions = {
         "project/reviewRequest",
         createApiHandler<{ requestId: string; status: "APPROVED" | "REJECTED" }>(
             "/api/project/access/review-request",
-            "post"
+            "put"
         )
     ),
     getPendingAccessRequests: createAsyncThunk<
@@ -146,7 +146,7 @@ const projectActions = {
         { rejectValue: ApiResponse }
     >(
         "project/getPendingAccessRequests",
-        createApiHandler<{ projectId: string }>("/api/project/access/get-pending-requests", "post")
+        createApiHandler<{ projectId: string }>("/api/project/access/get-pending-requests", "get")
     ),
     inviteMember: createAsyncThunk<
         ApiResponse,
@@ -167,7 +167,7 @@ const projectActions = {
         "project/changeMemberAccess",
         createApiHandler<{ projectId: string; userId: string; newAccessLevel: "READ" | "WRITE" }>(
             "/api/project/access/change-member-access",
-            "post"
+            "put"
         )
     ),
     removeMember: createAsyncThunk<
@@ -178,7 +178,7 @@ const projectActions = {
         "project/removeMember",
         createApiHandler<{ projectId: string; userId: string }>(
             "/api/project/access/remove-member",
-            "post"
+            "delete"
         )
     ),
 
@@ -209,13 +209,10 @@ const projectActions = {
         { rejectValue: ApiResponse }
     >("project/downloadProject", async ({ projectId, name }, { rejectWithValue }) => {
         try {
-            const response = await api.post(
-                "/api/project/download-project",
-                { projectId },
-                {
-                    responseType: "blob",
-                }
-            );
+            const response = await api.get("/api/project/download-project", {
+                params: { projectId },
+                responseType: "blob",
+            });
 
             const contentDisposition = response.headers["content-disposition"] as
                 | string

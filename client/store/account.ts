@@ -95,12 +95,12 @@ const accountActions = {
         { rejectValue: ApiResponse }
     >(
         "account/fetchPublicProfile",
-        createApiHandler<{ username: string }>("/api/account/public-profile", "post")
+        createApiHandler<{ username: string }>("/api/account/public-profile", "get")
     ),
 
     fetchMyProfile: createAsyncThunk<ApiResponse, void, { rejectValue: ApiResponse }>(
         "account/fetchMyProfile",
-        createApiHandler<void>("/api/account/my-profile", "post")
+        createApiHandler<void>("/api/account/my-profile", "get")
     ),
 
     updateSettings: createAsyncThunk<
@@ -111,7 +111,7 @@ const accountActions = {
         "account/updateSettings",
         createApiHandler<{ twoFactorEnabled?: boolean; signInEmailEnabled?: boolean }>(
             "/api/account/update-settings",
-            "post"
+            "put"
         )
     ),
 
@@ -123,7 +123,7 @@ const accountActions = {
         "account/changePassword",
         createApiHandler<{ oldPassword: string; newPassword: string }>(
             "/api/account/change-password",
-            "post"
+            "put"
         )
     ),
 
@@ -133,12 +133,12 @@ const accountActions = {
         { rejectValue: ApiResponse }
     >(
         "account/deleteAccount",
-        createApiHandler<{ password: string }>("/api/account/delete-account", "post")
+        createApiHandler<{ password: string }>("/api/account/delete-account", "delete")
     ),
 
     fetchSessions: createAsyncThunk<ApiResponse, void, { rejectValue: ApiResponse }>(
         "account/fetchSessions",
-        createApiHandler<void>("/api/account/sessions", "post")
+        createApiHandler<void>("/api/account/sessions", "get")
     ),
 
     logoutSession: createAsyncThunk<
@@ -147,12 +147,12 @@ const accountActions = {
         { rejectValue: ApiResponse }
     >(
         "account/logoutSession",
-        createApiHandler<{ sessionId: string }>("/api/account/logout-session", "post")
+        createApiHandler<{ sessionId: string }>("/api/account/logout-session", "delete")
     ),
 
     logoutOtherSessions: createAsyncThunk<ApiResponse, void, { rejectValue: ApiResponse }>(
         "account/logoutOtherSessions",
-        createApiHandler<void>("/api/account/logout-other-sessions", "post")
+        createApiHandler<void>("/api/account/logout-other-sessions", "delete")
     ),
 
     updateProfileReadme: createAsyncThunk<
@@ -161,7 +161,7 @@ const accountActions = {
         { rejectValue: ApiResponse }
     >(
         "account/updateProfileReadme",
-        createApiHandler<{ content: string }>("/api/account/profile-readme", "post")
+        createApiHandler<{ content: string }>("/api/account/profile-readme", "put")
     ),
 
     pinProject: createAsyncThunk<
@@ -170,7 +170,7 @@ const accountActions = {
         { rejectValue: ApiResponse }
     >(
         "account/pinProject",
-        createApiHandler<{ projectId: string; pinned: boolean }>("/api/account/pin-project", "post")
+        createApiHandler<{ projectId: string; pinned: boolean }>("/api/account/pin-project", "put")
     ),
 
     getViewProjectDetails: createAsyncThunk<
@@ -179,7 +179,7 @@ const accountActions = {
         { rejectValue: ApiResponse }
     >(
         "account/getViewProjectDetails",
-        createApiHandler<{ projectId: string }>("/api/account/get-view-project", "post")
+        createApiHandler<{ projectId: string }>("/api/account/get-view-project", "get")
     ),
 
     getViewFolderContent: createAsyncThunk<
@@ -190,7 +190,7 @@ const accountActions = {
         "account/getViewFolderContent",
         createApiHandler<{ projectId: string; folderPath: string }>(
             "/api/account/get-folder-content",
-            "post"
+            "get"
         )
     ),
 
@@ -202,7 +202,7 @@ const accountActions = {
         "account/getViewFileContent",
         createApiHandler<{ projectId: string; filePath: string }>(
             "/api/account/get-file-content",
-            "post"
+            "get"
         )
     ),
 };
