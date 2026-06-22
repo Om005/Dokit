@@ -430,10 +430,10 @@ const accountSlice = createSlice({
             .addCase(accountActions.getViewFileContent.fulfilled, (state, action) => {
                 state.gettingFileContent = false;
                 const payload = action.payload as Payload<{ content: string }>;
-                if (payload.success && payload.data?.content && state.viewProject) {
+                if (payload.success && state.viewProject) {
                     const filePath = action.meta.arg.filePath;
                     if (state.viewProject.filetree[filePath]) {
-                        state.viewProject.filetree[filePath].content = payload.data.content;
+                        state.viewProject.filetree[filePath].content = payload.data!.content;
                         state.viewProject.filetree[filePath].isLoaded = true;
                     }
                 }
