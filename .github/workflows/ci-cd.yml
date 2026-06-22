@@ -208,7 +208,9 @@ jobs:
               ln -sfn "$dir" "$CURRENT_LINK"
 
               cd "$CURRENT_LINK/server"
-              docker compose up -d --build
+              docker compose build
+              docker compose up -d
+              sudo chown -R ubuntu:ubuntu "$dir" 2>/dev/null || true
 
               if pm2 describe "$APP_NAME" > /dev/null 2>&1; then
                 echo "  PM2: restarting existing process..."
@@ -328,12 +330,21 @@ jobs:
             kept=("${new_list[@]::$max}")
             evicted=("${new_list[@]:$max}")
 
+            write_stable_list "${kept[@]}"
+
             for old_id in "${evicted[@]}"; do
               echo "  Removing old release: $old_id"
-              rm -rf "$DEPLOY_DIR/$old_id"
+              rm -rf "$DEPLOY_DIR/$old_id" || echo "  WARNING: failed to remove $old_id (will retry next deploy)"
             done
 
-            write_stable_list "${kept[@]}"
+            echo "[cleanup] Sweeping any orphaned release dirs not in stable list..."
+            for dir in "$DEPLOY_DIR"/*/; do
+              id="$(basename "$dir")"
+              if [[ "$id" != "$RELEASE_ID" ]] && ! grep -qx "$id" "$STABLE_FILE"; then
+                echo "  Removing orphaned release: $id"
+                rm -rf "$dir" || echo "  WARNING: failed to remove orphan $id"
+              fi
+            done
 
             echo ""
             echo "  Deployment successful: $RELEASE_ID"
