@@ -73,6 +73,7 @@ model Project {
   updatedAt      DateTime      @updatedAt @default(now())
   lastAccessedAt DateTime      @default(now())
   pinned         Boolean       @default(false)
+  status         ProjectStatus @default(STOPPED)
 
   CodeChunk       CodeChunk[]
   chats           ChatThread[]
@@ -186,4 +187,11 @@ enum ChatRole {
   USER
   ASSISTANT
   SYSTEM
+}
+
+enum ProjectStatus {
+  INITIALIZING
+  RUNNING
+  STOPPED
+  FAILED
 }

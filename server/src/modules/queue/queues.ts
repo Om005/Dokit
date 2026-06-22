@@ -69,7 +69,7 @@ const removeRequestQueue = new Queue(queues.REMOVE_REQUEST_QUEUE, {
     },
 });
 
-const createEmbeddingsQueue = new Queue(queues.CREATE_EMBEDDINGS_QUEUE, {
+const createProjectQueue = new Queue(queues.CREATE_PROJECT_QUEUE, {
     connection: redisConfig,
     defaultJobOptions: {
         attempts: 3,
@@ -98,6 +98,6 @@ export {
     updateProjectLastAccessedQueue,
     syncToR2Queue,
     removeRequestQueue,
-    createEmbeddingsQueue,
+    createProjectQueue,
     updateEmbeddingsQueue,
 };

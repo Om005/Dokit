@@ -42,14 +42,10 @@ const initiatWorkers = () => {
         concurrency: 5,
     });
 
-    const createEmbeddingsWorker = new Worker(
-        queues.CREATE_EMBEDDINGS_QUEUE,
-        workers.createEmbeddings,
-        {
-            connection: redisConfig,
-            concurrency: 5,
-        }
-    );
+    const createProjectWorker = new Worker(queues.CREATE_PROJECT_QUEUE, workers.createProject, {
+        connection: redisConfig,
+        concurrency: 5,
+    });
 
     const updateEmbeddingsWorker = new Worker(
         queues.UPDATE_EMBEDDINGS_QUEUE,
@@ -67,7 +63,7 @@ const initiatWorkers = () => {
         updateProjectLastAccessedWorker,
         syncToR2Worker,
         removeRequestWorker,
-        createEmbeddingsWorker,
+        createProjectWorker,
         updateEmbeddingsWorker,
     ];
 };

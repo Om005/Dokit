@@ -6,10 +6,11 @@ import {
     emailQueue,
     removeRequestQueue,
     syncToR2Queue,
-    createEmbeddingsQueue,
     updateProjectLastAccessedQueue,
     updateEmbeddingsQueue,
+    createProjectQueue,
 } from "./queues";
+import { ProjectStack } from "@generated/prisma";
 
 const queueActions = {
     addEmailToQueue: async ({ from, to, subject, htmlContent }: MailerOptions) => {
@@ -129,19 +130,19 @@ const queueActions = {
         }
     },
 
-    addCreateEmbeddingsJob: async (projectId: string) => {
+    addCreateProjectJob: async (projectId: string, stack: ProjectStack, userId: string) => {
         try {
-            await createEmbeddingsQueue.add(
-                "create-embeddings",
-                { projectId },
+            await createProjectQueue.add(
+                "create-project",
+                { projectId, stack, userId },
                 {
                     removeOnComplete: true,
                     removeOnFail: { count: 5 },
                 }
             );
-            logger.info(`Create embeddings job added to the queue for project ${projectId}`);
+            logger.info(`Create project job added to the queue for project ${projectId}`);
         } catch (error) {
-            logger.error("Error adding create embeddings job to queue:");
+            logger.error("Error adding create project job to queue:");
             logger.error(error);
             throw error;
         }

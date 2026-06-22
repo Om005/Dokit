@@ -1,12 +1,14 @@
 import { transporter } from "@config/mailer";
 import { MailerOptions } from "@config/mailer";
 import { prisma } from "@db/prisma";
+import { ProjectStack } from "@generated/prisma";
 import logger from "@utils/logger";
 import type { Job } from "bullmq";
 import DockerManager from "services/dockerManager";
 import R2Manager from "services/r2Manager";
 import { FileInput, ingestProjectFiles } from "services/rag/ingestionService";
 import { FileNode } from "types/express";
+import { io } from "index";
 
 export const IGNORED_DIRECTORIES = new Set([
     "node_modules",
@@ -113,8 +115,35 @@ const workers = {
             throw error;
         }
     },
-    createEmbeddings: async (job: Job) => {
-        const { projectId } = job.data;
+    createProject: async (job: Job) => {
+        const { projectId, stack, userId } = job.data;
+        const filesCopied = await R2Manager.copyBaseToProject(projectId, stack as ProjectStack);
+        if (filesCopied === -1) {
+            await prisma.project.update({
+                where: { id: projectId },
+                data: { status: "FAILED" },
+            });
+            return;
+        }
+        const containerInfo = await DockerManager.createDokitContainer(
+            projectId,
+            stack == "GITHUB" ? "BLANK" : stack
+        );
+        if (!containerInfo.containerId) {
+            logger.error("Failed to create dokit container for project.");
+            await prisma.project.update({
+                where: { id: projectId },
+                data: { status: "FAILED" },
+            });
+            return;
+        }
+        await prisma.project.update({
+            where: { id: projectId },
+            data: { status: "RUNNING" },
+        });
+
+        io.to(`user-${userId}`).emit("project-status-updated", { projectId, status: "RUNNING" });
+
         try {
             const FileTree: Record<string, FileNode> | null = await DockerManager.getFolderContent(
                 projectId,
@@ -168,11 +197,8 @@ const workers = {
                 );
             }
         } catch (error) {
-            logger.error(
-                `Failed to create embeddings for project ${projectId} by job id: ${job.id}`
-            );
+            logger.error(`Failed to create project for project ${projectId} by job id: ${job.id}`);
             logger.error(error);
-            throw error;
         }
     },
     updateEmbeddings: async (job: Job) => {

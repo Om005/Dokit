@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { Outfit, JetBrains_Mono } from "next/font/google";
-import "./globals.css";
+import "@/app/globals.css";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/components/auth-provider";
 import { Toaster } from "@/components/ui/sonner";
 import StoreProvider from "@/components/store-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ServiceWorker from "@/components/service-worker";
+import { GlobalSocket } from "@/components/global-socket";
 
 const outfit = Outfit({
     subsets: ["latin"],
@@ -46,6 +47,7 @@ export default function RootLayout({
                         <AuthProvider>
                             <TooltipProvider>
                                 <ServiceWorker />
+                                <GlobalSocket />
                                 {children}
                             </TooltipProvider>
                             <Toaster position="top-right" richColors={true} />

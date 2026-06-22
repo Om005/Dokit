@@ -295,6 +295,13 @@ const projectSlice = createSlice({
         setLastProject(state, action) {
             state.lastProject = action.payload;
         },
+        updateProjectStatus(state, action) {
+            const { projectId, status } = action.payload;
+            const projectIndex = state.projects.findIndex((project) => project.id === projectId);
+            if (projectIndex !== -1) {
+                state.projects[projectIndex].status = status;
+            }
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -507,5 +514,5 @@ const projectPersistConfig = {
 
 const persistedProjectReducer = persistReducer(projectPersistConfig, projectSlice.reducer);
 
-export const { setPendingPassword, setLastProject } = projectSlice.actions;
+export const { setPendingPassword, setLastProject, updateProjectStatus } = projectSlice.actions;
 export { projectActions, persistedProjectReducer };

@@ -26,7 +26,6 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { STACKS } from "@/components/stack-logos";
-import { useRouter } from "next/navigation";
 import { FileNode, Payload } from "@/types/types";
 import { setCurrProject } from "@/store/editor";
 import { setPendingPassword } from "@/store/project";
@@ -38,7 +37,6 @@ interface CreateProjectDialogProps {
 
 export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogProps) {
     const dispatch = useDispatch<AppDispatch>();
-    const router = useRouter();
     const { creatingProject } = useSelector((state: RootState) => state.project);
     const [projectName, setProjectName] = useState("");
     const [description, setDescription] = useState("");
@@ -92,9 +90,8 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                 FileTree: Record<string, FileNode>;
             }>;
             if (payload.success) {
-                toast.success("Project created successfully!");
+                toast.success("Project initialization started.");
 
-                const projectId = payload.data!.project.id.toString().replaceAll("-", "");
                 await dispatch(setCurrProject(payload.data!.project));
                 if (isPasswordProtected && password) {
                     dispatch(setPendingPassword(password));
@@ -107,8 +104,6 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                 setIsPasswordProtected(false);
                 setPassword("");
                 onOpenChange(false);
-
-                router.push(`/project/${projectId}`);
             } else {
                 toast.error(result.payload?.message || "Failed to create project");
             }

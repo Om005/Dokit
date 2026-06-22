@@ -24,6 +24,17 @@ const controllers = {
                     statusCode: StatusCodes.UNAUTHORIZED,
                 });
             }
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { username: true },
+            });
+            if (!user) {
+                return sendResponse(res, {
+                    success: false,
+                    message: "User not found.",
+                    statusCode: StatusCodes.NOT_FOUND,
+                });
+            }
             let isPasswordProtected = false;
             let passwordHash: string | null = null;
             if (password !== undefined && typeof password === "string") {
@@ -48,81 +59,43 @@ const controllers = {
 
             const projectId = crypto.randomUUID();
 
-            try {
-                const user = await prisma.user.findUnique({
-                    where: { id: userId },
-                    select: { username: true },
-                });
-                if (!user) {
-                    return sendResponse(res, {
-                        success: false,
-                        message: "User not found.",
-                        statusCode: StatusCodes.NOT_FOUND,
-                    });
-                }
+            const project = await prisma.project.create({
+                data: {
+                    id: projectId,
+                    name,
+                    description,
+                    stack: stack as ProjectStack,
+                    visibility: visibility as Visibility,
+                    ownerId: userId,
+                    isPasswordProtected,
+                    passwordHash: isPasswordProtected ? passwordHash : null,
+                    status: "INITIALIZING",
+                },
+            });
 
-                const filesCopied = await R2Manager.copyBaseToProject(
-                    projectId,
-                    stack as ProjectStack
-                );
-                if (filesCopied === -1) {
-                    logger.error("Failed to copy base files to project.");
-                    return sendResponse(res, {
-                        success: false,
-                        message: "Failed to create project. Please try again later.",
-                        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-                    });
-                }
-
-                const project = await prisma.project.create({
-                    data: {
-                        id: projectId,
-                        name,
-                        description,
-                        stack: stack as ProjectStack,
-                        visibility: visibility as Visibility,
-                        ownerId: userId,
-                        isPasswordProtected,
-                        passwordHash: isPasswordProtected ? passwordHash : null,
-                    },
-                });
-
-                queueActions.addCreateEmbeddingsJob(projectId).catch((error) => {
-                    logger.error(`Failed to add update embeddings job for project ${projectId}:`);
+            queueActions
+                .addCreateProjectJob(projectId, stack as ProjectStack, userId)
+                .catch((error) => {
+                    logger.error(`Failed to add create project job for project ${projectId}:`);
                     logger.error(error);
                 });
 
-                return sendResponse(res, {
-                    success: true,
-                    message: "Project created successfully.",
-                    data: {
-                        project: {
-                            ...project,
-                            passwordHash: undefined,
-                            isOwner: true,
-                            ownerUsername: user.username,
-                            currentUserAccess: "OWNER",
-                            ownerId: userId,
-                            members: [],
-                            tools: project.tools ?? [],
-                        },
+            sendResponse(res, {
+                success: true,
+                message: "Project creation started.",
+                data: {
+                    project: {
+                        ...project,
+                        passwordHash: undefined,
+                        isOwner: true,
+                        ownerUsername: user.username,
+                        currentUserAccess: "OWNER",
+                        ownerId: userId,
+                        members: [],
+                        tools: project.tools ?? [],
                     },
-                });
-            } catch (error) {
-                logger.error("Error creating project:");
-                logger.error(error);
-
-                await Promise.all([
-                    queueActions.addDeleteProjectJob(projectId),
-                    queueActions.addContainerCleanupJob(projectId),
-                ]);
-
-                return sendResponse(res, {
-                    success: false,
-                    message: "Failed to create project. Please try again later.",
-                    statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-                });
-            }
+                },
+            });
         } catch (error) {
             logger.error("Error in createProject controller:");
             logger.error(error);
@@ -244,6 +217,7 @@ const controllers = {
                     lastAccessedAt: true,
                     tools: true,
                     ownerId: true,
+                    status: true,
                     owner: {
                         select: {
                             username: true,
@@ -283,6 +257,7 @@ const controllers = {
                     updatedAt: project.updatedAt,
                     lastAccessedAt: project.lastAccessedAt,
                     tools: project.tools ?? [],
+                    status: project.status,
 
                     isOwner: isOwner,
                     ownerId: project.ownerId,
@@ -351,6 +326,7 @@ const controllers = {
                     updatedAt: true,
                     lastAccessedAt: true,
                     tools: true,
+                    status: true,
                     ownerId: true,
                     owner: {
                         select: {
@@ -411,6 +387,7 @@ const controllers = {
                 updatedAt: project.updatedAt,
                 lastAccessedAt: project.lastAccessedAt,
                 tools: project.tools ?? [],
+                status: project.status,
 
                 isOwner: isOwner,
                 ownerId: project.ownerId,
@@ -535,6 +512,13 @@ const controllers = {
                     logger.error(error);
                 });
 
+                await prisma.project.update({
+                    where: { id: project.id },
+                    data: {
+                        status: "RUNNING",
+                    },
+                });
+
                 const formattedProjectInfo = {
                     id: project.id,
                     name: project.name,
@@ -546,6 +530,7 @@ const controllers = {
                     updatedAt: project.updatedAt,
                     lastAccessedAt: project.lastAccessedAt,
                     tools: project.tools ?? [],
+                    status: "RUNNING",
 
                     isOwner: isOwner,
                     ownerId: project.ownerId,
@@ -710,6 +695,7 @@ const controllers = {
                 createdAt: updatedProject.createdAt,
                 updatedAt: updatedProject.updatedAt,
                 lastAccessedAt: updatedProject.lastAccessedAt,
+                status: updatedProject.status,
 
                 isOwner: true,
                 ownerId: updatedProject.ownerId,
@@ -799,6 +785,18 @@ const controllers = {
                     statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
                 });
             }
+
+            prisma.project
+                .update({
+                    where: { id: project.id },
+                    data: {
+                        status: "STOPPED",
+                    },
+                })
+                .catch((error) => {
+                    logger.error("Error updating project status in closeProject controller:");
+                    logger.error(error);
+                });
 
             return sendResponse(res, {
                 success: true,

@@ -24,7 +24,6 @@ export function ContactForm() {
             });
 
             const data = await res.json();
-            console.log(data);
             if (data.success) {
                 toast.success("Message sent successfully!");
                 form.reset();

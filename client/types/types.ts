@@ -20,6 +20,7 @@ export interface Project {
     visibility: "PUBLIC" | "PRIVATE";
     isPasswordProtected: boolean;
     tools: string[];
+    status: "INITIALIZING" | "RUNNING" | "STOPPED" | "FAILED";
     createdAt: string;
     updatedAt: string;
     lastAccessedAt: string;
