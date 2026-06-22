@@ -19,8 +19,9 @@ const rateLimit = ({ limit, windowMs, prefix = "common" }: RateLimitOptions) => 
             return next();
         }
 
-        const ip = req.meta.clientIp || "unknown";
-        const key = `rl:${prefix}:${ip}`;
+        const clientKey = req.meta.user?.id || req.meta.clientIp || "unknown";
+
+        const key = `rl:${prefix}:${clientKey}`;
 
         const now = Date.now();
         const windowStart = now - windowMs;
@@ -48,7 +49,7 @@ const rateLimit = ({ limit, windowMs, prefix = "common" }: RateLimitOptions) => 
             if (requestCount >= limit) {
                 const retryAfterSeconds = Math.ceil(windowMs / 1000);
                 res.set("Retry-After", retryAfterSeconds.toString());
-                logger.warn(`Rate Limit Hit: ${ip} on [${prefix}]`);
+                logger.warn(`Rate Limit Hit: ${clientKey} on [${prefix}]`);
                 return sendResponse(res, {
                     success: false,
                     statusCode: StatusCodes.TOO_MANY_REQUESTS,

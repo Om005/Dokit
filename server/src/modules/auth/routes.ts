@@ -43,8 +43,8 @@ router.post(
 
 router.post(
     "/sign-out",
-    rateLimit({ limit: 10, windowMs: 60 * 1000, prefix: "sign-out" }),
     authenticate,
+    rateLimit({ limit: 10, windowMs: 60 * 1000, prefix: "sign-out" }),
     controllers.signOut
 );
 
@@ -79,8 +79,8 @@ router.post(
 
 router.post(
     "/is-authenticated",
-    rateLimit({ limit: 60, windowMs: 60 * 1000, prefix: "is-authenticated" }),
     authenticate,
+    rateLimit({ limit: 60, windowMs: 60 * 1000, prefix: "is-authenticated" }),
     controllers.isAuthenticated
 );
 
@@ -93,24 +93,24 @@ router.post(
 
 router.post(
     "/toggle-2fa",
-    rateLimit({ limit: 10, windowMs: 60 * 1000, prefix: "toggle-2fa" }),
     authenticate,
+    rateLimit({ limit: 10, windowMs: 60 * 1000, prefix: "toggle-2fa" }),
     validationMiddleware(validators.toggle2FA),
     controllers.toggle2FA
 );
 
 router.post(
     "/verify-2fa-setup",
-    rateLimit({ limit: 10, windowMs: 60 * 1000, prefix: "verify-2fa-setup" }),
     authenticate,
+    rateLimit({ limit: 10, windowMs: 60 * 1000, prefix: "verify-2fa-setup" }),
     validationMiddleware(validators.verify2FAsetup),
     controllers.verify2FAsetup
 );
 
 router.post(
     "/regenerate-backup-codes",
-    rateLimit({ limit: 10, windowMs: 60 * 1000, prefix: "regenerate-backup-codes" }),
     authenticate,
+    rateLimit({ limit: 10, windowMs: 60 * 1000, prefix: "regenerate-backup-codes" }),
     validationMiddleware(validators.regenerateBackupCodes),
     controllers.regenerateBackupCodes
 );
