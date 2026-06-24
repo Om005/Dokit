@@ -12,6 +12,7 @@ env:
   CURRENT_LINK: /home/ubuntu/Dokit/current
   STABLE_FILE:  /home/ubuntu/Dokit/.stable_versions
   ENV_FILE:     /home/ubuntu/env/Dokit/.env.production
+  MAINTENANCE_FLAG: "/tmp/dokit-maintenance.flag"
   APP_NAME:     dokit-backend
   MAX_STABLE:   3
   HEALTH_CHECK_URL:      http://localhost:4000/health
@@ -167,6 +168,7 @@ jobs:
             STABLE_FILE="${{ env.STABLE_FILE }}"
             ENV_FILE="${{ env.ENV_FILE }}"
             APP_NAME="${{ env.APP_NAME }}"
+            MAINTENANCE_FLAG="${{ env.MAINTENANCE_FLAG }}"
             RELEASE_DIR="$DEPLOY_DIR/$RELEASE_ID"
 
             PM2_ENTRY="$CURRENT_LINK/server/dist/index.js"
@@ -256,6 +258,7 @@ jobs:
             }
 
             trap rollback ERR
+            trap 'rm -f "$MAINTENANCE_FLAG"' EXIT
 
             echo "[1/9] Preparing release directory: $RELEASE_DIR"
             mkdir -p "$DEPLOY_DIR"
@@ -306,6 +309,9 @@ jobs:
             NODE_OPTIONS="--max-old-space-size=512" \
               pnpm script:geoip:prod --child-concurrency=1 --network-concurrency=1
 
+            echo "  Enabling maintenance mode..."
+            touch "$MAINTENANCE_FLAG"
+
             echo "[6/9] Building backend..."
             npm_config_child_concurrency=1 \
             npm_config_network_concurrency=1 \
@@ -317,6 +323,9 @@ jobs:
 
             echo "[8/9] Health check..."
             health_check
+
+            echo "  Disabling maintenance mode..."
+            rm -f "$MAINTENANCE_FLAG"
 
             echo "[9/9] Running database migrations..."
             pnpm prisma:migrate:prod
