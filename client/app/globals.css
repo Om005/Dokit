@@ -8,6 +8,18 @@
 /* Custom styles for Yjs collaborative cursors */
 
 /* The vertical blinking cursor line */
+
+@keyframes maintenance-cursor {
+    0%,
+    50% {
+        opacity: 1;
+    }
+
+    50.01%,
+    100% {
+        opacity: 0;
+    }
+}
 .cm-ySelectionCaret {
     position: relative;
     border-left: 2px solid black; /* This color gets overridden dynamically by Yjs */

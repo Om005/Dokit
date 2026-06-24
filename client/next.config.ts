@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
                 source: "/api/:path*",
                 destination: "https://dokit.backends.live/api/:path*",
             },
+            {
+                source: "/health",
+                destination: "https://dokit.backends.live/health",
+            },
         ];
     },
     reactStrictMode: false,

@@ -1,3 +1,4 @@
+import { setMaintenanceMode } from "@/lib/maintenance-store";
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { toast } from "sonner";
 
@@ -33,6 +34,10 @@ const processQueue = (error: unknown) => {
 api.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
+        if (error.response?.status === 503) {
+            setMaintenanceMode(true);
+            return;
+        }
         const originalRequest = error.config as RetriableRequestConfig | undefined;
         const statusCode = (error.response?.data as { statusCode?: number })?.statusCode;
 

@@ -8,6 +8,7 @@ import StoreProvider from "@/components/store-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ServiceWorker from "@/components/service-worker";
 import { GlobalSocket } from "@/components/global-socket";
+import MaintenanceOverlay from "@/components/maintenance-overlay";
 
 const outfit = Outfit({
     subsets: ["latin"],
@@ -46,6 +47,7 @@ export default function RootLayout({
                     <StoreProvider>
                         <AuthProvider>
                             <TooltipProvider>
+                                <MaintenanceOverlay />
                                 <ServiceWorker />
                                 <GlobalSocket />
                                 {children}
