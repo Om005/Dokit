@@ -88,9 +88,11 @@
 │   │   ├── features-section.tsx
 │   │   ├── file-node-context-menu.tsx
 │   │   ├── footer.tsx
+│   │   ├── global-socket.tsx
 │   │   ├── guest-route.tsx
 │   │   ├── hero-section.tsx
 │   │   ├── loader.tsx
+│   │   ├── maintenance-overlay.tsx
 │   │   ├── navbar.tsx
 │   │   ├── node-action-dialog.tsx
 │   │   ├── preview-panel.tsx
@@ -130,12 +132,15 @@
 │   │   │   └── tooltip.tsx
 │   │   └── view-project-workspace.tsx
 │   ├── components.json
+│   ├── css.d.ts
 │   ├── eslint.config.mjs
 │   ├── hooks
 │   │   ├── use-filetree-socket.ts
 │   │   ├── use-mobile.ts
-│   │   └── use-online-members.ts
+│   │   ├── use-online-members.ts
+│   │   └── use-project-status.ts
 │   ├── lib
+│   │   ├── maintenance-store.ts
 │   │   └── utils.ts
 │   ├── next.config.ts
 │   ├── next-env.d.ts
@@ -150,7 +155,6 @@
 │   │   ├── offline.html
 │   │   ├── service-worker.js
 │   │   └── window.svg
-│   ├── README.md
 │   ├── store
 │   │   ├── account.ts
 │   │   ├── authentication.ts
@@ -188,7 +192,13 @@
 │   │   ├── express
 │   │   │   ├── Dockerfile
 │   │   │   └── entrypoint.sh
+│   │   ├── fastapi
+│   │   │   ├── Dockerfile
+│   │   │   └── entrypoint.sh
 │   │   ├── github
+│   │   │   ├── Dockerfile
+│   │   │   └── entrypoint.sh
+│   │   ├── go
 │   │   │   ├── Dockerfile
 │   │   │   └── entrypoint.sh
 │   │   ├── nginx
@@ -253,6 +263,14 @@
 │   │   │   ├── 20260531173055_add_tables_for_ai_chat
 │   │   │   │   └── migration.sql
 │   │   │   ├── 20260607083849_add_summary_column_in_chatthread_table
+│   │   │   │   └── migration.sql
+│   │   │   ├── 20260612143434_add_github_project_stack
+│   │   │   │   └── migration.sql
+│   │   │   ├── 20260612162058_add_fastapi_stack
+│   │   │   │   └── migration.sql
+│   │   │   ├── 20260612173449_add_go_stack
+│   │   │   │   └── migration.sql
+│   │   │   ├── 20260622103500_add_status_field_in_project_table
 │   │   │   │   └── migration.sql
 │   │   │   └── migration_lock.toml
 │   │   └── schema.prisma
@@ -368,7 +386,12 @@
 │   │   ├── express
 │   │   │   ├── index.js
 │   │   │   └── package.json
+│   │   ├── fastapi
+│   │   │   ├── main.py
+│   │   │   └── pyproject.toml
 │   │   ├── go
+│   │   │   ├── go.mod
+│   │   │   └── main.go
 │   │   ├── node
 │   │   │   ├── main.js
 │   │   │   └── package.json
@@ -387,6 +410,7 @@
 │   │       │   ├── index.css
 │   │       │   └── main.jsx
 │   │       └── vite.config.js
+│   ├── trigger
 │   └── tsconfig.json
 └── skills-lock.json
 ```
