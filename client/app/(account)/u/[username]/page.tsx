@@ -119,7 +119,7 @@ export default function ProfilePage() {
 
     useEffect(() => {
         if (routeUsername) {
-            document.title = `${routeUsername}'s Profile - Dokit`;
+            document.title = `${routeUsername}'s Profile | Dokit`;
         }
     }, [routeUsername]);
 

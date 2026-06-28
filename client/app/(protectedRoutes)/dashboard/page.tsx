@@ -89,7 +89,7 @@ export default function DashboardPage() {
         {
             title: "Code Links",
             description:
-                "Share single code snippets securely with optional password protection, custom view limits, and expiration dates.",
+                "Share single code snippets securely with optional password protection, visibility settings, and expiration time.",
             icon: Link2,
             href: "/dashboard/codelink/generate",
             actionText: "Generate Link",
@@ -99,8 +99,7 @@ export default function DashboardPage() {
         },
         {
             title: "Import from GitHub",
-            description:
-                "Clone any public or private repository directly into a Dokit project workspace.",
+            description: "Clone any public repository directly into a Dokit project workspace.",
             icon: Github,
             onClick: () => setGithubDialogOpen(true),
             actionText: "Clone Repo",
@@ -111,7 +110,7 @@ export default function DashboardPage() {
         {
             title: "AI Coding Assistant",
             description:
-                "Leverage advanced AI pair programming inside your editor to review, explain, or write code.",
+                "Leverage advanced AI pair programming inside your project to review, explain, or write code.",
             icon: Cpu,
             href: "/dashboard/projects",
             actionText: "Open Project to Begin",
