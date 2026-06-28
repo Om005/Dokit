@@ -35,8 +35,8 @@ export function HeroSection() {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center gap-4">
                 <Button asChild size="lg" className="rounded-lg px-8 h-12 text-base">
-                    <Link href={isAuthenticated ? "/dashboard/projects" : "/signup"}>
-                        {isAuthenticated ? "Code Playground" : "Sign Up"}
+                    <Link href={isAuthenticated ? "/dashboard" : "/signup"}>
+                        {isAuthenticated ? "Go to Workspace" : "Sign Up"}
                     </Link>
                 </Button>
                 <Button

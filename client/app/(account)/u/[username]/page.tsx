@@ -118,6 +118,12 @@ export default function ProfilePage() {
     const twoFactorSwitchChecked = twoFactorEnabled || isTwoFactorSetupPending;
 
     useEffect(() => {
+        if (routeUsername) {
+            document.title = `${routeUsername}'s Profile - Dokit`;
+        }
+    }, [routeUsername]);
+
+    useEffect(() => {
         if (!routeUsername || isAuthLoading) {
             return;
         }

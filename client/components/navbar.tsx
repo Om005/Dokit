@@ -1,7 +1,19 @@
 "use client";
 
+import React, { useState } from "react";
 import { useTheme } from "next-themes";
-import { Moon, Sun, User, LogOut, Link2 } from "lucide-react";
+import {
+    Moon,
+    Sun,
+    User,
+    LogOut,
+    LayoutDashboard,
+    Link2,
+    Menu,
+    Sparkles,
+    Info,
+    Mail,
+} from "lucide-react";
 import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store/store";
@@ -16,6 +28,14 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
+    SheetTrigger,
+} from "@/components/ui/sheet";
 import { Payload } from "@/types/types";
 
 export function Navbar() {
@@ -25,6 +45,7 @@ export function Navbar() {
     const { isAuthenticated, firstName, lastName, username } = useSelector(
         (state: RootState) => state.auth
     );
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const toggleTheme = () => {
         setTheme(isLight ? "dark" : "light");
@@ -56,6 +77,7 @@ export function Navbar() {
                     Dokit.
                 </Link>
 
+                {/* Desktop Navigation */}
                 <div className="hidden md:flex items-center gap-1">
                     <Link
                         href="/features"
@@ -70,13 +92,13 @@ export function Navbar() {
                         About
                     </Link>
                     <Link
-                        href="/dashboard/projects"
+                        href="/dashboard"
                         className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full hover:bg-secondary/50"
                     >
-                        Projects
+                        Dashboard
                     </Link>
                     <Link
-                        href="/codelink/generate"
+                        href="/dashboard/codelink/generate"
                         className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full hover:bg-secondary/50"
                     >
                         Code Links
@@ -115,15 +137,15 @@ export function Navbar() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
                                 <DropdownMenuItem asChild>
-                                    <Link href={`/u/${username}`} className="cursor-pointer">
-                                        <User className="mr-2 h-4 w-4" />
-                                        My Account
+                                    <Link href="/dashboard" className="cursor-pointer">
+                                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                                        Dashboard
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
-                                    <Link href="/codelink/generate" className="cursor-pointer">
-                                        <Link2 className="mr-2 h-4 w-4" />
-                                        Code Links
+                                    <Link href={`/u/${username}`} className="cursor-pointer">
+                                        <User className="mr-2 h-4 w-4" />
+                                        My Account
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
@@ -150,6 +172,77 @@ export function Navbar() {
                             </Button>
                         </>
                     )}
+
+                    {/* Mobile Navigation Trigger */}
+                    <div className="md:hidden">
+                        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                            <SheetTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="rounded-full h-9 w-9 cursor-pointer"
+                                    aria-label="Open menu"
+                                >
+                                    <Menu className="h-5 w-5" />
+                                </Button>
+                            </SheetTrigger>
+                            <SheetContent
+                                side="right"
+                                className="w-[280px] border-l border-border/50 bg-background/95 backdrop-blur-md"
+                            >
+                                <SheetHeader className="text-left pb-4 border-b border-border/50">
+                                    <SheetTitle className="text-xl font-bold tracking-tight text-foreground">
+                                        Dokit.
+                                    </SheetTitle>
+                                    <SheetDescription className="text-xs text-muted-foreground">
+                                        Collaborative coding environment
+                                    </SheetDescription>
+                                </SheetHeader>
+                                <div className="pl-5 flex flex-col gap-4 py-6">
+                                    <Link
+                                        href="/features"
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors py-1.5"
+                                    >
+                                        <Sparkles className="mr-2 h-4 w-4 inline" />
+                                        Features
+                                    </Link>
+                                    <Link
+                                        href="/about"
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors py-1.5"
+                                    >
+                                        <Info className="mr-2 h-4 w-4 inline" />
+                                        About
+                                    </Link>
+                                    <Link
+                                        href="/dashboard"
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors py-1.5"
+                                    >
+                                        <LayoutDashboard className="mr-2 h-4 w-4 inline" />
+                                        Dashboard
+                                    </Link>
+                                    <Link
+                                        href="/dashboard/codelink/generate"
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors py-1.5"
+                                    >
+                                        <Link2 className="mr-2 h-4 w-4 inline" />
+                                        Code Links
+                                    </Link>
+                                    <Link
+                                        href="/contact-us"
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="text-base font-medium text-muted-foreground hover:text-foreground transition-colors py-1.5"
+                                    >
+                                        <Mail className="mr-2 h-4 w-4 inline" />
+                                        Contact
+                                    </Link>
+                                </div>
+                            </SheetContent>
+                        </Sheet>
+                    </div>
                 </div>
             </nav>
         </header>

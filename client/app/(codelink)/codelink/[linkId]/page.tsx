@@ -142,6 +142,14 @@ export default function CodeLinkViewPage({ params }: PageProps) {
         return () => clearTimeout(timer);
     }, [dispatch, fetchCodeLink]);
 
+    useEffect(() => {
+        if (currentLink) {
+            document.title = `${currentLink.title || "Untitled Snippet"} - Dokit Code Link`;
+        } else {
+            document.title = "Code Link - Dokit";
+        }
+    }, [currentLink]);
+
     const handlePasswordSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!password.trim()) {
@@ -219,7 +227,7 @@ export default function CodeLinkViewPage({ params }: PageProps) {
             if (result.meta.requestStatus === "fulfilled") {
                 toast.success("Code link deleted successfully");
                 setShowDeleteConfirm(false);
-                router.push("/codelink/generate");
+                router.push("/dashboard/codelink/generate");
             } else {
                 toast.error("Failed to delete code link");
             }
@@ -233,7 +241,6 @@ export default function CodeLinkViewPage({ params }: PageProps) {
         return found ? found.ext : "txt";
     };
 
-    // Lock screen UI
     if (isPasswordRequired) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -288,7 +295,6 @@ export default function CodeLinkViewPage({ params }: PageProps) {
         );
     }
 
-    // Error UI
     if (error && !isPasswordRequired && !currentLink) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -313,7 +319,6 @@ export default function CodeLinkViewPage({ params }: PageProps) {
         );
     }
 
-    // Loading State
     if (gettingLink && !currentLink) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center">
@@ -327,7 +332,6 @@ export default function CodeLinkViewPage({ params }: PageProps) {
         );
     }
 
-    // Main Code Viewer / Editor UI
     if (currentLink) {
         const fileExt = getFileExt(isEditing ? editLanguage : currentLink.language);
         const langExt = getLanguageExtension(`file.${fileExt}`);
@@ -346,7 +350,7 @@ export default function CodeLinkViewPage({ params }: PageProps) {
                             size="sm"
                             className="text-muted-foreground hover:text-foreground"
                         >
-                            <Link href="/codelink/generate">
+                            <Link href="/dashboard/codelink/generate">
                                 <ArrowLeft className="size-4 mr-2" />
                                 Generate New Link
                             </Link>
@@ -706,10 +710,10 @@ export default function CodeLinkViewPage({ params }: PageProps) {
                                 <>
                                     <span className="text-xs text-muted-foreground flex items-center gap-1.5">
                                         <FileCode className="size-3.5 text-primary" />
-                                        Rendered securely via Dokit Codelink
+                                        Rendered via Dokit Codelink
                                     </span>
                                     <Button asChild size="sm">
-                                        <Link href="/codelink/generate">
+                                        <Link href="/dashboard/codelink/generate">
                                             <Plus className="size-4 mr-1.5" />
                                             Generate Your Own Link
                                         </Link>
