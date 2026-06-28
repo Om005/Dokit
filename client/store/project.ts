@@ -69,13 +69,26 @@ const projectActions = {
         ApiResponse,
         { projectId: string; accountPassword: string },
         { rejectValue: ApiResponse }
-    >(
-        "project/deleteProject",
-        createApiHandler<{ projectId: string; accountPassword: string }>(
-            "/api/project/delete-project",
-            "delete"
-        )
-    ),
+    >("project/deleteProject", async (inputData, { rejectWithValue }) => {
+        try {
+            const response = await api.request<ApiResponse>({
+                url: "/api/project/delete-project",
+                method: "delete",
+                data: inputData,
+            });
+            return response.data;
+        } catch (error) {
+            const err = error as AxiosError<ApiResponse>;
+            if (err.response && err.response.data) {
+                return rejectWithValue(err.response.data);
+            }
+            return rejectWithValue({
+                success: false,
+                statusCode: 500,
+                message: "An unexpected error occurred. Please try again later.",
+            });
+        }
+    }),
 
     startProject: createAsyncThunk<
         ApiResponse,

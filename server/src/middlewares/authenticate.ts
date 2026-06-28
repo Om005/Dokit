@@ -141,7 +141,7 @@ export const optionalAuthenticate = async (req: Request, res: Response, next: Ne
             };
         }
         next();
-    } catch (error: unknown) {
+    } catch {
         next();
     }
 };

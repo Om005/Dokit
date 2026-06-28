@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { Moon, Sun, User, LogOut } from "lucide-react";
+import { Moon, Sun, User, LogOut, Link2 } from "lucide-react";
 import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store/store";
@@ -76,6 +76,12 @@ export function Navbar() {
                         Projects
                     </Link>
                     <Link
+                        href="/codelink/generate"
+                        className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full hover:bg-secondary/50"
+                    >
+                        Code Links
+                    </Link>
+                    <Link
                         href="/contact-us"
                         className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full hover:bg-secondary/50"
                     >
@@ -112,6 +118,12 @@ export function Navbar() {
                                     <Link href={`/u/${username}`} className="cursor-pointer">
                                         <User className="mr-2 h-4 w-4" />
                                         My Account
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                    <Link href="/codelink/generate" className="cursor-pointer">
+                                        <Link2 className="mr-2 h-4 w-4" />
+                                        Code Links
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />

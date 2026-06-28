@@ -118,7 +118,7 @@ const controllers = {
 
     deleteProject: async (req: Request, res: Response) => {
         try {
-            const result = validators.DeleteProjectSchema.safeParse(req.query);
+            const result = validators.DeleteProjectSchema.safeParse(req.body);
             if (!result.success) {
                 const message = result.error.issues[0]?.message;
                 return sendResponse(res, {
