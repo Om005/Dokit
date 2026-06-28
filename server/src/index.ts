@@ -13,6 +13,7 @@ import projectRoutes from "@modules/project/routes";
 import editorRoutes from "@modules/editor/routes";
 import projectAccessRoutes from "@modules/project/access.routes";
 import chatRoutes from "@modules/chat/routes";
+import codelinkRoutes from "@modules/codelink/routes";
 import httpLogger from "@middlewares/httpLogger";
 import extractIpMiddleware from "@middlewares/IP";
 import { verifyTransporter } from "@config/mailer";
@@ -57,6 +58,7 @@ app.use("/api/project/access", projectAccessRoutes);
 app.use("/api/project", projectRoutes);
 app.use("/api/editor", editorRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/codelink", codelinkRoutes);
 app.get("/health", (req, res) => {
     res.status(200).json({ status: "ok" });
 });

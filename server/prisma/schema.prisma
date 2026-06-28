@@ -36,6 +36,8 @@ model User {
   accessRequests    AccessRequest[]
   chatThreads    ChatThread[]
   chatMessages   ChatMessage[]
+  codeLinks        CodeLink[]
+  codeLinkAccesses CodeLinkAccess[]
 }
 
 model Session {
@@ -157,6 +159,40 @@ model CodeChunk {
   @@index([projectId])
 }
 
+model CodeLink {
+  id             String       @id @unique @default(cuid())
+  userId         String
+  title          String       @default("")
+  description    String       @default("")
+  language       String
+  compressedCode Bytes
+  isPasswordProtected Boolean      @default(false)
+  visibility     CodeLinkVisibility @default(ANYONE_WITH_LINK)
+  passwordHash   String?
+  expiresAt      DateTime?
+  viewCount      Int          @default(0)
+  createdAt      DateTime     @default(now())
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  allowedUsers   CodeLinkAccess[]
+
+  @@index([userId])
+  @@index([id])
+}
+
+model CodeLinkAccess {
+  id         String   @id @default(cuid())
+  codeLinkId String
+  userId      String
+  createdAt  DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeLink   CodeLink @relation(fields: [codeLinkId], references: [id], onDelete: Cascade)
+
+  @@unique([codeLinkId, userId])
+  @@index([codeLinkId])
+}
+
 enum ProjectStack {
   NODE
   REACT_VITE
@@ -194,4 +230,9 @@ enum ProjectStatus {
   RUNNING
   STOPPED
   FAILED
+}
+
+enum CodeLinkVisibility {
+  ANYONE_WITH_LINK
+  RESTRICTED
 }
