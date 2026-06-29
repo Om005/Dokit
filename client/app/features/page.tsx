@@ -25,6 +25,8 @@ import {
     MessageSquare,
     Zap,
     Sparkles,
+    Link2,
+    Clock,
 } from "lucide-react";
 
 import { Navbar } from "@/components/navbar";
@@ -85,6 +87,29 @@ const collaborationFeatures: FeatureItem[] = [
         icon: Network,
         title: "Realtime file sync",
         description: "File tree changes stream instantly across every collaborator.",
+    },
+];
+
+const codeLinkFeatures: FeatureItem[] = [
+    {
+        icon: Link2,
+        title: "Instant Snippet Sharing",
+        description: "Generate secure, shareable links for individual code snippets directly.",
+    },
+    {
+        icon: Lock,
+        title: "Password Protection",
+        description: "Optionally restrict snippet viewing access with password.",
+    },
+    {
+        icon: Users,
+        title: "Access Control Lists",
+        description: "Restrict visibility to a predefined list of allowed email addresses.",
+    },
+    {
+        icon: Clock,
+        title: "Automated Expiration",
+        description: "Set self-destruction datetimes for transient or temporary snippets.",
     },
 ];
 
@@ -234,6 +259,14 @@ const faqs = [
         question: "How does ASTra access my project files?",
         answer: "ASTra has secure, read-only access to your project workspace. It analyzes files only when you ask a question and respects your project's privacy.",
     },
+    {
+        question: "What are Code Links?",
+        answer: "Code Links let you quickly share independent code snippets without creating a full project workspace. They can be protected with passwords, expirations, and access lists.",
+    },
+    {
+        question: "Can I edit a Code Link after generating it?",
+        answer: "Yes. If you are the owner of the Code Link, you can toggle edit mode directly from the snippet viewer page to update the code or change settings.",
+    },
 ];
 
 export default function FeaturesPage() {
@@ -323,7 +356,7 @@ export default function FeaturesPage() {
                     </div>
                 </section>
 
-                <section className="w-full max-w-6xl mx-auto container px-4 py-16">
+                <section className="w-full max-w-6xl mx-auto border-y border-border bg-muted/10 py-16">
                     {/* <section className="w-full max-w-6xl mx-auto border-y border-border bg-gradient-to-br from-primary/5 via-background to-primary/5 py-16"> */}
                     <div className="container px-4">
                         <div className="mx-auto max-w-6xl">
@@ -352,6 +385,39 @@ export default function FeaturesPage() {
                                     </div>
                                 ))}
                             </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section className="w-full max-w-6xl mx-auto container px-4 py-16">
+                    <div className="mx-auto max-w-6xl">
+                        <div className="mb-12 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <h2 className="text-3xl font-bold">Secure Snippet Sharing</h2>
+                                <p className="text-lg text-muted-foreground leading-relaxed">
+                                    Share individual files or snippets instantly with advanced
+                                    security parameters.
+                                </p>
+                            </div>
+                            <Button asChild className="rounded-lg px-4 py-2">
+                                <Link href="/dashboard/codelink/generate">Create a Code Link</Link>
+                            </Button>
+                        </div>
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                            {codeLinkFeatures.map((feature) => (
+                                <div
+                                    key={feature.title}
+                                    className="rounded-xl border border-border/50 bg-card p-5 shadow-sm"
+                                >
+                                    <feature.icon className="mb-3 h-8 w-8 text-primary" />
+                                    <h3 className="text-base font-semibold leading-snug">
+                                        {feature.title}
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        {feature.description}
+                                    </p>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </section>

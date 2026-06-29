@@ -86,12 +86,6 @@ export function Navbar() {
                         Features
                     </Link>
                     <Link
-                        href="/about"
-                        className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full hover:bg-secondary/50"
-                    >
-                        About
-                    </Link>
-                    <Link
                         href="/dashboard"
                         className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full hover:bg-secondary/50"
                     >
