@@ -11,6 +11,11 @@
 │   │   │       └── [username]
 │   │   │           ├── layout.tsx
 │   │   │           └── page.tsx
+│   │   ├── (codelink)
+│   │   │   └── codelink
+│   │   │       └── [linkId]
+│   │   │           ├── layout.tsx
+│   │   │           └── page.tsx
 │   │   ├── favicon.ico
 │   │   ├── features
 │   │   │   ├── layout.tsx
@@ -57,6 +62,12 @@
 │   │   │   │       ├── layout.tsx
 │   │   │   │       └── page.tsx
 │   │   │   ├── dashboard
+│   │   │   │   ├── codelink
+│   │   │   │   │   └── generate
+│   │   │   │   │       ├── layout.tsx
+│   │   │   │   │       └── page.tsx
+│   │   │   │   ├── layout.tsx
+│   │   │   │   ├── page.tsx
 │   │   │   │   └── projects
 │   │   │   │       ├── layout.tsx
 │   │   │   │       └── page.tsx
@@ -159,10 +170,12 @@
 │   │   ├── account.ts
 │   │   ├── authentication.ts
 │   │   ├── chat.ts
+│   │   ├── codelink.ts
 │   │   ├── editor.ts
 │   │   ├── project.ts
 │   │   └── store.ts
 │   ├── tsconfig.json
+│   ├── tsconfig.tsbuildinfo
 │   ├── types
 │   │   └── types.ts
 │   └── utils
@@ -272,6 +285,8 @@
 │   │   │   │   └── migration.sql
 │   │   │   ├── 20260622103500_add_status_field_in_project_table
 │   │   │   │   └── migration.sql
+│   │   │   ├── 20260628111013_add_codelink_table
+│   │   │   │   └── migration.sql
 │   │   │   └── migration_lock.toml
 │   │   └── schema.prisma
 │   ├── prisma.config.ts
@@ -347,6 +362,10 @@
 │   │   │   │   ├── controllers.ts
 │   │   │   │   ├── routes.ts
 │   │   │   │   └── validators.ts
+│   │   │   ├── codelink
+│   │   │   │   ├── controller.ts
+│   │   │   │   ├── routes.ts
+│   │   │   │   └── validators.ts
 │   │   │   ├── editor
 │   │   │   │   ├── controllers.ts
 │   │   │   │   ├── routes.ts
@@ -410,7 +429,6 @@
 │   │       │   ├── index.css
 │   │       │   └── main.jsx
 │   │       └── vite.config.js
-│   ├── trigger
 │   └── tsconfig.json
 └── skills-lock.json
 ```

@@ -97,16 +97,22 @@ Dokit brings the speed of the cloud to local development, allowing team members 
   * <img src="https://cdn.simpleicons.org/express/000000/ffffff" width="16" /> **Express** — Backend API development
   * <img src="https://cdn.simpleicons.org/fastapi" width="16" /> **FastAPI** — High-performance Python framework
   * <img src="https://cdn.simpleicons.org/go" width="16" /> **Go API** — Scalable backend in Go
-  * <img src="https://cdn.simpleicons.org/visualstudiocode/000000/ffffff" width="16" /> **Blank** — Empty canvas for custom setups
+  * <img src="https://cdn.simpleicons.org/devbox/000000/ffffff" width="16" /> **Blank** — Empty canvas for custom setups
 * **Public Developer Profiles**: Render developer portfolios from a customizable `profile.md` with featured projects.
 * **Workspace Exporting**: Download entire workspace folders as `.zip` archives for local backups or offline execution.
 * **Access Request Management**: Users can request contributor access to collaborate on public projects.
 
-### 5. Dynamic Routing & Networking
+### 5. Secure Snippet Sharing (Code Links)
+* **Instant Snippet Sharing**: Generate secure, shareable links for individual code snippets.
+* **Granular Access Permissions**: Restrict snippet viewing access using Argon2-encrypted passwords and restricted allowed user lists.
+* **Link Lifespan**: Set snippet expiration date and time.
+* **Owner Workspaces**: Code link owners can modify snippet titles, descriptions, code content, visibility, and credentials directly within the viewing interface.
+
+### 6. Dynamic Routing & Networking
 * **Wildcard Preview Domains**: Route HTTP preview traffic dynamically to running dev servers via Nginx (`[port]-[projectId].dokit.backends.live`).
 * **Secure Proxying**: Proxy terminal WebSocket sessions and preview HTTP requests with internal authorization sub-requests.
 
-### 6. Hardened Security & Authentication
+### 7. Hardened Security & Authentication
 * **Two-Factor Authentication (2FA)**: Secure accounts with TOTP verification using AES-encrypted secrets and backup recovery codes.
 * **Robust Session Management**: Use short-lived JWT access tokens with secure rotation and instant, remote session revocation.
 * **Infrastructure Throttling**: Protect API endpoints using a Redis-based sliding-window rate limiter and strictly validate payloads via Zod.
@@ -125,7 +131,7 @@ Please refer to **[SETUP.md](./docs/SETUP.md)** for detailed local environment i
 
 ### Database Schema
 
-Prisma data model managing users, sessions, projects, collaborators, and access requests.
+Prisma data model managing users, sessions, projects, project collaborator, access request, chat thread, chat message, code chunk, codelink, and codelink access.
 
 ![Dokit Database Schema](./docs/diagrams/dokit_database_schema.png)
 
