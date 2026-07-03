@@ -1,11 +1,13 @@
 import path from "path";
+import Parser from "tree-sitter";
 
 interface ChunkMetadata {
     startRow: number;
     endRow: number;
+    entityName?: string;
 }
 
-interface Chunk {
+export interface Chunk {
     projectId: string;
     filePath: string;
     language: string;
@@ -14,9 +16,42 @@ interface Chunk {
     metadata: ChunkMetadata;
 }
 
-type Pattern = {
-    entityType: string;
-    regex: RegExp;
+// Dynamically require languages so the server doesn't instantly crash if a module fails to load on a new deployment environment
+let JavaScript: unknown,
+    TypeScript: unknown,
+    TSX: unknown,
+    Python: unknown,
+    Rust: unknown,
+    Go: unknown,
+    C: unknown,
+    Cpp: unknown;
+
+/* eslint-disable @typescript-eslint/no-require-imports */
+try {
+    JavaScript = require("tree-sitter-javascript");
+    const ts = require("tree-sitter-typescript");
+    TypeScript = ts.typescript;
+    TSX = ts.tsx;
+    Python = require("tree-sitter-python");
+    Rust = require("tree-sitter-rust");
+    Go = require("tree-sitter-go");
+    C = require("tree-sitter-c");
+    Cpp = require("tree-sitter-cpp");
+} catch (error) {
+    console.warn("Tree-sitter languages not fully loaded. Falling back gracefully.", error);
+}
+/* eslint-enable @typescript-eslint/no-require-imports */
+
+const languageMap: Record<string, unknown> = {
+    ".js": JavaScript,
+    ".jsx": TSX, // Using TSX for JSX safely parses React
+    ".ts": TypeScript,
+    ".tsx": TSX,
+    ".py": Python,
+    ".rs": Rust,
+    ".go": Go,
+    ".c": C,
+    ".cpp": Cpp,
 };
 
 const languageNameByExt: Record<string, string> = {
@@ -31,82 +66,57 @@ const languageNameByExt: Record<string, string> = {
     ".cpp": "cpp",
 };
 
-const bracePatternsByExt: Record<string, Pattern[]> = {
-    ".js": [
-        { entityType: "function", regex: /^\s*(export\s+)?(default\s+)?(async\s+)?function\b/ },
-        {
-            entityType: "function",
-            regex: /^\s*(export\s+)?(const|let|var)\s+\w+\s*=\s*(async\s*)?\([^)]*\)\s*=>/,
-        },
-        { entityType: "class", regex: /^\s*(export\s+)?(default\s+)?class\b/ },
-    ],
-    ".jsx": [
-        { entityType: "function", regex: /^\s*(export\s+)?(default\s+)?(async\s+)?function\b/ },
-        {
-            entityType: "function",
-            regex: /^\s*(export\s+)?(const|let|var)\s+\w+\s*=\s*(async\s*)?\([^)]*\)\s*=>/,
-        },
-        { entityType: "class", regex: /^\s*(export\s+)?(default\s+)?class\b/ },
-    ],
-    ".ts": [
-        { entityType: "function", regex: /^\s*(export\s+)?(default\s+)?(async\s+)?function\b/ },
-        {
-            entityType: "function",
-            regex: /^\s*(export\s+)?(const|let|var)\s+\w+\s*=\s*(async\s*)?\([^)]*\)\s*=>/,
-        },
-        { entityType: "class", regex: /^\s*(export\s+)?(default\s+)?(abstract\s+)?class\b/ },
-        { entityType: "interface", regex: /^\s*(export\s+)?interface\b/ },
-    ],
-    ".tsx": [
-        { entityType: "function", regex: /^\s*(export\s+)?(default\s+)?(async\s+)?function\b/ },
-        {
-            entityType: "function",
-            regex: /^\s*(export\s+)?(const|let|var)\s+\w+\s*=\s*(async\s*)?\([^)]*\)\s*=>/,
-        },
-        { entityType: "class", regex: /^\s*(export\s+)?(default\s+)?(abstract\s+)?class\b/ },
-        { entityType: "interface", regex: /^\s*(export\s+)?interface\b/ },
-    ],
-    ".go": [
-        { entityType: "function", regex: /^\s*func\b/ },
-        { entityType: "type", regex: /^\s*type\s+\w+\s+(struct|interface)\b/ },
-    ],
-    ".rs": [
-        { entityType: "function", regex: /^\s*fn\b/ },
-        { entityType: "struct", regex: /^\s*struct\b/ },
-        { entityType: "impl", regex: /^\s*impl\b/ },
-        { entityType: "trait", regex: /^\s*trait\b/ },
-        { entityType: "enum", regex: /^\s*enum\b/ },
-    ],
-    ".c": [
-        { entityType: "struct", regex: /^\s*struct\b/ },
-        { entityType: "enum", regex: /^\s*enum\b/ },
-        {
-            entityType: "function",
-            regex: /^\s*[A-Za-z_][\w\s\*\&:<>,~]*\s+[A-Za-z_]\w*\s*\([^;]*\)\s*\{?/,
-        },
-    ],
-    ".cpp": [
-        { entityType: "class", regex: /^\s*class\b/ },
-        { entityType: "struct", regex: /^\s*struct\b/ },
-        { entityType: "enum", regex: /^\s*enum\b/ },
-        {
-            entityType: "function",
-            regex: /^\s*[A-Za-z_][\w\s\*\&:<>,~]*\s+[A-Za-z_]\w*\s*\([^;]*\)\s*\{?/,
-        },
-    ],
-};
+const targetNodeTypes = new Set([
+    // JS / TS
+    "function_declaration",
+    "class_declaration",
+    "abstract_class_declaration",
+    "method_definition",
+    "interface_declaration",
+    "type_alias_declaration",
+    "lexical_declaration", // let/const (checked for arrow func)
+    "variable_declaration", // var (checked for arrow func)
 
-const statementPatternsByExt: Record<string, Pattern[]> = {
-    ".ts": [{ entityType: "type", regex: /^\s*(export\s+)?type\b/ }],
-    ".tsx": [{ entityType: "type", regex: /^\s*(export\s+)?type\b/ }],
-};
+    // Python
+    "function_definition",
+    "class_definition",
 
-const indentPatternsByExt: Record<string, Pattern[]> = {
-    ".py": [
-        { entityType: "function", regex: /^\s*(async\s+)?def\b/ },
-        { entityType: "class", regex: /^\s*class\b/ },
-    ],
-};
+    // Rust
+    "function_item",
+    "struct_item",
+    "enum_item",
+    "impl_item",
+    "trait_item",
+
+    // Go
+    "function_declaration",
+    "method_declaration",
+    "type_declaration",
+
+    // C / C++
+    "function_definition",
+    "struct_specifier",
+    "class_specifier",
+    "enum_specifier",
+]);
+
+function getEntityName(node: Parser.SyntaxNode): string | undefined {
+    const nameNode = node.childForFieldName("name");
+    if (nameNode) return nameNode.text;
+
+    for (let i = 0; i < node.childCount; i++) {
+        const child = node.child(i);
+        if (
+            child &&
+            (child.type === "identifier" ||
+                child.type === "type_identifier" ||
+                child.type === "name")
+        ) {
+            return child.text;
+        }
+    }
+    return undefined;
+}
 
 function extractTextChunks(
     sourceCode: string,
@@ -114,13 +124,16 @@ function extractTextChunks(
     projectId: string,
     ext: string
 ): Chunk[] {
-    // Split by double newline to separate paragraphs or markdown blocks
     const rawChunks = sourceCode.split(/\n\s*\n/);
     const chunks: Chunk[] = [];
     let currentStartRow = 0;
 
     for (const block of rawChunks) {
-        if (!block.trim()) continue;
+        if (!block.trim()) {
+            const lineCount = block.split("\n").length;
+            currentStartRow += lineCount;
+            continue;
+        }
 
         const lineCount = block.split("\n").length;
         chunks.push({
@@ -134,230 +147,83 @@ function extractTextChunks(
                 endRow: currentStartRow + lineCount - 1,
             },
         });
-        currentStartRow += lineCount + 1;
+        currentStartRow += lineCount;
     }
     return chunks;
 }
 
-function isCommentLine(line: string, ext: string): boolean {
-    const trimmed = line.trim();
-    if (!trimmed) return false;
-    if (trimmed.startsWith("//") || trimmed.startsWith("/*") || trimmed.startsWith("*")) {
-        return true;
-    }
-    if (ext === ".py" && trimmed.startsWith("#")) {
-        return true;
-    }
-    return false;
-}
-
-function countChar(value: string, target: string): number {
-    let count = 0;
-    for (let i = 0; i < value.length; i += 1) {
-        if (value[i] === target) count += 1;
-    }
-    return count;
-}
-
-function findStatementEndRow(lines: string[], startRow: number): number {
-    let braceCount = 0;
-    let parenCount = 0;
-    let bracketCount = 0;
-
-    for (let j = startRow; j < lines.length; j += 1) {
-        const currentLine = lines[j];
-        braceCount += countChar(currentLine, "{");
-        braceCount -= countChar(currentLine, "}");
-        parenCount += countChar(currentLine, "(");
-        parenCount -= countChar(currentLine, ")");
-        bracketCount += countChar(currentLine, "[");
-        bracketCount -= countChar(currentLine, "]");
-
-        if (currentLine.includes(";") && braceCount <= 0 && parenCount <= 0 && bracketCount <= 0) {
-            return j;
-        }
-    }
-
-    return lines.length - 1;
-}
-
-function findPattern(line: string, patterns: Pattern[]): Pattern | null {
-    for (const pattern of patterns) {
-        if (pattern.regex.test(line)) return pattern;
-    }
-    return null;
-}
-
-function extractBraceBlocks(
-    sourceCode: string,
+function traverseTree(
+    node: Parser.SyntaxNode,
+    chunks: Chunk[],
     filePath: string,
     projectId: string,
-    ext: string,
-    patterns: Pattern[]
-): Chunk[] {
-    const lines = sourceCode.split("\n");
-    const chunks: Chunk[] = [];
-    const language = languageNameByExt[ext] || ext.replace(".", "");
+    language: string
+) {
+    let shouldExtract = false;
+    let entityType = node.type;
+    let entityName = getEntityName(node);
 
-    for (let i = 0; i < lines.length; i += 1) {
-        const line = lines[i];
-        if (isCommentLine(line, ext)) continue;
+    if (targetNodeTypes.has(node.type)) {
+        shouldExtract = true;
 
-        const pattern = findPattern(line, patterns);
-        if (!pattern) continue;
-
-        let braceCount = 0;
-        let started = false;
-        let endRow = i;
-
-        for (let j = i; j < lines.length; j += 1) {
-            const currentLine = lines[j];
-            braceCount += countChar(currentLine, "{");
-            braceCount -= countChar(currentLine, "}");
-
-            if (countChar(currentLine, "{") > 0) started = true;
-
-            if (started && braceCount <= 0) {
-                endRow = j;
-                break;
-            }
-
-            if (j === lines.length - 1) {
-                endRow = j;
+        // Handle JS/TS Arrow functions assigned to variables
+        if (node.type === "lexical_declaration" || node.type === "variable_declaration") {
+            shouldExtract = false;
+            for (const child of node.namedChildren) {
+                if (child.type === "variable_declarator") {
+                    const value = child.childForFieldName("value");
+                    if (value && value.type === "arrow_function") {
+                        shouldExtract = true;
+                        entityType = "function";
+                        const nameNode = child.childForFieldName("name");
+                        if (nameNode) entityName = nameNode.text;
+                        break;
+                    }
+                }
             }
         }
+    }
 
-        if (!started) {
-            endRow = findStatementEndRow(lines, i);
-        }
-
-        const content = lines.slice(i, endRow + 1).join("\n");
+    if (shouldExtract) {
+        const cleanType = entityType
+            .replace("_declaration", "")
+            .replace("_definition", "")
+            .replace("_item", "")
+            .replace("_specifier", "");
 
         chunks.push({
             projectId,
             filePath,
             language,
-            entityType: pattern.entityType,
-            content,
+            entityType: cleanType,
+            content: node.text,
             metadata: {
-                startRow: i,
-                endRow: endRow,
+                startRow: node.startPosition.row,
+                endRow: node.endPosition.row,
+                entityName,
             },
         });
-
-        i = Math.max(endRow, i);
     }
 
-    return chunks;
-}
-
-function getIndentLevel(line: string): number {
-    let indent = 0;
-    for (let i = 0; i < line.length; i += 1) {
-        const ch = line[i];
-        if (ch === " ") indent += 1;
-        else if (ch === "\t") indent += 4;
-        else break;
+    for (const child of node.namedChildren) {
+        traverseTree(child, chunks, filePath, projectId, language);
     }
-    return indent;
 }
 
-function extractIndentBlocks(
-    sourceCode: string,
-    filePath: string,
-    projectId: string,
-    ext: string,
-    patterns: Pattern[]
-): Chunk[] {
-    const lines = sourceCode.split("\n");
-    const chunks: Chunk[] = [];
-    const language = languageNameByExt[ext] || "python";
+function deduplicateChunks(chunks: Chunk[]): Chunk[] {
+    const deduped: Chunk[] = [];
+    const seenRanges = new Set<string>();
 
-    for (let i = 0; i < lines.length; i += 1) {
-        const line = lines[i];
-        if (isCommentLine(line, ext)) continue;
+    const sorted = [...chunks].sort((a, b) => a.metadata.startRow - b.metadata.startRow);
 
-        const pattern = findPattern(line, patterns);
-        if (!pattern) continue;
-
-        const baseIndent = getIndentLevel(line);
-        let endRow = i;
-
-        for (let j = i + 1; j < lines.length; j += 1) {
-            const currentLine = lines[j];
-            if (!currentLine.trim()) {
-                endRow = j;
-                continue;
-            }
-            if (isCommentLine(currentLine, ext)) {
-                endRow = j;
-                continue;
-            }
-
-            const indent = getIndentLevel(currentLine);
-            if (indent <= baseIndent) break;
-            endRow = j;
+    for (const chunk of sorted) {
+        const key = `${chunk.metadata.startRow}-${chunk.metadata.endRow}`;
+        if (!seenRanges.has(key)) {
+            seenRanges.add(key);
+            deduped.push(chunk);
         }
-
-        const content = lines.slice(i, endRow + 1).join("\n");
-
-        chunks.push({
-            projectId,
-            filePath,
-            language,
-            entityType: pattern.entityType,
-            content,
-            metadata: {
-                startRow: i,
-                endRow: endRow,
-            },
-        });
-
-        i = Math.max(endRow, i);
     }
-
-    return chunks;
-}
-
-function extractStatementBlocks(
-    sourceCode: string,
-    filePath: string,
-    projectId: string,
-    ext: string,
-    patterns: Pattern[]
-): Chunk[] {
-    const lines = sourceCode.split("\n");
-    const chunks: Chunk[] = [];
-    const language = languageNameByExt[ext] || ext.replace(".", "");
-
-    for (let i = 0; i < lines.length; i += 1) {
-        const line = lines[i];
-        if (isCommentLine(line, ext)) continue;
-
-        const pattern = findPattern(line, patterns);
-        if (!pattern) continue;
-
-        let endRow = i;
-        endRow = findStatementEndRow(lines, i);
-
-        const content = lines.slice(i, endRow + 1).join("\n");
-
-        chunks.push({
-            projectId,
-            filePath,
-            language,
-            entityType: pattern.entityType,
-            content,
-            metadata: {
-                startRow: i,
-                endRow: endRow,
-            },
-        });
-
-        i = Math.max(endRow, i);
-    }
-
-    return chunks;
+    return deduped;
 }
 
 export function extractCodeChunks(
@@ -366,42 +232,37 @@ export function extractCodeChunks(
     projectId: string
 ): Chunk[] {
     const ext = path.extname(filePath);
+    const grammar = languageMap[ext];
 
-    if (ext === ".md" || ext === ".txt") {
+    if (!grammar) {
         return extractTextChunks(sourceCode, filePath, projectId, ext);
     }
 
-    const indentPatterns = indentPatternsByExt[ext];
-    if (indentPatterns) {
-        const indentChunks = extractIndentBlocks(
-            sourceCode,
+    try {
+        const parser = new Parser();
+        parser.setLanguage(grammar);
+
+        const tree = parser.parse(sourceCode);
+        const chunks: Chunk[] = [];
+
+        traverseTree(
+            tree.rootNode,
+            chunks,
             filePath,
             projectId,
-            ext,
-            indentPatterns
+            languageNameByExt[ext] || ext.replace(".", "")
         );
-        return indentChunks.length > 0
-            ? indentChunks
-            : extractTextChunks(sourceCode, filePath, projectId, ext);
-    }
 
-    const bracePatterns = bracePatternsByExt[ext];
-    const statementPatterns = statementPatternsByExt[ext];
-    const chunks: Chunk[] = [];
+        if (chunks.length === 0) {
+            return extractTextChunks(sourceCode, filePath, projectId, ext);
+        }
 
-    if (bracePatterns) {
-        chunks.push(...extractBraceBlocks(sourceCode, filePath, projectId, ext, bracePatterns));
-    }
-
-    if (statementPatterns) {
-        chunks.push(
-            ...extractStatementBlocks(sourceCode, filePath, projectId, ext, statementPatterns)
+        return deduplicateChunks(chunks);
+    } catch (error) {
+        console.warn(
+            `[Tree-sitter] Failed to parse ${filePath}, falling back to text chunking.`,
+            error
         );
-    }
-
-    if (chunks.length === 0) {
         return extractTextChunks(sourceCode, filePath, projectId, ext);
     }
-
-    return chunks;
 }

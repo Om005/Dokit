@@ -62,6 +62,14 @@
         "qrcode": "^1.5.4",
         "redis": "^5.10.0",
         "socket.io": "^4.8.3",
+        "tree-sitter": "^0.25.0",
+        "tree-sitter-c": "^0.24.1",
+        "tree-sitter-cpp": "^0.23.4",
+        "tree-sitter-go": "^0.25.0",
+        "tree-sitter-javascript": "^0.25.0",
+        "tree-sitter-python": "^0.25.0",
+        "tree-sitter-rust": "^0.24.0",
+        "tree-sitter-typescript": "^0.23.2",
         "ua-parser-js": "^2.0.8",
         "ws": "^8.19.0",
         "y-websocket": "2.1.0",
@@ -87,5 +95,22 @@
         "tsc-alias": "^1.8.16",
         "tsx": "^4.21.0",
         "typescript": "^5.9.3"
+    },
+    "pnpm": {
+        "onlyBuiltDependencies": [
+            "tree-sitter",
+            "tree-sitter-c",
+            "tree-sitter-cpp",
+            "tree-sitter-go",
+            "tree-sitter-javascript",
+            "tree-sitter-python",
+            "tree-sitter-rust",
+            "tree-sitter-typescript",
+            "argon2",
+            "esbuild",
+            "@prisma/client",
+            "@prisma/engines",
+            "prisma"
+        ]
     }
 }

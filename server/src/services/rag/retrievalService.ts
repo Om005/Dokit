@@ -8,6 +8,7 @@ export interface RetrievedChunk {
     entityType: string;
     language: string;
     similarity: number;
+    metadata?: Record<string, unknown>;
 }
 
 interface RetrieveOptions {
@@ -88,6 +89,7 @@ export async function retrieveContext(
             "content",
             "entityType",
             "language",
+            "metadata",
             embedding::text AS embedding,
             1 - (embedding <=> ${vectorLiteral}::vector) AS similarity
         FROM "CodeChunk"

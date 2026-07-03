@@ -541,7 +541,11 @@ const controllers = {
 
             let contextString = "";
             contextChunks.forEach((chunk) => {
-                contextString += `--- File: ${chunk.filePath} (${chunk.entityType}) ---\n`;
+                const name = chunk.metadata?.entityName ? ` '${chunk.metadata.entityName}'` : "";
+                const lines = chunk.metadata
+                    ? ` (Lines ${chunk.metadata.startRow}-${chunk.metadata.endRow})`
+                    : "";
+                contextString += `--- File: ${chunk.filePath} | Type: ${chunk.entityType}${name}${lines} ---\n`;
                 contextString += `${chunk.content}\n\n`;
             });
 
