@@ -33,7 +33,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
           cache: pnpm
       
       - name: Install dependencies
@@ -56,7 +56,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
           cache: pnpm
       
       - name: Install dependencies
@@ -104,7 +104,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
           cache: pnpm
       
       - name: Install Vercel CLI
@@ -173,7 +173,7 @@ jobs:
 
             PM2_ENTRY="$CURRENT_LINK/server/dist/index.js"
 
-            export PATH="$PATH:/home/ubuntu/.nvm/versions/node/v24.15.0/bin"
+            export PATH="$PATH:/home/ubuntu/.nvm/versions/node/v22.23.1/bin"
 
             get_stable_list() {
               if [[ -f "$STABLE_FILE" ]]; then
