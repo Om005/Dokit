@@ -16,15 +16,14 @@ export interface Chunk {
     metadata: ChunkMetadata;
 }
 
-// Dynamically require languages so the server doesn't instantly crash if a module fails to load on a new deployment environment
-let JavaScript: unknown,
-    TypeScript: unknown,
-    TSX: unknown,
-    Python: unknown,
-    Rust: unknown,
-    Go: unknown,
-    C: unknown,
-    Cpp: unknown;
+let JavaScript!: Parser.Language,
+    TypeScript!: Parser.Language,
+    TSX!: Parser.Language,
+    Python!: Parser.Language,
+    Rust!: Parser.Language,
+    Go!: Parser.Language,
+    C!: Parser.Language,
+    Cpp!: Parser.Language;
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 try {
@@ -42,9 +41,9 @@ try {
 }
 /* eslint-enable @typescript-eslint/no-require-imports */
 
-const languageMap: Record<string, unknown> = {
+const languageMap: Record<string, Parser.Language> = {
     ".js": JavaScript,
-    ".jsx": TSX, // Using TSX for JSX safely parses React
+    ".jsx": TSX,
     ".ts": TypeScript,
     ".tsx": TSX,
     ".py": Python,
@@ -74,8 +73,8 @@ const targetNodeTypes = new Set([
     "method_definition",
     "interface_declaration",
     "type_alias_declaration",
-    "lexical_declaration", // let/const (checked for arrow func)
-    "variable_declaration", // var (checked for arrow func)
+    "lexical_declaration",
+    "variable_declaration",
 
     // Python
     "function_definition",
@@ -166,7 +165,6 @@ function traverseTree(
     if (targetNodeTypes.has(node.type)) {
         shouldExtract = true;
 
-        // Handle JS/TS Arrow functions assigned to variables
         if (node.type === "lexical_declaration" || node.type === "variable_declaration") {
             shouldExtract = false;
             for (const child of node.namedChildren) {
