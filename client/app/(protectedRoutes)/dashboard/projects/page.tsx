@@ -21,16 +21,13 @@ export default function ProjectsDashboard() {
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [createFromGithubDialogOpen, setCreateFromGithubDialogOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState(
-        searchParams.get("shared") === "true" ? "shared" : "mine"
-    );
+    const activeTab = searchParams.get("shared") === "true" ? "shared" : "mine";
 
     useEffect(() => {
         dispatch(projectActions.fetchProjects());
     }, [dispatch]);
 
     const handleTabChange = (newTab: string) => {
-        setActiveTab(newTab);
         if (newTab === "shared") {
             router.push("/dashboard/projects?shared=true");
         } else {

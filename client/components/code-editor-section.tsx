@@ -1,10 +1,34 @@
 "use client";
 
+import { motion, useReducedMotion } from "framer-motion";
+
 export function CodeEditorSection() {
+    const shouldReduceMotion = useReducedMotion();
+
+    const containerVariants = {
+        hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 40 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: {
+                duration: 0.8,
+                ease: [0.215, 0.61, 0.355, 1] as [number, number, number, number],
+                when: "beforeChildren",
+                staggerChildren: 0.3,
+            },
+        },
+    };
+
     return (
         <section className="relative py-24 px-4 flex items-center justify-center bg-gradient-to-b from-background via-background to-muted/30">
             <div className="w-full max-w-4xl">
-                <div className="bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
+                <motion.div
+                    variants={containerVariants}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, margin: "-100px" }}
+                    className="bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
+                >
                     <div className="flex items-center justify-between px-4 py-3 bg-card border-b border-border">
                         <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-[#ff5f57]" />
@@ -89,21 +113,41 @@ export function CodeEditorSection() {
                             </pre>
                         </div>
                     </div>
-                </div>
+                </motion.div>
             </div>
         </section>
     );
 }
 
 function CollaboratorCursor({ name, color }: { name: string; color: string }) {
+    const shouldReduceMotion = useReducedMotion();
+
     return (
-        <span className="relative inline-block">
+        <motion.span
+            className="relative inline-block"
+            variants={{
+                hidden: { opacity: 0, scale: 0 },
+                visible: {
+                    opacity: 1,
+                    scale: 1,
+                    transition: {
+                        type: shouldReduceMotion ? "tween" : "spring",
+                        stiffness: 300,
+                        damping: 20,
+                        duration: shouldReduceMotion ? 0.3 : undefined,
+                        ease: shouldReduceMotion
+                            ? ([0.215, 0.61, 0.355, 1] as [number, number, number, number])
+                            : undefined,
+                    },
+                },
+            }}
+        >
             <span
                 className="absolute -top-5 left-0 px-2 py-0.5 text-xs text-white rounded font-sans whitespace-nowrap"
                 style={{ backgroundColor: color }}
             >
                 {name}
             </span>
-        </span>
+        </motion.span>
     );
 }

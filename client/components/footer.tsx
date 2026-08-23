@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Github, Linkedin, Mail } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store/store";
+import { motion, useReducedMotion } from "framer-motion";
 
 const footerLinks = {
     quick_links: [
@@ -36,11 +37,41 @@ const socialLinks = [
 
 export function Footer() {
     const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+    const shouldReduceMotion = useReducedMotion();
+
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+            },
+        },
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 20 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: {
+                duration: 0.8,
+                ease: [0.215, 0.61, 0.355, 1] as [number, number, number, number],
+            },
+        },
+    };
+
     return (
         <footer className="relative py-16 px-4 bg-card border-t border-border/50">
-            <div className="max-w-6xl mx-auto">
+            <motion.div
+                className="max-w-6xl mx-auto"
+                variants={containerVariants}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-100px" }}
+            >
                 <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-5">
-                    <div className="lg:col-span-2">
+                    <motion.div className="lg:col-span-2" variants={itemVariants}>
                         <Link href="/" className="text-2xl font-bold text-foreground">
                             Dokit<span className="text-primary">.</span>
                         </Link>
@@ -62,9 +93,9 @@ export function Footer() {
                                 </a>
                             ))}
                         </div>
-                    </div>
+                    </motion.div>
 
-                    <div>
+                    <motion.div variants={itemVariants}>
                         <h4 className="text-sm font-semibold text-foreground mb-4">Quick Links</h4>
                         <ul className="space-y-3">
                             {footerLinks.quick_links.map((link) => (
@@ -84,9 +115,9 @@ export function Footer() {
                                 </li>
                             ))}
                         </ul>
-                    </div>
+                    </motion.div>
 
-                    <div>
+                    <motion.div variants={itemVariants}>
                         <h4 className="text-sm font-semibold text-foreground mb-4">Legal</h4>
                         <ul className="space-y-3">
                             {footerLinks.legal.map((link) => (
@@ -100,9 +131,9 @@ export function Footer() {
                                 </li>
                             ))}
                         </ul>
-                    </div>
+                    </motion.div>
 
-                    <div>
+                    <motion.div variants={itemVariants}>
                         <h4 className="text-sm font-semibold text-foreground mb-4">Connect</h4>
                         <ul className="space-y-3 flex gap-4">
                             {footerLinks.connect.map((link) => (
@@ -120,15 +151,18 @@ export function Footer() {
                                 </li>
                             ))}
                         </ul>
-                    </div>
+                    </motion.div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-12 mt-12 border-t border-border/50">
+                <motion.div
+                    variants={itemVariants}
+                    className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-12 mt-12 border-t border-border/50"
+                >
                     <p className="text-sm text-muted-foreground">
                         &copy; {new Date().getFullYear()} Dokit. All rights reserved.
                     </p>
-                </div>
-            </div>
+                </motion.div>
+            </motion.div>
         </footer>
     );
 }

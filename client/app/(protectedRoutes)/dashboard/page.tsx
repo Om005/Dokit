@@ -18,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { CreateProjectFromGithubDialog } from "@/components/create-project-from-github-dialog";
 import Link from "next/link";
+import { motion, useReducedMotion } from "framer-motion";
 
 export default function DashboardPage() {
     const dispatch = useDispatch<AppDispatch>();
@@ -38,6 +39,29 @@ export default function DashboardPage() {
     const myProjectsCount = projects.filter((p) => p.isOwner).length;
     const sharedProjectsCount = projects.filter((p) => !p.isOwner).length;
     const activeCodelinksCount = links.length;
+
+    const shouldReduceMotion = useReducedMotion();
+    const customEase = [0.215, 0.61, 0.355, 1] as [number, number, number, number];
+
+    const fadeUpVariants = {
+        hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 20 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: customEase } },
+    };
+
+    const staggerContainer = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+            },
+        },
+    };
+
+    const cardVariants = {
+        hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 20 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: customEase } },
+    };
 
     const stats = [
         {
@@ -124,7 +148,12 @@ export default function DashboardPage() {
         <div className="min-h-screen bg-background pb-12">
             <div className="mx-auto max-w-7xl px-4 py-8 pt-24 sm:px-6 lg:px-8">
                 {/* Greeting & Header */}
-                <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <motion.div
+                    className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                    initial="hidden"
+                    animate="visible"
+                    variants={fadeUpVariants}
+                >
                     <div>
                         <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-violet-400 bg-clip-text text-transparent">
                             {greeting}, {username || "Developer"}
@@ -148,34 +177,44 @@ export default function DashboardPage() {
                             </Link>
                         </Button>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* Stats Widgets */}
-                <div className="grid gap-4 sm:grid-cols-3 mb-8">
+                <motion.div
+                    className="grid gap-4 sm:grid-cols-3 mb-8"
+                    variants={staggerContainer}
+                    initial="hidden"
+                    animate="visible"
+                >
                     {stats.map((stat, i) => (
-                        <Card
-                            key={i}
-                            className="border-border/50 bg-card/40 backdrop-blur-md transition-all duration-300 hover:shadow-md"
-                        >
-                            <CardContent className="p-6 flex items-center justify-between">
-                                <div className="space-y-1">
-                                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                        {stat.name}
-                                    </p>
-                                    <p className="text-3xl font-bold tracking-tight">
-                                        {stat.value}
-                                    </p>
-                                </div>
-                                <div className={`p-3 rounded-xl ${stat.bg}`}>
-                                    <stat.icon className={`size-6 ${stat.color}`} />
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <motion.div key={i} variants={cardVariants} className="h-full">
+                            <Card className="border-border/50 bg-card/40 backdrop-blur-md transition-all duration-300 hover:shadow-md h-full">
+                                <CardContent className="p-6 flex items-center justify-between h-full">
+                                    <div className="space-y-1">
+                                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                            {stat.name}
+                                        </p>
+                                        <p className="text-3xl font-bold tracking-tight">
+                                            {stat.value}
+                                        </p>
+                                    </div>
+                                    <div className={`p-3 rounded-xl ${stat.bg}`}>
+                                        <stat.icon className={`size-6 ${stat.color}`} />
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </motion.div>
                     ))}
-                </div>
+                </motion.div>
 
                 {/* Main Workspace Navigation Directory */}
-                <div className="mb-6">
+                <motion.div
+                    className="mb-6"
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, margin: "-50px" }}
+                    variants={fadeUpVariants}
+                >
                     <h2 className="text-xl font-bold tracking-tight mb-2 flex items-center gap-2">
                         <Activity className="size-5 text-primary" />
                         Workspace Directory
@@ -184,60 +223,76 @@ export default function DashboardPage() {
                         Select a workspace card below to access your projects, snippets, or
                         integration tools.
                     </p>
-                </div>
+                </motion.div>
 
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <motion.div
+                    className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+                    variants={staggerContainer}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, margin: "-50px" }}
+                >
                     {features.map((feature, i) => {
                         const CardWrapper = feature.href ? Link : "div";
 
                         return (
-                            <Card
+                            <motion.div
                                 key={i}
-                                className={`group border-border/50 bg-card/40 backdrop-blur-md transition-all duration-300 hover:shadow-lg ${feature.border} flex flex-col justify-between overflow-hidden cursor-pointer`}
-                                style={{ contentVisibility: "auto" }}
+                                variants={cardVariants}
+                                whileHover={
+                                    shouldReduceMotion
+                                        ? {}
+                                        : { y: -5, transition: { duration: 0.2, ease: customEase } }
+                                }
+                                className="h-full"
                             >
-                                <CardWrapper
-                                    href={feature.href!}
-                                    onClick={feature.onClick}
-                                    className="flex flex-col h-full justify-between"
+                                <Card
+                                    className={`group border-border/50 bg-card/40 backdrop-blur-md transition-all duration-300 hover:shadow-lg ${feature.border} flex flex-col justify-between overflow-hidden cursor-pointer h-full`}
+                                    style={{ contentVisibility: "auto" }}
                                 >
-                                    <div>
-                                        <CardHeader className="relative">
-                                            <div className="flex items-center justify-between">
-                                                <div
-                                                    className={`p-2.5 rounded-lg bg-input/10 group-hover:bg-primary/10 transition-colors duration-300 w-fit mb-3`}
-                                                >
-                                                    <feature.icon
-                                                        className={`size-5 text-muted-foreground transition-colors duration-300 ${feature.color}`}
-                                                    />
-                                                </div>
-                                                {feature.badge && (
-                                                    <Badge
-                                                        className="absolute top-6 right-6 text-[10px]"
-                                                        variant="secondary"
+                                    <CardWrapper
+                                        href={feature.href!}
+                                        onClick={feature.onClick}
+                                        className="flex flex-col h-full justify-between"
+                                    >
+                                        <div>
+                                            <CardHeader className="relative">
+                                                <div className="flex items-center justify-between">
+                                                    <div
+                                                        className={`p-2.5 rounded-lg bg-input/10 group-hover:bg-primary/10 transition-colors duration-300 w-fit mb-3`}
                                                     >
-                                                        {feature.badge}
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                            <CardTitle className="text-lg font-semibold group-hover:text-primary transition-colors duration-300">
-                                                {feature.title}
-                                            </CardTitle>
-                                            <CardDescription className="text-xs mt-1.5 leading-relaxed">
-                                                {feature.description}
-                                            </CardDescription>
-                                        </CardHeader>
-                                    </div>
+                                                        <feature.icon
+                                                            className={`size-5 text-muted-foreground transition-colors duration-300 ${feature.color}`}
+                                                        />
+                                                    </div>
+                                                    {feature.badge && (
+                                                        <Badge
+                                                            className="absolute top-6 right-6 text-[10px]"
+                                                            variant="secondary"
+                                                        >
+                                                            {feature.badge}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                                <CardTitle className="text-lg font-semibold group-hover:text-primary transition-colors duration-300">
+                                                    {feature.title}
+                                                </CardTitle>
+                                                <CardDescription className="text-xs mt-1.5 leading-relaxed">
+                                                    {feature.description}
+                                                </CardDescription>
+                                            </CardHeader>
+                                        </div>
 
-                                    <CardFooter className="pt-2 pb-6 border-t border-border/10 bg-input/5 group-hover:bg-input/10 transition-colors duration-300 flex items-center justify-between text-xs text-muted-foreground font-medium">
-                                        <span>{feature.actionText}</span>
-                                        <ArrowRight className="size-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 text-primary" />
-                                    </CardFooter>
-                                </CardWrapper>
-                            </Card>
+                                        <CardFooter className="pt-2 pb-6 border-t border-border/10 bg-input/5 group-hover:bg-input/10 transition-colors duration-300 flex items-center justify-between text-xs text-muted-foreground font-medium">
+                                            <span>{feature.actionText}</span>
+                                            <ArrowRight className="size-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 text-primary" />
+                                        </CardFooter>
+                                    </CardWrapper>
+                                </Card>
+                            </motion.div>
                         );
                     })}
-                </div>
+                </motion.div>
             </div>
 
             {/* GitHub Import Dialog Modal */}

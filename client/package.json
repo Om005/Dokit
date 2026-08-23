@@ -51,6 +51,7 @@
         "clsx": "^2.1.1",
         "codemirror-lang-elixir": "^4.0.1",
         "date-fns": "^4.1.0",
+        "framer-motion": "^13.1.1",
         "input-otp": "^1.4.2",
         "lucide-react": "^0.563.0",
         "markdown-it": "^14.2.0",

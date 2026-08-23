@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { AppDispatch, RootState } from "@/store/store";
 import { accountActions } from "@/store/account";
@@ -93,7 +93,14 @@ export default function ProfilePage() {
         currentUsername &&
         currentUsername.toLowerCase() === routeUsername.toLowerCase();
 
-    const [activeTab, setActiveTab] = useState("overview");
+    const searchParams = useSearchParams();
+    const tabParam = searchParams.get("tab") || "overview";
+    const validTabs = ["overview", "account", "sessions", "appearance"];
+    const activeTab = validTabs.includes(tabParam) ? tabParam : "overview";
+
+    const setActiveTab = (tab: string) => {
+        router.push(`/u/${routeUsername}?tab=${tab}`);
+    };
     const [oldPassword, setOldPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useTheme } from "next-themes";
+import { motion, useReducedMotion } from "framer-motion";
 import {
     Moon,
     Sun,
@@ -46,6 +47,7 @@ export function Navbar() {
         (state: RootState) => state.auth
     );
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const shouldReduceMotion = useReducedMotion();
 
     const toggleTheme = () => {
         setTheme(isLight ? "dark" : "light");
@@ -68,7 +70,15 @@ export function Navbar() {
     };
 
     return (
-        <header className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl">
+        <motion.header
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-3xl"
+            initial={{ y: shouldReduceMotion ? 0 : -100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{
+                duration: 0.8,
+                ease: [0.215, 0.61, 0.355, 1] as [number, number, number, number],
+            }}
+        >
             <nav className="flex items-center justify-between px-2 py-2 bg-navbar-bg backdrop-blur-xl border border-border/50 rounded-full shadow-lg shadow-black/5 dark:shadow-black/20">
                 <Link
                     href="/"
@@ -239,6 +249,6 @@ export function Navbar() {
                     </div>
                 </div>
             </nav>
-        </header>
+        </motion.header>
     );
 }

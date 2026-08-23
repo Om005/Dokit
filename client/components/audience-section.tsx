@@ -1,6 +1,7 @@
 "use client";
 
 import { Code2, GraduationCap, Rocket, Zap } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 
 const audiences = [
     {
@@ -30,13 +31,22 @@ const audiences = [
 ];
 
 export function AudienceSection() {
+    const shouldReduceMotion = useReducedMotion();
+    const ease = [0.215, 0.61, 0.355, 1] as [number, number, number, number];
+
     return (
         <section className="relative py-24 px-4 bg-background overflow-hidden">
             <div className="absolute top-1/2 left-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px] -translate-y-1/2 -translate-x-1/2" />
             <div className="absolute top-1/2 right-0 w-[500px] h-[500px] bg-violet-500/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
 
             <div className="max-w-6xl mx-auto relative z-10">
-                <div className="text-center mb-16">
+                <motion.div
+                    className="text-center mb-16"
+                    initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-50px" }}
+                    transition={{ duration: 0.8, ease }}
+                >
                     <span className="inline-flex items-center gap-2 px-3 py-1 text-xs font-medium text-foreground bg-muted rounded-full mb-4">
                         <Zap className="w-3 h-3" />
                         Built For Everyone
@@ -47,11 +57,19 @@ export function AudienceSection() {
                     <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
                         From hobbyists to professional teams, Dokit adapts to your workflow.
                     </p>
-                </div>
+                </motion.div>
 
                 <div className="grid gap-8 md:grid-cols-3">
                     {audiences.map((audience, index) => (
-                        <div key={index} className="group relative">
+                        <motion.div
+                            key={index}
+                            className="group relative"
+                            initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, margin: "-50px" }}
+                            transition={{ duration: 0.8, delay: index * 0.1, ease }}
+                            whileHover={shouldReduceMotion ? {} : { y: -8 }}
+                        >
                             <div className="relative h-full p-8 rounded-2xl border border-border/50 bg-gradient-to-b from-card to-card/50 backdrop-blur-sm overflow-hidden transition-all duration-300 hover:border-border hover:shadow-2xl hover:shadow-black/10">
                                 <div
                                     className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${audience.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
@@ -84,7 +102,7 @@ export function AudienceSection() {
                                     ))}
                                 </ul>
                             </div>
-                        </div>
+                        </motion.div>
                     ))}
                 </div>
             </div>

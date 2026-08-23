@@ -1,6 +1,7 @@
 "use client";
 
 import { Github, Wrench, Users, Terminal, Cloud, Shield } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 
 const features = [
     {
@@ -54,13 +55,41 @@ const features = [
 ];
 
 export function FeaturesSection() {
+    const shouldReduceMotion = useReducedMotion();
+    const ease = [0.215, 0.61, 0.355, 1] as [number, number, number, number];
+
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+            },
+        },
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 20 },
+        show: {
+            opacity: 1,
+            y: 0,
+            transition: { duration: 0.8, ease },
+        },
+    };
+
     return (
         <section
             id="features"
             className="relative py-24 px-4 bg-gradient-to-b from-muted/30 to-background"
         >
             <div className="max-w-6xl mx-auto">
-                <div className="text-center mb-16">
+                <motion.div
+                    initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-100px" }}
+                    transition={{ duration: 0.8, ease }}
+                    className="text-center mb-16"
+                >
                     <span className="inline-block px-3 py-1 text-xs font-medium text-primary bg-primary/10 rounded-full mb-4">
                         Why Dokit?
                     </span>
@@ -72,11 +101,23 @@ export function FeaturesSection() {
                         From instant environments to real-time collaboration, Dokit gives you the
                         tools to focus on what matters: writing great code.
                     </p>
-                </div>
+                </motion.div>
 
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <motion.div
+                    variants={containerVariants}
+                    initial="hidden"
+                    whileInView="show"
+                    viewport={{ once: true, margin: "-100px" }}
+                    className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+                >
                     {features.map((feature, index) => (
-                        <div
+                        <motion.div
+                            variants={itemVariants}
+                            whileHover={
+                                shouldReduceMotion
+                                    ? {}
+                                    : { scale: 1.02, transition: { duration: 0.3, ease } }
+                            }
                             key={index}
                             className="group relative p-6 rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm hover:bg-card hover:border-border hover:shadow-xl hover:shadow-black/5 transition-all duration-300"
                         >
@@ -94,9 +135,9 @@ export function FeaturesSection() {
                             </p>
 
                             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                        </div>
+                        </motion.div>
                     ))}
-                </div>
+                </motion.div>
             </div>
         </section>
     );
